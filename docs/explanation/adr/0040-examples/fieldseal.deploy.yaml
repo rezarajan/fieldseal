@@ -1,0 +1,10 @@
+# What this deployment runs and which signed artefacts it serves. Nothing here varies between
+# deploys: no URLs, ports, hosts, paths, environments or secrets. Those are the environment's
+# (twelve-factor III), each one variable read by every process that needs it (.env.example).
+deployment: local-stack
+authority: Local Stack Authority
+serves:
+  - { kind: instrument, name: food-intake-baseline,   digest: "sha256:dac718d46fdfb2be37eb626b8aefe36f241b90d6d861d84172b5bcc2dab0efdd" }
+  - { kind: instrument, name: household-water-access, digest: "sha256:a7bbfe3ace6d30e54a125395b1a9d3594e66316ad6f2cce59b7602492c0e2dce" }
+  - { kind: policy,     name: deployment-default,     digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+runs: [factory, intake, log]

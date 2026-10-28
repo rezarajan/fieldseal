@@ -1,0 +1,7 @@
+# One cohort's roster. Only the columns the instrument reads (roster.<column>) reach a device.
+roster: { cohort: village-a, version: 3 }
+columns: [subject, display, consent, head_name]
+rows:
+  - [hh-0001, Household 1, unknown, Amina]
+  - [hh-0002, Household 2, granted, Tomas]
+  - [hh-0003, Household 3, refused, Lena]

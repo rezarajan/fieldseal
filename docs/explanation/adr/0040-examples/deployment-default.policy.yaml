@@ -1,0 +1,13 @@
+# A policy layer states only what it tightens; every control, its type and default is printed by
+# `fieldseal policy schema`.
+policy: { name: deployment-default, version: 1.0.0, scope: deployment }
+publishing:
+  approvals: 2
+  publishers: { threshold: 2, of: 3 }
+  transparency-log: required
+registration:
+  phishing-resistant: required
+  unattested-devices: { allowed-in: [development] }
+custody:                         # ADR 0038: minimum per purpose on each axis
+  root:   { min-assurance: attested,      mode: cold }
+  record: { min-assurance: custody-bound, mode: hot }
