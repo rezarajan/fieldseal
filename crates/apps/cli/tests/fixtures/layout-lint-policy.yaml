@@ -1,0 +1,12 @@
+# A deployment policy that loosens the decision count and makes the option-count lint blocking.
+apiVersion: fieldseal.dev/v1alpha1
+kind: Policy
+metadata: { name: layout-lint-test, version: 1.0.0 }
+spec:
+  schemaVersion: 1.0.0
+  layer: { scope: deployment }
+  publishing:
+    layoutLint:
+      maxDecisionsPerScreen: 40
+      maxVisibleOptions: 3
+      blocking: [INS-211]

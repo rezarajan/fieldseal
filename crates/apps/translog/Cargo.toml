@@ -1,0 +1,30 @@
+[package]
+name = "fieldseal-translog"
+description = "The Fieldseal transparency-log server: a self-hosted, append-only Merkle log over HTTP, configured from the environment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "fieldseal_translog"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fieldseal-translog"
+path = "src/main.rs"
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-adapters-translog.workspace = true
+thiserror.workspace = true
+getrandom = "0.2"
+
+[dev-dependencies]
+fieldseal-deployment.workspace = true
+fieldseal-adapters-authoring.workspace = true
+
+[lints]
+workspace = true

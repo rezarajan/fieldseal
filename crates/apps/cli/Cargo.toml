@@ -1,0 +1,39 @@
+[package]
+name = "fieldseal-cli"
+description = "The fieldseal CLI: reference implementation of every Fieldseal operation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "fieldseal"
+path = "src/main.rs"
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-distribution.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-adapters-authoring.workspace = true
+fieldseal-adapters-html.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-adapters-rekor.workspace = true
+fieldseal-adapters-translog.workspace = true
+zeroize.workspace = true
+serde_json = "1"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+fieldseal-deployment.workspace = true
+fieldseal-adapters-landing-files.workspace = true
+fieldseal-adapters-file.workspace = true
+fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
+fieldseal-adapters-upload-http.workspace = true
+
+[dev-dependencies]
+tiny_http = "0.12"

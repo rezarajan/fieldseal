@@ -1,0 +1,31 @@
+/* Design tokens shared by every page of the web app and the browser device. Values follow the
+   Android app wireframes' design language: white ground, deep green,
+   neutral ink, flat surfaces separated by 1px borders, 16/24px radii, pill buttons, 52px targets. */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --ink: #17211f;
+  --ink-2: #56615e;
+  --border: #e4e7e6;
+  --primary: #0d7a5f;
+  --on-primary: #ffffff;
+  --selected-fill: #ecfdf5;
+  --selected-border: #0d7a5f;
+  --amount: #be123c;
+  --amount-tint: #fff1f2;
+  --yes: #006398;
+  --no: #6e7a74;
+  --warning: #d97706;
+  --warning-tint: #fffbeb;
+  --focus: #0284c7;
+  --unset: #d5dad8;
+  --freq-0: #56615e; --freq-1: #0f8466; --freq-2: #0d7a5f; --freq-3: #0c735a; --freq-4: #0b6b54;
+  --freq-5: #09634e; --freq-6: #085b48; --freq-7: #075442; --freq-8: #064e3b;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --target: 52px;
+  --header-h: 72px;
+  --font: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

@@ -1,0 +1,30 @@
+[package]
+name = "fieldseal-factory"
+description = "The Fieldseal factory service: registration API and portal, wired from the environment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "fieldseal-factory"
+path = "src/main.rs"
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-oidc = { path = "../../adapters/oidc" }
+fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
+fieldseal-adapters-file.workspace = true
+getrandom = "0.2"
+tiny_http = "0.12"
+
+[dev-dependencies]
+fieldseal-deployment.workspace = true
+fieldseal-adapters-authoring.workspace = true
+
+[lints]
+workspace = true

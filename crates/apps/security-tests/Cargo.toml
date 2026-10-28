@@ -1,0 +1,29 @@
+[package]
+name = "fieldseal-security-tests"
+description = "Adversarial tests for Fieldseal (issue #59): hostile bytes, replay, key misuse, leaks and injection. Test-only."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-distribution.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-deployment.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-authoring.workspace = true
+fieldseal-adapters-html.workspace = true
+fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
+serde_json = "1"
+zeroize.workspace = true
+
+[lints]
+workspace = true

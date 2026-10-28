@@ -1,0 +1,24 @@
+[package]
+name = "fieldseal-e2e"
+description = "End-to-end and fault-injection tests: the connected, air-gapped and multi-device flows over the in-memory adapters (test-only)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-distribution.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-authoring.workspace = true
+
+[lints]
+workspace = true
