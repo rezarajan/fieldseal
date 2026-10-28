@@ -1,0 +1,202 @@
+# The Fieldseal local stack: Keycloak (passkeys), the factory and portal, the practice intake
+# upload endpoint and the self-hosted transparency log. Everything is local: nothing is pushed
+# or pulled except the pinned Keycloak image.
+#
+# Do not run this file directly; `just up` (tools/stack-up.sh) generates what it needs first
+# (the env files rendered from examples/deployments/local-stack.yaml, the secrets, the images).
+# Works with docker-compose and podman-compose (both from Nix): only the common subset is used.
+#
+# Twelve-factor: every service gets its configuration from its rendered env file and nothing
+# else. Secrets come from `.env.secrets` (git-ignored, generated), by reference.
+# State lives in named volumes only (no host bind mounts), so rootless Podman has no uid problems:
+# the images own their mount points (uid 10001), which a fresh volume inherits.
+name: fieldseal-local
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+# Start order uses service_started, not service_healthy: rootless Podman without systemd never
+# runs health checks on a timer. tools/stack-up.sh waits for the endpoints instead.
+services:
+  keycloak:
+    # Pinned. The official image; nothing of ours is in it. Realm imported from the checked-in JSON.
+    image: quay.io/keycloak/keycloak:26.4.7
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8180"
+      KC_HOSTNAME: http://localhost:8180
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run just up}
+      # Read by the realm import (the client secret placeholder in the realm JSON).
+      FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak/fieldseal-realm.json:/opt/keycloak/data/import/fieldseal-realm.json:ro
+    # The factory and the demo join this container's network namespace (below), so these are
+    # their ports too. Published on the loopback interface only.
+    ports:
+      - "127.0.0.1:8180:8180"
+      - "127.0.0.1:8080:8080"
+      # The web app and its browser device (the `web` service shares this network namespace).
+      - "127.0.0.1:8090:8090"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  init:
+    # One authority for the whole stack, made once (marker /authority/.initialised): the root
+    # ceremony, the purpose keys and certificates, the transparency log's key and the trust
+    # bundle that pins it. Development custody: software keys in a volume.
+    image: fieldseal-cli:local
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    entrypoint: ["/opt/fieldseal/tools/stack-init.sh"]
+    tmpfs: ["/tmp:mode=1777"]
+    volumes:
+      - authority:/authority
+
+  factory:
+    # The registration API and portal. Shares Keycloak's network namespace so that the issuer URL
+    # a browser uses (http://localhost:8180/realms/fieldseal, the only form a passkey works on)
+    # is also the one the factory reaches. Discovery is lazy, so start order is not critical.
+    image: fieldseal-factory:local
+    <<: *hardened
+    network_mode: "service:keycloak"
+    depends_on:
+      keycloak:
+        condition: service_started
+      init:
+        condition: service_completed_successfully
+    env_file: [.generated/factory.env]
+    environment:
+      # The secret named by FIELDSEAL_OIDC_CLIENT_SECRET_REF=factory-oidc-client-secret.
+      FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
+    volumes:
+      - authority:/authority:ro
+      - factory-state:/state/factory
+
+  upload:
+    # The intake upload endpoint (fieldseal-upload-server) on the stack's authority: it unseals
+    # with the online record key and accepts the devices the factory registered.
+    image: fieldseal-upload:local
+    <<: *hardened
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    env_file: [.generated/intake.env]
+    environment:
+      FIELDSEAL_UPLOAD_PUBLIC_URLS: http://localhost:8480,http://upload:8480
+      # What the gate needs to accept real devices: the published instrument and policy, the
+      # rosters issued with the bundles, and a submission store that survives a restart.
+      FIELDSEAL_INTAKE_PUBLISHED_DIR: /published
+      FIELDSEAL_INTAKE_ROSTERS_DIR: /published/rosters
+      FIELDSEAL_INTAKE_SUBMISSIONS_DIR: /submissions
+      FIELDSEAL_INTAKE_ALLOWED_BUILDERS: https://ci.example.org/builders/fieldseal-publish
+      FIELDSEAL_INTAKE_ALLOWED_SOURCES: https://git.example.org/authority/artefacts
+    volumes:
+      - authority:/authority:ro
+      - factory-state:/factory-state:ro
+      - landing:/landing
+      - published:/published:ro
+      - submissions:/submissions
+    ports:
+      - "127.0.0.1:8480:8480"
+
+  translog:
+    # The self-hosted transparency log (fieldseal-translog): append-only, Merkle, file-backed.
+    image: fieldseal-translog:local
+    <<: *hardened
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    env_file: [.generated/publishing.env]
+    volumes:
+      - authority:/authority:ro
+      - log:/data/log
+    ports:
+      - "127.0.0.1:9001:8080"
+
+  demo:
+    # The end-to-end demo and the browser passkey flow, as one-shot runs:
+    #   compose --profile demo run --rm demo demo|seed|resume      (just demo|seed|resume)
+    # It shares Keycloak's network namespace: localhost:8180 is Keycloak, localhost:8080 the
+    # factory; the other services are upload:8480 and translog:8080.
+    image: fieldseal-demo:local
+    profiles: [demo]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    network_mode: "service:keycloak"
+    shm_size: 512m
+    tmpfs: ["/tmp:mode=1777,size=1g"]
+    depends_on:
+      keycloak:
+        condition: service_started
+      init:
+        condition: service_completed_successfully
+    environment:
+      FIELDSEAL_FACTORY_URL: http://localhost:8080
+      FIELDSEAL_INTAKE_URL: http://upload:8480
+      FIELDSEAL_TRANSLOG_URL: http://translog:8080
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run just up}
+      FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
+    volumes:
+      - authority:/authority:ro
+      - landing:/landing:ro
+      - device:/device
+      - clistate:/clistate
+      - published:/published
+      - factory-state:/factory-state:ro
+      # The walkthrough's files for you: fetched artefacts and rendered instruments.
+      - ./.out:/out
+
+  web:
+    # The web app and its browser device, as a service of the stack (FIELDSEAL_WEB_STACK=true):
+    # provisioned from the stack's trust bundle, choosing among the surveys published through
+    # its log, registering with its factory and uploading to its intake. Bundles are built by
+    # the stack's authority from the factory's records. Shares Keycloak's network namespace so
+    # that http://localhost:8080 is the factory for the browser and for the app alike.
+    image: fieldseal-web:local
+    <<: *hardened
+    network_mode: "service:keycloak"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    tmpfs: ["/tmp:mode=1777,size=256m"]
+    environment:
+      FIELDSEAL_ENVIRONMENT: development
+      FIELDSEAL_WEB_STACK: "true"
+      FIELDSEAL_FACTORY_URL: http://localhost:8080
+      FIELDSEAL_UPLOAD_URL: http://upload:8480
+      FIELDSEAL_LOG_URL: http://translog:8080
+      FIELDSEAL_WEB_PUBLIC_URL: http://localhost:8090
+    volumes:
+      - authority:/authority:ro
+      - published:/published
+      - factory-state:/factory-state:ro
+      - clistate:/clistate
+
+volumes:
+  authority:
+  factory-state:
+  landing:
+  log:
+  device:
+  clistate:
+  published:
+  submissions:
+  keycloak-data:

@@ -1,0 +1,115 @@
+{
+  "realm": "fieldseal",
+  "displayName": "Fieldseal (local stack)",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "browserFlow": "fieldseal passkey browser",
+  "attributes": {
+    "acr.loa.map": "{\"phr\":\"2\"}"
+  },
+  "webAuthnPolicyPasswordlessRpEntityName": "Fieldseal local stack",
+  "webAuthnPolicyPasswordlessRpId": "localhost",
+  "webAuthnPolicyPasswordlessSignatureAlgorithms": ["ES256", "RS256"],
+  "webAuthnPolicyPasswordlessAttestationConveyancePreference": "none",
+  "webAuthnPolicyPasswordlessAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyPasswordlessRequireResidentKey": "Yes",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "required",
+  "webAuthnPolicyPasswordlessCreateTimeout": 0,
+  "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
+  "roles": {
+    "realm": [
+      { "name": "collector", "description": "May request registration tokens for their own devices" },
+      { "name": "operator", "description": "May also issue batch tokens" }
+    ]
+  },
+  "authenticationFlows": [
+    {
+      "alias": "fieldseal passkey browser",
+      "description": "Username, then a passkey. The passkey step raises the level of authentication to 2 (acr phr); a user without one registers one first, at a lower level.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-username-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false },
+        { "flowAlias": "fieldseal passkey level 2", "authenticatorFlow": true, "requirement": "CONDITIONAL", "priority": 20, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "fieldseal passkey level 2",
+      "description": "Runs when the user has a passkey; completing it records level of authentication 2.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-level-of-authentication", "authenticatorConfig": "fieldseal level 2", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false },
+        { "authenticator": "conditional-user-configured", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false },
+        { "authenticator": "webauthn-authenticator-passwordless", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 30, "userSetupAllowed": false }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "fieldseal level 2",
+      "config": { "loa-condition-level": "2", "loa-max-age": "0", "loa-store-in-user-session": "true" }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "fieldseal-factory",
+      "name": "Fieldseal factory portal",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8080/sign-in/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/",
+        "acr.loa.map": "{\"phr\":\"2\"}"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles as roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "product-owner",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "product-owner@fieldseal.test",
+      "firstName": "Product",
+      "lastName": "Owner",
+      "realmRoles": ["collector", "operator"],
+      "requiredActions": ["webauthn-register-passwordless"]
+    }
+  ]
+}

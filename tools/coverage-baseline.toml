@@ -1,0 +1,22 @@
+# MUST-coverage floor per spec (issue #56). Regenerate upward only: a lower value needs a reason.
+# Use: tools/check-coverage.py --baseline tools/coverage-baseline.toml
+# Measured with tools/check-coverage.py; PLAT and AND are platform specs with no Rust code yet.
+
+[must]
+AND = 0.0
+CLI = 77.3
+COL = 88.3
+DEL = 86.0
+DEP = 50.0
+DIS = 88.0
+INS = 85.2
+INT = 80.0
+PLAT = 37.8
+POL = 100.0
+PUB = 87.7
+REG = 88.6
+TRU = 78.3
+WIRE = 81.9
+WEB = 100.0
+ALL = 78.2
+

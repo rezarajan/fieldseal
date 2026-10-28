@@ -1,0 +1,128 @@
+# Fieldseal's entry points. Everything runs inside the Nix dev shell (`path:.`, because the tree
+# is jj-colocated and files may be untracked), so the host needs only nix, just and a container
+# engine daemon: docker, or rootless podman (see docs/how-to/run-the-local-stack.md).
+set shell := ["nix", "develop", "path:.", "--command", "bash", "-euo", "pipefail", "-c"]
+
+# docker (default) or podman
+engine := env("FIELDSEAL_CONTAINER_ENGINE", "docker")
+export FIELDSEAL_CONTAINER_ENGINE := engine
+
+# List the recipes.
+default:
+    @just --list
+
+# Start the local stack (builds the images with Nix, waits for every endpoint).
+up:
+    tools/stack-up.sh
+
+# Publish the sample instrument through the stack's transparency log.
+seed:
+    tools/stack-run.sh seed
+
+# The end-to-end demo: passkey, device registration, capture, upload, receipts (starts the stack if needed).
+demo:
+    tools/stack-run.sh demo
+
+# After `just down` and `just up`: the registered device is still registered and uploads again.
+resume:
+    tools/stack-run.sh resume
+
+# --- The hands-on walkthrough (docs/tutorials/hands-on.md), one step at a time ---------------
+
+# Walkthrough 1: the authority's root, purpose keys and trust bundle.
+authority:
+    tools/stack-run.sh authority
+
+# Walkthrough 2: publish the instruments and the policy (two of three signatures, the log).
+publish:
+    tools/stack-run.sh publish
+
+# Walkthrough 3: browse the register; give an address to see one artefact in full.
+registry address="":
+    tools/stack-run.sh registry {{address}}
+
+# Walkthrough 4: download a published artefact by name or address (sha256:…), verify it, and
+# render an instrument to deploy/local/.out. A name shared by several artefacts is refused.
+fetch artefact="food-intake-baseline":
+    tools/stack-run.sh fetch {{artefact}}
+
+# Walkthrough 5a: register a device headless (virtual passkey, words confirmed for you).
+enrol:
+    tools/stack-run.sh enrol
+
+# Walkthrough 5b: register a device with a token you got from the portal yourself.
+register token:
+    tools/stack-run.sh register {{token}}
+
+# Walkthrough 5b (cont.): after confirming the words in the portal, collect the certificate.
+wait:
+    tools/stack-run.sh wait
+
+# Walkthrough 6: a bundle sealed to the registered device, verified as the device verifies it.
+bundle:
+    tools/stack-run.sh bundle
+
+# Walkthrough 7: the device captures (scripted) and exports.
+capture:
+    tools/stack-run.sh capture
+
+# Walkthrough 8: upload the export and verify every receipt.
+upload:
+    tools/stack-run.sh upload
+
+# Walkthrough 9: what intake landed for this device.
+intake:
+    tools/stack-run.sh intake
+
+# Every walkthrough step in the tutorial's order, headless, against a fresh stack.
+acceptance:
+    tools/stack-acceptance.sh
+
+# Containers and endpoint health.
+status:
+    tools/stack-status.sh
+
+# Follow the logs; name services to narrow: just logs factory
+logs *services:
+    tools/stack-compose.sh logs -f {{services}}
+
+# Stop the stack; the registered device, the passkey and the log are kept.
+down:
+    tools/stack-down.sh
+
+# Stop the stack and forget everything: volumes, generated files, secrets.
+purge:
+    tools/stack-down.sh --purge
+
+# Opt-in smoke check of the running stack (add --browser for the whole demo).
+smoke *flags:
+    tools/stack-smoke.sh {{flags}}
+
+# Build the stack's images with Nix and load them into the engine (add demo for the demo image).
+images *names:
+    tools/stack-images.sh {{names}}
+
+# shellcheck on the stack's scripts.
+lint:
+    shellcheck -x -P SCRIPTDIR -s bash tools/stack-*.sh
+
+# The three flake checks CI runs: clippy, tests, architecture.
+check:
+    for c in clippy tests architecture; do nix build "path:.#checks.x86_64-linux.$c" --no-link --print-build-logs; done
+
+# Workspace tests (in parallel, within the 20 s budget), clippy and the architecture check.
+test:
+    python3 tools/test-inventory.py --check
+    tools/test-budget.sh
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+    python3 tools/check-architecture.py
+
+# A release, locally: the per-release service images (loaded and tagged, not pushed) and the
+# signed release record with its documentation bundle in release-docs/ (CI does the same on v*).
+release tag="v0.0.0-local":
+    tools/release-images.sh localhost/fieldseal {{tag}}
+    tools/release-docs.sh {{tag}} release-docs
+
+# WCAG 2.2 AA: the rendered instruments, and the web app when its URL is given (WEB-192, INS-257).
+a11y url="":
+    tools/browser-tests/wcag.sh {{url}}
