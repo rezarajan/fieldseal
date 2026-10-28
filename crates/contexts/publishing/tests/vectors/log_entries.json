@@ -1,0 +1,87 @@
+{
+  "checkpoints": [
+    {
+      "error": null,
+      "id": "valid",
+      "note": "log.example.org/v1\n2\nmIrldTOFkubpejuszQDkJoPUY2gF3iagea4/H1zTeSQ=\n\n— log.example.org/v1 gT2wIjBEAiA8cxKkjFZozeZdq75gS8E/dsLCKt6zyykcug/r6fSjAwIgCaupFguGMgo7HLI9rV2GNt7K2auhkzA2GkqrOOoxcTA=\n"
+    },
+    {
+      "error": "bad-signature",
+      "id": "tampered-size",
+      "note": "log.example.org/v1\n3\nmIrldTOFkubpejuszQDkJoPUY2gF3iagea4/H1zTeSQ=\n\n— log.example.org/v1 gT2wIjBEAiA8cxKkjFZozeZdq75gS8E/dsLCKt6zyykcug/r6fSjAwIgCaupFguGMgo7HLI9rV2GNt7K2auhkzA2GkqrOOoxcTA=\n"
+    },
+    {
+      "error": "bad-signature",
+      "id": "other-key",
+      "note": "log.example.org/v1\n1\n0DUKF6UjVOR2xLkD58JER1qXwskzSsrPx0l2mkL64Ms=\n\n— log.example.org/v1 NmYphzBFAiEA2fycJ/uTxXnmO2wFs5a9UdtpTVwpQchigcZEQaC4xZ4CICnmWVNc7LIYWE1wVnPDBkXZ3BjRWgs3APPnwTfLD4Jo\n"
+    }
+  ],
+  "header": {
+    "description": "Publication statements (WIRE-190), log entries (WIRE-191), their leaf hashes under each leaf format (PUB-051, PUB-105), and C2SP checkpoints (WIRE-192) checked against the pinned log key.",
+    "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-publishing --test vectors",
+    "spec": "docs/reference/spec/publishing.md"
+  },
+  "invalid_decode": [
+    {
+      "cbor": "a5637075625841045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d63736967584003296eaa05e94e34409d36fcfe364c63d92f354a984028ae1df965866b012d88123eef2f25b5b0a8490e6a1bf2ded5067f8da9dfd788e08ce1a93a86166681cb646e616d656c6865616c74682d636865636b6474797065677075626c69736866646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "extra-name",
+      "requirement": "PUB-102"
+    },
+    {
+      "cbor": "a5637075625841045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d63736967584003296eaa05e94e34409d36fcfe364c63d92f354a984028ae1df965866b012d88123eef2f25b5b0a8490e6a1bf2ded5067f8da9dfd788e08ce1a93a86166681cb6474797065677075626c69736866646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d16776657273696f6e65312e322e30",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "extra-version",
+      "requirement": "PUB-104"
+    },
+    {
+      "cbor": "a4637075625841045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d63736967584003296eaa05e94e34409d36fcfe364c63d92f354a984028ae1df965866b012d88123eef2f25b5b0a8490e6a1bf2ded5067f8da9dfd788e08ce1a93a86166681cb6474797065656c6162656c66646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "unknown-type",
+      "requirement": "WIRE-191"
+    },
+    {
+      "cbor": "a4637075625841045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d63736967583f0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101016474797065677075626c69736866646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "error": "E_SIG",
+      "id": "short-signature",
+      "requirement": "WIRE-022"
+    },
+    {
+      "cbor": "a363736967584003296eaa05e94e34409d36fcfe364c63d92f354a984028ae1df965866b012d88123eef2f25b5b0a8490e6a1bf2ded5067f8da9dfd788e08ce1a93a86166681cb6474797065677075626c69736866646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "missing-key",
+      "requirement": "WIRE-191"
+    }
+  ],
+  "log_pin": {
+    "format": "c2sp-tlog-checkpoint",
+    "origin": "log.example.org/v1",
+    "public_key": "04e8092e70b1c1b917ae4add5a6da30240ab2bc4aea4a962dc3a8cfc2a8b65fbf6371e924b69b3540dc542d46341a70c6731c11f791e08b11cdb2d9766b5f84b1a"
+  },
+  "valid": [
+    {
+      "digest": "52d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "entry": "a4637075625841045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d63736967584003296eaa05e94e34409d36fcfe364c63d92f354a984028ae1df965866b012d88123eef2f25b5b0a8490e6a1bf2ded5067f8da9dfd788e08ce1a93a86166681cb6474797065677075626c69736866646967657374582052d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1",
+      "hashedrekord": "{\"apiVersion\":\"0.0.1\",\"kind\":\"hashedrekord\",\"spec\":{\"data\":{\"hash\":{\"algorithm\":\"sha256\",\"value\":\"52d312e9cbe42fcc3c2dce62180b0919adc23b1e573079d34b09ededaec3d4d1\"}},\"signature\":{\"content\":\"MEQCIAMpbqoF6U40QJ02/P42TGPZLzVKmEAorh35ZYZrAS2IAiASPu8vJbWwqEkOahvy3tUGf42p39eI4IzhqTqGFmaByw==\",\"publicKey\":{\"content\":\"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFWDFXREdzdmxFUkVGbklUeGFUazExT3JIcGRzTgpnUlNjZFE4Q2JFYkhES3h3cUVXb3V1ZUZ3ZmVFQlBWSnZSQ2dlQWdsM0psOXV3MFZ2M1NDckg4T0xRPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"}}}}",
+      "id": "publish",
+      "leaf_hash": {
+        "fieldseal/v1": "a05bd8ebb88feb85563d871fcec117d4af156d8ebe3118559c08e11400142cb1",
+        "hashedrekord/v0.0.1": "7556fa2e26f60277098f513c5eb75fd669bd03c6cb9885ce334e687431590607"
+      },
+      "publisher_public_key": "045f55831acbe51111059c84f1693935d4eac7a5db0d81149c750f026c46c70cac70a845a8bae785c1f78404f549bd10a0780825dc997dbb0d15bf7482ac7f0e2d",
+      "statement": "a36474797065677075626c6973686a70726f76656e616e636558205190a46a9c12be88a130d010016372a97a1451ce4ea47669a9025be4661700766b66696e6765727072696e74582066a09d85315bdffde4c530644c99f1a770bf8fa0af412c43a6db872a9ffbbc0b"
+    },
+    {
+      "digest": "f408f77be0b0596c5b31201d60f3cfa93b289b1dfc649831b6c6c47fd0bdcb02",
+      "entry": "a463707562584104f693750448fb41d5f110193e80db1106cbe58955dca622971c959ecc168d19ae18795089a451666372bfeac4340a866d0c775ee7dc157f883447077668658a516373696758409fb3e67b10d12e0a9ed914d1f2eb4acd47fe0a063fd690488bb504832a339a1e46860e3591b90af3b80648729b26de5077a6e3dd9b3de1e729b38fddfdbf3b6b6474797065687769746864726177666469676573745820f408f77be0b0596c5b31201d60f3cfa93b289b1dfc649831b6c6c47fd0bdcb02",
+      "hashedrekord": "{\"apiVersion\":\"0.0.1\",\"kind\":\"hashedrekord\",\"spec\":{\"data\":{\"hash\":{\"algorithm\":\"sha256\",\"value\":\"f408f77be0b0596c5b31201d60f3cfa93b289b1dfc649831b6c6c47fd0bdcb02\"}},\"signature\":{\"content\":\"MEUCIQCfs+Z7ENEuCp7ZFNHy60rNR/4KBj/WkEiLtQSDKjOaHgIgRoYONZG5CvO4BkhymybeUHem492bPeHnKbOP3f2/O2s=\",\"publicKey\":{\"content\":\"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFOXBOMUJFajdRZFh4RUJrK2dOc1JCc3ZsaVZYYwpwaUtYSEpXZXpCYU5HYTRZZVZDSnBGRm1ZM0svNnNRMENvWnRESGRlNTl3VmY0ZzBSd2QyYUdXS1VRPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"}}}}",
+      "id": "withdraw",
+      "leaf_hash": {
+        "fieldseal/v1": "001b09fad141db26682fe10944ca887779ab100c094bd9bd92ee5acd6816ae05",
+        "hashedrekord/v0.0.1": "ddb8274503134068a196790222df98a1f56b0653051f520fcc3f02dbcc7afb73"
+      },
+      "publisher_public_key": "04f693750448fb41d5f110193e80db1106cbe58955dca622971c959ecc168d19ae18795089a451666372bfeac4340a866d0c775ee7dc157f883447077668658a51",
+      "statement": "a364747970656877697468647261776a70726f76656e616e636558205190a46a9c12be88a130d010016372a97a1451ce4ea47669a9025be4661700766b66696e6765727072696e74582066a09d85315bdffde4c530644c99f1a770bf8fa0af412c43a6db872a9ffbbc0b"
+    }
+  ]
+}

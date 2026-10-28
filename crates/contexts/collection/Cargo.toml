@@ -1,0 +1,20 @@
+[package]
+name = "fieldseal-collection"
+description = "Fieldseal Collection bounded context: domain, use cases and ports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-distribution.workspace = true
+fieldseal-publishing.workspace = true
+zeroize.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

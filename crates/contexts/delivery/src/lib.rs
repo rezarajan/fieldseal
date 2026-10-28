@@ -1,0 +1,16 @@
+//! The Delivery bounded context.
+//!
+//! Normative behaviour: `docs/reference/spec/delivery.md`. Layering (ADR 0028):
+//! - [`domain`]: entities and value objects; pure.
+//! - [`export`]: assembling, verifying, inspecting and repairing export files.
+//! - [`checks`]: receipts and receiver proofs against the trust bundle.
+//! - [`application`]: use cases (driving ports).
+//! - [`ports`]: driven-port interfaces this context owns; adapters implement them.
+//! - [`contract`]: contract tests every adapter of these ports must pass.
+
+pub mod application;
+pub mod checks;
+pub mod contract;
+pub mod domain;
+pub mod export;
+pub mod ports;

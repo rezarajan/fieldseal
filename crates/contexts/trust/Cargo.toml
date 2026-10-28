@@ -1,0 +1,19 @@
+[package]
+name = "fieldseal-trust"
+description = "Fieldseal Trust bounded context: domain, use cases and ports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+thiserror.workspace = true
+rand_core.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+serde_json = "1"
+
+[lints]
+workspace = true

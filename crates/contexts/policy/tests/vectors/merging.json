@@ -1,0 +1,1417 @@
+{
+  "cases": [
+    {
+      "controls": {
+        "factory.registration.maxDevicesPerAccount": "1"
+      },
+      "id": "tighten-lower-maximum-wins",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "3"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "1"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "runtime.session.idleLock": "5m"
+      },
+      "id": "tighten-shorter-lifetime-wins",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "session": {
+                      "map": {
+                        "idleLock": {
+                          "text": "10m"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "session": {
+                      "map": {
+                        "idleLock": {
+                          "text": "5m"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "factory.registration.serialCheck": "required"
+      },
+      "id": "tighten-required-over-optional",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "serialCheck": {
+                          "text": "optional"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "serialCheck": {
+                          "text": "required"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "error": "POL-021",
+      "id": "tighten-loosening-is-an-error",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "1"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "3"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-021"
+    },
+    {
+      "error": "POL-021",
+      "id": "tighten-a-looser-duration-is-an-error",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "session": {
+                      "map": {
+                        "idleLock": {
+                          "text": "5m"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "session": {
+                      "map": {
+                        "idleLock": {
+                          "text": "10m"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-021"
+    },
+    {
+      "controls": {
+        "intake.consent.sampleRate": "0.10"
+      },
+      "id": "override-later-layer-wins",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "intake": {
+                  "map": {
+                    "consent": {
+                      "map": {
+                        "sampleRate": {
+                          "decimal": {
+                            "exponent": -2,
+                            "mantissa": "5"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "intake": {
+                  "map": {
+                    "consent": {
+                      "map": {
+                        "sampleRate": {
+                          "decimal": {
+                            "exponent": -2,
+                            "mantissa": "10"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "runtime.retention.remindAfter": "14d"
+      },
+      "id": "override-may-loosen",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "retention": {
+                      "map": {
+                        "remindAfter": {
+                          "text": "3d"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "retention": {
+                      "map": {
+                        "remindAfter": {
+                          "text": "14d"
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "runtime.export.destinations": "[local, share]"
+      },
+      "id": "intersect-keeps-values-in-every-layer",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "export": {
+                      "map": {
+                        "destinations": {
+                          "array": [
+                            {
+                              "text": "upload"
+                            },
+                            {
+                              "text": "local"
+                            },
+                            {
+                              "text": "share"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "export": {
+                      "map": {
+                        "destinations": {
+                          "array": [
+                            {
+                              "text": "local"
+                            },
+                            {
+                              "text": "share"
+                            },
+                            {
+                              "text": "cloud"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "runtime.device.requiredRestrictions": "[debugging-disabled, uninstall-blocked]"
+      },
+      "id": "union-combines-values-from-every-layer",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "device": {
+                      "map": {
+                        "requiredRestrictions": {
+                          "array": [
+                            {
+                              "text": "uninstall-blocked"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "runtime": {
+                  "map": {
+                    "device": {
+                      "map": {
+                        "requiredRestrictions": {
+                          "array": [
+                            {
+                              "text": "debugging-disabled"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "intake.consent.heuristics": "[rapid-entry, same-hand]"
+      },
+      "id": "union-extra-heuristics",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "intake": {
+                  "map": {
+                    "consent": {
+                      "map": {
+                        "heuristics": {
+                          "array": [
+                            {
+                              "text": "same-hand"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "intake": {
+                  "map": {
+                    "consent": {
+                      "map": {
+                        "heuristics": {
+                          "array": [
+                            {
+                              "text": "rapid-entry"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "factory.registration.maxDevicesPerAccount": "2"
+      },
+      "id": "three-layers-apply-in-order",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "4"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "3"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "water-survey"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "factory": {
+                  "map": {
+                    "registration": {
+                      "map": {
+                        "maxDevicesPerAccount": {
+                          "int": "2"
+                        }
+                      }
+                    }
+                  }
+                },
+                "layer": {
+                  "map": {
+                    "instrument": {
+                      "text": "water-survey"
+                    },
+                    "scope": {
+                      "text": "instrument"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "controls": {
+        "factory.registration.maxDevicesPerAccount": "2",
+        "factory.registration.tokenTtl": "10m",
+        "intake.consent.sampleRate": "0.05",
+        "intake.limits.maxSubmissionSize": "512MiB",
+        "runtime.pin.minLength": "6",
+        "runtime.session.idleLock": "2m"
+      },
+      "id": "missing-controls-take-the-schema-default",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "defaults-only"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-022"
+    },
+    {
+      "error": "POL-020",
+      "id": "the-deployment-layer-comes-first",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "programme-a"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "programme": {
+                      "text": "programme-a"
+                    },
+                    "scope": {
+                      "text": "programme"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    },
+    {
+      "error": "POL-020",
+      "id": "each-layer-applies-once",
+      "layers": [
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "map": {
+            "apiVersion": {
+              "text": "fieldseal.dev/v1alpha1"
+            },
+            "kind": {
+              "text": "Policy"
+            },
+            "metadata": {
+              "map": {
+                "name": {
+                  "text": "baseline"
+                },
+                "version": {
+                  "text": "1.0.0"
+                }
+              }
+            },
+            "spec": {
+              "map": {
+                "layer": {
+                  "map": {
+                    "scope": {
+                      "text": "deployment"
+                    }
+                  }
+                },
+                "schemaVersion": {
+                  "text": "1.0.0"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "requirement": "POL-020"
+    }
+  ],
+  "description": "Layer merging by rule (POL-020), loosening as an error (POL-021) and schema defaults (POL-022).",
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-policy --test vectors",
+  "requirements": "POL-020 POL-021 POL-022",
+  "spec": "docs/reference/spec/policy.md"
+}

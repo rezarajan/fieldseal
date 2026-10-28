@@ -1,0 +1,4498 @@
+{
+  "cases": [
+    {
+      "expect": "unset",
+      "expr": "$missing + 1",
+      "id": "unset-add",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 - $missing",
+      "id": "unset-sub-right",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing * 0",
+      "id": "unset-mul",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing / 2",
+      "id": "unset-div",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "-$missing",
+      "id": "unset-neg",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing == 1",
+      "id": "unset-eq",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing != 1",
+      "id": "unset-ne",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing < 1",
+      "id": "unset-lt",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 >= $missing",
+      "id": "unset-ge",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "not ($missing == 1)",
+      "id": "unset-not",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "false and $missing",
+      "id": "unset-and-false-left",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "true and $missing",
+      "id": "unset-and-true-left",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing or true",
+      "id": "unset-or-true-right",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing in [1, 2]",
+      "id": "unset-in-left",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 in [$missing]",
+      "id": "unset-in-list-element",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "[1, $missing]",
+      "id": "unset-list",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "abs($missing)",
+      "id": "unset-abs",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "min(1, $missing)",
+      "id": "unset-min",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "max([1, 2], $missing)",
+      "id": "unset-max-list",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "round($missing, 2)",
+      "id": "unset-round",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "($a + $missing) * 3 > 1",
+      "id": "unset-nested",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "roster.missing + 1",
+      "id": "unset-roster",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_set($missing)",
+      "id": "is-set-unset",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "is_set($a)",
+      "id": "is-set-set",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "is_set(roster.age)",
+      "id": "is-set-roster",
+      "requirement": "INS-041",
+      "roster": {
+        "age": {
+          "num": "9"
+        }
+      }
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_set(roster.age)",
+      "id": "is-set-roster-missing",
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_set($a + $missing)",
+      "id": "is-set-expression",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "num": "2"
+      },
+      "expr": "count_set($a, $missing, $b)",
+      "id": "count-set-mixed",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "num": "0"
+      },
+      "expr": "count_set($missing)",
+      "id": "count-set-none",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "num": "1"
+      },
+      "expr": "count_set($dk, $rf, $a)",
+      "id": "count-set-nonresponse-is-unset",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "num": "1"
+      },
+      "expr": "count_set($set)",
+      "id": "count-set-list-counts-once",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": "unset",
+      "expr": "$missing == 1",
+      "id": "when-unset-is-false-by-value",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-041"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "is_nr($dk)",
+      "id": "nr-is-nr-dont-know",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "is_nr($rf)",
+      "id": "nr-is-nr-refused",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_nr($a)",
+      "id": "nr-is-nr-answered",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_nr($missing)",
+      "id": "nr-is-nr-missing",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_nr(1)",
+      "id": "nr-is-nr-not-a-path",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "is_set($dk)",
+      "id": "nr-is-set",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "$dk == 1",
+      "id": "nr-compare",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "$dk == $dk",
+      "id": "nr-compare-itself",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "$rf + 1",
+      "id": "nr-arithmetic",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "not is_nr($dk)",
+      "id": "nr-guarded",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "is_nr($dk) or is_nr($a)",
+      "id": "nr-or-answer",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "num": "0.214"
+      },
+      "expr": "value($f)",
+      "id": "value-of-code",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "num": "0"
+      },
+      "expr": "value($g)",
+      "id": "value-of-zero-code",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "num": "214"
+      },
+      "expr": "value($f) * 1000",
+      "id": "value-arithmetic",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "value($dk)",
+      "id": "value-of-nonresponse",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "value($a)",
+      "id": "value-of-plain-number",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": "unset",
+      "expr": "value($missing)",
+      "id": "value-of-missing",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "value($f) < value($g) or value($f) > 0.2",
+      "id": "value-compared",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-048"
+    },
+    {
+      "expect": {
+        "num": "7"
+      },
+      "expr": "lookup(\"t\", $f)",
+      "id": "lookup-text-key",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "14"
+      },
+      "expr": "lookup(\"t\", $f) * 2",
+      "id": "lookup-arithmetic",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "9.5"
+      },
+      "expr": "lookup(\"t\", \"w_3\")",
+      "id": "lookup-literal-key",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "10"
+      },
+      "expr": "lookup(\"n\", 1)",
+      "id": "lookup-numeric-key",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "20"
+      },
+      "expr": "lookup(\"n\", 2.50)",
+      "id": "lookup-numeric-key-by-value",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "20"
+      },
+      "expr": "lookup(\"n\", 5 / 2)",
+      "id": "lookup-numeric-key-computed",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "lookup(\"t\", \"nope\")",
+      "id": "lookup-missing-key",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "lookup(\"t\", $missing)",
+      "id": "lookup-unset-key",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "lookup(\"t\", $dk)",
+      "id": "lookup-nonresponse-key",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "lookup(\"t\", 1)",
+      "id": "lookup-wrong-key-type",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "lookup(\"zzz\", 1)",
+      "id": "lookup-undeclared-table",
+      "requirement": "INS-043",
+      "tables": {
+        "n": [
+          [
+            {
+              "num": "1"
+            },
+            {
+              "num": "10"
+            }
+          ],
+          [
+            {
+              "num": "2.5"
+            },
+            {
+              "num": "20"
+            }
+          ]
+        ],
+        "t": [
+          [
+            {
+              "text": "w_1_2"
+            },
+            {
+              "num": "7"
+            }
+          ],
+          [
+            {
+              "text": "w_3"
+            },
+            {
+              "num": "9.5"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "expect": {
+        "num": "0.3"
+      },
+      "expr": "0.1 + 0.2",
+      "id": "decimal-add",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "0.1 + 0.2 == 0.3",
+      "id": "decimal-add-equals",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "1.50 == 1.5",
+      "id": "decimal-trailing-zeros-are-equal",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "59.97"
+      },
+      "expr": "19.99 * 3",
+      "id": "decimal-mul",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0.0049"
+      },
+      "expr": "0.07 * 0.07",
+      "id": "decimal-mul-scale",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "2.5"
+      },
+      "expr": "10 / 4",
+      "id": "decimal-div-terminates",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "1/3"
+      },
+      "expr": "1 / 3",
+      "id": "decimal-div-fraction",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "1 / 3 * 3 == 1",
+      "id": "decimal-div-fraction-round-trip",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 / 0",
+      "id": "decimal-div-by-zero",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "0 / 0",
+      "id": "decimal-zero-over-zero",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "-0.75"
+      },
+      "expr": "-0.5 - 0.25",
+      "id": "decimal-negative",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0"
+      },
+      "expr": "-0",
+      "id": "decimal-neg-zero",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "5"
+      },
+      "expr": "1 + 2 * 3 - 4 / 2",
+      "id": "decimal-precedence",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "0.30 < 0.3000001",
+      "id": "decimal-compare-scales",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0.25"
+      },
+      "expr": "min(3, 0.25, [7, 0.5])",
+      "id": "decimal-min",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "7"
+      },
+      "expr": "max(3, 0.25, [7, 0.5])",
+      "id": "decimal-max",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "min([])",
+      "id": "decimal-min-empty-list",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "min(\"a\", 1)",
+      "id": "decimal-min-of-text",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "2.5"
+      },
+      "expr": "abs(-2.50)",
+      "id": "decimal-abs",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "22.9"
+      },
+      "expr": "round(70 / (1.75 * 1.75), 1)",
+      "id": "decimal-bmi",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0.67"
+      },
+      "expr": "round(2 / 3, 2)",
+      "id": "round-down",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0.13"
+      },
+      "expr": "round(0.125, 2)",
+      "id": "round-half-up",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "-0.13"
+      },
+      "expr": "round(-0.125, 2)",
+      "id": "round-half-away-negative",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "3"
+      },
+      "expr": "round(2.5)",
+      "id": "round-half-integer",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "-3"
+      },
+      "expr": "round(-2.5)",
+      "id": "round-half-integer-negative",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "2"
+      },
+      "expr": "round(2.4999, 0)",
+      "id": "round-just-below-half",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "1.01"
+      },
+      "expr": "round(1.005, 2)",
+      "id": "round-exact-decimal-tie",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "0.3333"
+      },
+      "expr": "round(1 / 3, 4)",
+      "id": "round-fraction",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "1"
+      },
+      "expr": "round(2 / 3, 0)",
+      "id": "round-fraction-up",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "num": "1.5"
+      },
+      "expr": "round(1.5, 5)",
+      "id": "round-more-digits-than-needed",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "round(15, -1)",
+      "id": "round-negative-digits",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "round(1, 19)",
+      "id": "round-too-many-digits",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "round(1.234, 1.5)",
+      "id": "round-fractional-digits",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "round(\"1.5\")",
+      "id": "round-text",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "round($a / 3, 2) == 0.67",
+      "id": "round-then-compare",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "\"x\" in $set",
+      "id": "in-list-found",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "\"z\" in $set",
+      "id": "in-list-missing",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "$a in [1, 2, 3]",
+      "id": "in-literal-list",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "\"x\" in [1, 2]",
+      "id": "in-list-type-mismatch",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 in 1",
+      "id": "in-non-list",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "[1, 2] == [1, 2.0]",
+      "id": "list-equality",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "[1, 2] == [1]",
+      "id": "list-length-differs",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "$d >= \"2026-01-01\"",
+      "id": "date-order",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": false
+      },
+      "expr": "$d < \"2026-01-01\"",
+      "id": "date-order-before",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "\"abc\" < \"abd\"",
+      "id": "text-order-is-unset",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "$f == \"w_1_2\"",
+      "id": "text-equality",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "$yes == true",
+      "id": "bool-equality",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "$yes and not false or false",
+      "id": "bool-and-or",
+      "items": {
+        "a": {
+          "value": {
+            "num": "2"
+          }
+        },
+        "b": {
+          "value": {
+            "num": "0.5"
+          }
+        },
+        "d": {
+          "value": {
+            "text": "2026-03-01"
+          }
+        },
+        "dk": {
+          "nr": "dont-know"
+        },
+        "f": {
+          "codeValue": "0.214",
+          "value": {
+            "text": "w_1_2"
+          }
+        },
+        "g": {
+          "codeValue": "0",
+          "value": {
+            "text": "w_3"
+          }
+        },
+        "rf": {
+          "nr": "refused"
+        },
+        "set": {
+          "value": {
+            "list": [
+              {
+                "text": "x"
+              },
+              {
+                "text": "y"
+              }
+            ]
+          }
+        },
+        "yes": {
+          "value": {
+            "bool": true
+          }
+        }
+      },
+      "requirement": "INS-046"
+    },
+    {
+      "expect": "unset",
+      "expr": "1 and true",
+      "id": "and-needs-booleans",
+      "requirement": "INS-046"
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "roster.age < 10",
+      "id": "roster-compare",
+      "requirement": "INS-046",
+      "roster": {
+        "age": {
+          "num": "9"
+        }
+      }
+    },
+    {
+      "expect": "unset",
+      "expr": "roster.age == \"9\"",
+      "id": "roster-type-mismatch",
+      "requirement": "INS-046",
+      "roster": {
+        "age": {
+          "num": "9"
+        }
+      }
+    },
+    {
+      "expect": {
+        "bool": true
+      },
+      "expr": "roster.sex == \"f\"",
+      "id": "roster-text",
+      "requirement": "INS-046",
+      "roster": {
+        "sex": {
+          "text": "f"
+        }
+      }
+    },
+    {
+      "expect": {
+        "num": "128"
+      },
+      "expr": "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1",
+      "id": "limit-255-nodes-pass",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1",
+      "id": "limit-257-nodes-abort",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1",
+      "id": "limit-300-nodes-abort",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "true or (1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)",
+      "id": "limit-counts-both-branches",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "num": "255"
+      },
+      "expr": "count_set(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)",
+      "id": "limit-counts-list-elements",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "count_set(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)",
+      "id": "limit-counts-list-elements-over",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "170141183460469231731687303715884105727 + 1",
+      "id": "overflow-add",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "error": "EvaluationLimitExceeded"
+      },
+      "expr": "170141183460469231731687303715884105727 * 2",
+      "id": "overflow-mul",
+      "requirement": "INS-044"
+    },
+    {
+      "expect": {
+        "num": "170141183460469231731687303715884105727"
+      },
+      "expr": "170141183460469231731687303715884105726 + 1",
+      "id": "no-overflow-at-the-edge",
+      "requirement": "INS-044"
+    }
+  ],
+  "description": "Golden rule-evaluation vectors (INS-046). Every runtime and intake must compute exactly `expect` for each case; see crates/contexts/instrument/tests/rule_vectors.rs for the encoding.",
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-instrument --test rule_vectors"
+}

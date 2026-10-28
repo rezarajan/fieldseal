@@ -1,0 +1,291 @@
+{
+  direction: "ltr"
+  instrument: {
+    administration: "self"
+    name: "golden"
+    title: "Golden"
+    version: "1.0.0"
+  }
+  language: "en"
+  layout: bytes(0707070707070707070707070707070707070707070707070707070707070707)
+  layoutWindowClass: "medium"
+  steps: [
+    {
+      children: [
+        {
+          bind: "hello"
+          disabledDisplay: "hidden"
+          id: 1
+          kind: "display"
+          role: "introduction"
+          text: {
+            message: "Hello {$roster.name}."
+            variables: [
+              "roster.name"
+            ]
+          }
+        }
+        {
+          children: [
+            {
+              children: [
+                {
+                  bind: "g.pick"
+                  control: {
+                    options: [
+                      {
+                        code: "a"
+                        icon: "🍞"
+                        label: "A"
+                      }
+                      {
+                        code: "other"
+                        label: "Other"
+                      }
+                    ]
+                    other: {
+                      code: "other"
+                      label: "Something else"
+                      maxLength: 20
+                    }
+                    type: "choice"
+                  }
+                  dataType: "code"
+                  disabledDisplay: "hidden"
+                  id: 4
+                  kind: "question"
+                  label: "Pick one"
+                  nonresponse: [
+                    "refused"
+                  ]
+                  prefix: "1"
+                }
+                {
+                  bind: "g.pick.other"
+                  control: {
+                    maxLength: 20
+                    type: "text"
+                  }
+                  dataType: "string"
+                  disabledDisplay: "hidden"
+                  id: 5
+                  kind: "question"
+                  label: "Something else"
+                  origin: "other-text"
+                  otherOf: "g.pick"
+                }
+                {
+                  bind: "g.n"
+                  control: {
+                    decimals: 1
+                    entryUnits: [
+                      "[lb_av]"
+                    ]
+                    max: 95e-1
+                    min: 0e0
+                    type: "number"
+                    unit: {
+                      code: "kg"
+                    }
+                  }
+                  dataType: "decimal"
+                  disabledDisplay: "protected"
+                  id: 6
+                  kind: "question"
+                  label: "How much?"
+                  nonresponse: [
+                    "refused"
+                  ]
+                }
+              ]
+              disabledDisplay: "hidden"
+              id: 3
+              kind: "row"
+            }
+          ]
+          disabledDisplay: "hidden"
+          icon: "🧭"
+          id: 2
+          kind: "card"
+          title: "Choose"
+        }
+        {
+          children: [
+            {
+              children: [
+                {
+                  bind: "g.inner"
+                  children: [
+                    {
+                      bind: "g.inner.ok"
+                      control: {
+                        type: "yes-no"
+                      }
+                      dataType: "boolean"
+                      disabledDisplay: "hidden"
+                      id: 10
+                      kind: "question"
+                      label: "OK?"
+                      nonresponse: [
+                        "refused"
+                      ]
+                      presentation: "buttons"
+                    }
+                  ]
+                  disabledDisplay: "hidden"
+                  id: 9
+                  kind: "group"
+                  label: "Inner"
+                }
+              ]
+              disabledDisplay: "hidden"
+              id: 8
+              kind: "tab"
+              title: "Inner"
+            }
+          ]
+          disabledDisplay: "hidden"
+          id: 7
+          kind: "tabs"
+        }
+      ]
+      disabledDisplay: "hidden"
+      emphasis: "compact"
+      id: 0
+      kind: "step"
+      navigation: "free"
+      title: "Start"
+    }
+    {
+      children: [
+        {
+          bind: "r"
+          children: [
+            {
+              bind: "r.x"
+              children: [
+                {
+                  bind: "r.x.size"
+                  column: "size"
+                  control: {
+                    steps: [
+                      {
+                        code: "s"
+                        label: "Small"
+                      }
+                      {
+                        code: "l"
+                        label: "Large"
+                      }
+                    ]
+                    type: "scale"
+                  }
+                  dataType: "code"
+                  disabledDisplay: "hidden"
+                  id: 14
+                  kind: "question"
+                  label: "Size"
+                  nonresponse: [
+                    "refused"
+                  ]
+                }
+                {
+                  bind: "r.x.cost"
+                  column: "cost"
+                  control: {
+                    currency: "JOD"
+                    max: 100e0
+                    min: 0e0
+                    minorDigits: 3
+                    type: "money"
+                  }
+                  dataType: "money"
+                  disabledDisplay: "hidden"
+                  id: 15
+                  kind: "question"
+                  label: "Cost"
+                }
+              ]
+              code: "x"
+              disabledDisplay: "hidden"
+              id: 13
+              kind: "instance"
+              label: "X"
+            }
+            {
+              bind: "r.y"
+              children: [
+                {
+                  bind: "r.y.size"
+                  column: "size"
+                  control: {
+                    steps: [
+                      {
+                        code: "s"
+                        label: "Small"
+                      }
+                      {
+                        code: "l"
+                        label: "Large"
+                      }
+                    ]
+                    type: "scale"
+                  }
+                  dataType: "code"
+                  disabledDisplay: "hidden"
+                  id: 17
+                  kind: "question"
+                  label: "Size"
+                  nonresponse: [
+                    "refused"
+                  ]
+                }
+                {
+                  bind: "r.y.cost"
+                  column: "cost"
+                  control: {
+                    currency: "JOD"
+                    max: 100e0
+                    min: 0e0
+                    minorDigits: 3
+                    type: "money"
+                  }
+                  dataType: "money"
+                  disabledDisplay: "hidden"
+                  id: 18
+                  kind: "question"
+                  label: "Cost"
+                }
+              ]
+              code: "y"
+              disabledDisplay: "hidden"
+              id: 16
+              kind: "instance"
+              label: "Y"
+            }
+          ]
+          columns: [
+            {
+              key: "size"
+              label: "Size"
+            }
+            {
+              key: "cost"
+              label: "Cost"
+            }
+          ]
+          disabledDisplay: "hidden"
+          id: 12
+          kind: "table"
+          label: "Things"
+        }
+      ]
+      disabledDisplay: "hidden"
+      id: 11
+      kind: "step"
+      navigation: "linear"
+      title: "Things"
+    }
+  ]
+  windowClass: "medium"
+}

@@ -1,0 +1,254 @@
+{
+  direction: "rtl"
+  instrument: {
+    administration: "self"
+    name: "golden"
+    title: "ذهبي"
+    version: "1.0.0"
+  }
+  language: "ar"
+  layout: "default"
+  steps: [
+    {
+      children: [
+        {
+          bind: "hello"
+          disabledDisplay: "hidden"
+          id: 1
+          kind: "display"
+          role: "introduction"
+          text: {
+            message: "مرحبا {$roster.name}."
+            variables: [
+              "roster.name"
+            ]
+          }
+        }
+        {
+          bind: "g.pick"
+          control: {
+            options: [
+              {
+                code: "a"
+                icon: "🍞"
+                label: "أ"
+              }
+              {
+                code: "other"
+                label: "آخر"
+              }
+            ]
+            other: {
+              code: "other"
+              label: "شيء آخر"
+              maxLength: 20
+            }
+            type: "choice"
+          }
+          dataType: "code"
+          disabledDisplay: "hidden"
+          id: 2
+          kind: "question"
+          label: "اختر"
+          nonresponse: [
+            "refused"
+          ]
+          prefix: "1"
+        }
+        {
+          bind: "g.pick.other"
+          control: {
+            maxLength: 20
+            type: "text"
+          }
+          dataType: "string"
+          disabledDisplay: "hidden"
+          id: 3
+          kind: "question"
+          label: "شيء آخر"
+          origin: "other-text"
+          otherOf: "g.pick"
+        }
+        {
+          bind: "g.n"
+          control: {
+            decimals: 1
+            entryUnits: [
+              "[lb_av]"
+            ]
+            max: 95e-1
+            min: 0e0
+            type: "number"
+            unit: {
+              code: "kg"
+            }
+          }
+          dataType: "decimal"
+          disabledDisplay: "protected"
+          id: 4
+          kind: "question"
+          label: "كم؟"
+          nonresponse: [
+            "refused"
+          ]
+        }
+        {
+          bind: "g.inner"
+          children: [
+            {
+              bind: "g.inner.ok"
+              control: {
+                type: "yes-no"
+              }
+              dataType: "boolean"
+              disabledDisplay: "hidden"
+              id: 6
+              kind: "question"
+              label: "حسنا؟"
+              nonresponse: [
+                "refused"
+              ]
+              presentation: "buttons"
+            }
+          ]
+          disabledDisplay: "hidden"
+          id: 5
+          kind: "group"
+          label: "داخلي"
+        }
+      ]
+      disabledDisplay: "hidden"
+      id: 0
+      kind: "step"
+      navigation: "linear"
+      title: "الأول"
+    }
+    {
+      children: [
+        {
+          bind: "r"
+          children: [
+            {
+              bind: "r.x"
+              children: [
+                {
+                  bind: "r.x.size"
+                  column: "size"
+                  control: {
+                    steps: [
+                      {
+                        code: "s"
+                        label: "صغير"
+                      }
+                      {
+                        code: "l"
+                        label: "كبير"
+                      }
+                    ]
+                    type: "scale"
+                  }
+                  dataType: "code"
+                  disabledDisplay: "hidden"
+                  id: 10
+                  kind: "question"
+                  label: "الحجم"
+                  nonresponse: [
+                    "refused"
+                  ]
+                }
+                {
+                  bind: "r.x.cost"
+                  column: "cost"
+                  control: {
+                    currency: "JOD"
+                    max: 100e0
+                    min: 0e0
+                    minorDigits: 3
+                    type: "money"
+                  }
+                  dataType: "money"
+                  disabledDisplay: "hidden"
+                  id: 11
+                  kind: "question"
+                  label: "التكلفة"
+                }
+              ]
+              code: "x"
+              disabledDisplay: "hidden"
+              id: 9
+              kind: "instance"
+              label: "س"
+            }
+            {
+              bind: "r.y"
+              children: [
+                {
+                  bind: "r.y.size"
+                  column: "size"
+                  control: {
+                    steps: [
+                      {
+                        code: "s"
+                        label: "صغير"
+                      }
+                      {
+                        code: "l"
+                        label: "كبير"
+                      }
+                    ]
+                    type: "scale"
+                  }
+                  dataType: "code"
+                  disabledDisplay: "hidden"
+                  id: 13
+                  kind: "question"
+                  label: "الحجم"
+                  nonresponse: [
+                    "refused"
+                  ]
+                }
+                {
+                  bind: "r.y.cost"
+                  column: "cost"
+                  control: {
+                    currency: "JOD"
+                    max: 100e0
+                    min: 0e0
+                    minorDigits: 3
+                    type: "money"
+                  }
+                  dataType: "money"
+                  disabledDisplay: "hidden"
+                  id: 14
+                  kind: "question"
+                  label: "التكلفة"
+                }
+              ]
+              code: "y"
+              disabledDisplay: "hidden"
+              id: 12
+              kind: "instance"
+              label: "ص"
+            }
+          ]
+          disabledDisplay: "hidden"
+          id: 8
+          kind: "list"
+          label: "أشياء"
+        }
+      ]
+      disabledDisplay: "hidden"
+      id: 7
+      kind: "step"
+      navigation: "linear"
+      title: "أشياء"
+    }
+    {
+      children: []
+      disabledDisplay: "hidden"
+      id: 15
+      kind: "review"
+    }
+  ]
+  windowClass: "compact"
+}

@@ -1,0 +1,1731 @@
+{
+  "cases": [
+    {
+      "facts": {
+        "airGapped": {
+          "bool": false
+        },
+        "batch": {
+          "bool": false
+        },
+        "phishingResistantAuth": {
+          "bool": true
+        },
+        "requestedTtlSeconds": {
+          "int": "600"
+        },
+        "role": {
+          "text": "collector"
+        }
+      },
+      "name": "token within ttl",
+      "obligations": [],
+      "point": "registration.token.issue",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "airGapped": {
+          "bool": false
+        },
+        "batch": {
+          "bool": false
+        },
+        "phishingResistantAuth": {
+          "bool": true
+        },
+        "requestedTtlSeconds": {
+          "int": "601"
+        },
+        "role": {
+          "text": "collector"
+        }
+      },
+      "name": "token over ttl",
+      "obligations": [],
+      "point": "registration.token.issue",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "airGapped": {
+          "bool": false
+        },
+        "batch": {
+          "bool": false
+        },
+        "phishingResistantAuth": {
+          "bool": false
+        },
+        "requestedTtlSeconds": {
+          "int": "60"
+        },
+        "role": {
+          "text": "collector"
+        }
+      },
+      "name": "token without phishing-resistant auth",
+      "obligations": [],
+      "point": "registration.token.issue",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "airGapped": {
+          "bool": false
+        },
+        "batch": {
+          "bool": true
+        },
+        "phishingResistantAuth": {
+          "bool": true
+        },
+        "requestedTtlSeconds": {
+          "int": "3600"
+        },
+        "role": {
+          "text": "device-preparation"
+        }
+      },
+      "name": "batch token for a listed role",
+      "obligations": [],
+      "point": "registration.token.issue",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "airGapped": {
+          "bool": false
+        },
+        "batch": {
+          "bool": true
+        },
+        "phishingResistantAuth": {
+          "bool": true
+        },
+        "requestedTtlSeconds": {
+          "int": "60"
+        },
+        "role": {
+          "text": "collector"
+        }
+      },
+      "name": "batch token for a collector",
+      "obligations": [],
+      "point": "registration.token.issue",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "fingerprintConfirmed": {
+          "bool": true
+        },
+        "nonceOnly": {
+          "bool": false
+        },
+        "serialStatus": {
+          "text": "matched"
+        }
+      },
+      "name": "approve clean",
+      "obligations": [],
+      "point": "registration.approve",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "fingerprintConfirmed": {
+          "bool": false
+        },
+        "nonceOnly": {
+          "bool": false
+        },
+        "serialStatus": {
+          "text": "matched"
+        }
+      },
+      "name": "approve unconfirmed fingerprint",
+      "obligations": [],
+      "point": "registration.approve",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "fingerprintConfirmed": {
+          "bool": true
+        },
+        "nonceOnly": {
+          "bool": true
+        },
+        "serialStatus": {
+          "text": "matched"
+        }
+      },
+      "name": "approve nonce-only registration",
+      "obligations": [],
+      "point": "registration.approve",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "activeDevices": {
+          "int": "1"
+        }
+      },
+      "name": "device below the limit",
+      "obligations": [],
+      "point": "device.add",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "activeDevices": {
+          "int": "2"
+        }
+      },
+      "name": "device at the limit",
+      "obligations": [],
+      "point": "device.add",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "postureOk": {
+          "bool": true
+        }
+      },
+      "name": "key roll with good posture",
+      "obligations": [],
+      "point": "key.roll",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "postureOk": {
+          "bool": false
+        }
+      },
+      "name": "key roll with bad posture",
+      "obligations": [],
+      "point": "key.roll",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "0"
+        },
+        "containsRoster": {
+          "bool": true
+        },
+        "keyAttested": {
+          "bool": true
+        },
+        "paused": {
+          "bool": false
+        },
+        "tenancyRegistered": {
+          "bool": true
+        },
+        "unattestedAllowed": {
+          "bool": false
+        }
+      },
+      "name": "release to a registered tenancy",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "0"
+        },
+        "containsRoster": {
+          "bool": false
+        },
+        "keyAttested": {
+          "bool": true
+        },
+        "paused": {
+          "bool": false
+        },
+        "tenancyRegistered": {
+          "bool": false
+        },
+        "unattestedAllowed": {
+          "bool": false
+        }
+      },
+      "name": "release to an unregistered tenancy",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "0"
+        },
+        "containsRoster": {
+          "bool": true
+        },
+        "keyAttested": {
+          "bool": false
+        },
+        "paused": {
+          "bool": false
+        },
+        "tenancyRegistered": {
+          "bool": true
+        },
+        "unattestedAllowed": {
+          "bool": false
+        }
+      },
+      "name": "roster to an unattested key",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "0"
+        },
+        "containsRoster": {
+          "bool": true
+        },
+        "keyAttested": {
+          "bool": false
+        },
+        "paused": {
+          "bool": false
+        },
+        "tenancyRegistered": {
+          "bool": true
+        },
+        "unattestedAllowed": {
+          "bool": true
+        }
+      },
+      "name": "roster to an unattested key under the development allowance (REG-017)",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "1"
+        },
+        "containsRoster": {
+          "bool": false
+        },
+        "keyAttested": {
+          "bool": true
+        },
+        "paused": {
+          "bool": false
+        },
+        "tenancyRegistered": {
+          "bool": true
+        },
+        "unattestedAllowed": {
+          "bool": false
+        }
+      },
+      "name": "release when the cohort is full",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "activeTenanciesInCohort": {
+          "int": "0"
+        },
+        "containsRoster": {
+          "bool": false
+        },
+        "keyAttested": {
+          "bool": true
+        },
+        "paused": {
+          "bool": true
+        },
+        "tenancyRegistered": {
+          "bool": true
+        },
+        "unattestedAllowed": {
+          "bool": false
+        }
+      },
+      "name": "release while paused",
+      "obligations": [],
+      "point": "bundle.release",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "bootloaderLocked": {
+          "bool": true
+        },
+        "osPatchLevel": {
+          "text": "2026-07-01"
+        },
+        "securityLevel": {
+          "text": "strongbox"
+        },
+        "unknownRestriction": {
+          "bool": false
+        },
+        "verifiedBoot": {
+          "bool": true
+        }
+      },
+      "name": "posture ok",
+      "obligations": [],
+      "point": "posture.recheck",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "bootloaderLocked": {
+          "bool": false
+        },
+        "osPatchLevel": {
+          "text": "2026-07-01"
+        },
+        "securityLevel": {
+          "text": "strongbox"
+        },
+        "unknownRestriction": {
+          "bool": false
+        },
+        "verifiedBoot": {
+          "bool": true
+        }
+      },
+      "name": "posture bootloader unlocked",
+      "obligations": [
+        "pause-release"
+      ],
+      "point": "posture.recheck",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "approvals": {
+          "int": "2"
+        },
+        "authorIsApprover": {
+          "bool": false
+        },
+        "builder": {
+          "text": "https://ci.example.org/builders/fieldseal-publish"
+        },
+        "inclusionProof": {
+          "bool": true
+        },
+        "kind": {
+          "text": "Instrument"
+        },
+        "publisherSignatures": {
+          "int": "2"
+        },
+        "source": {
+          "text": "https://git.example.org/authority/artefacts"
+        },
+        "witnessCosignatures": {
+          "int": "0"
+        }
+      },
+      "name": "publish with approvals",
+      "obligations": [],
+      "point": "artefact.publish",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "approvals": {
+          "int": "1"
+        },
+        "authorIsApprover": {
+          "bool": false
+        },
+        "builder": {
+          "text": "https://ci.example.org/builders/fieldseal-publish"
+        },
+        "inclusionProof": {
+          "bool": true
+        },
+        "kind": {
+          "text": "Instrument"
+        },
+        "publisherSignatures": {
+          "int": "2"
+        },
+        "source": {
+          "text": "https://git.example.org/authority/artefacts"
+        },
+        "witnessCosignatures": {
+          "int": "0"
+        }
+      },
+      "name": "publish below approvals",
+      "obligations": [],
+      "point": "artefact.publish",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "approvals": {
+          "int": "2"
+        },
+        "authorIsApprover": {
+          "bool": false
+        },
+        "builder": {
+          "text": "https://ci.example.org/builders/fieldseal-publish"
+        },
+        "inclusionProof": {
+          "bool": true
+        },
+        "kind": {
+          "text": "Instrument"
+        },
+        "publisherSignatures": {
+          "int": "1"
+        },
+        "source": {
+          "text": "https://git.example.org/authority/artefacts"
+        },
+        "witnessCosignatures": {
+          "int": "0"
+        }
+      },
+      "name": "publish below threshold",
+      "obligations": [],
+      "point": "artefact.publish",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "approvals": {
+          "int": "2"
+        },
+        "authorIsApprover": {
+          "bool": false
+        },
+        "builder": {
+          "text": "https://evil.example/b"
+        },
+        "inclusionProof": {
+          "bool": true
+        },
+        "kind": {
+          "text": "Instrument"
+        },
+        "publisherSignatures": {
+          "int": "2"
+        },
+        "source": {
+          "text": "https://git.example.org/authority/artefacts"
+        },
+        "witnessCosignatures": {
+          "int": "0"
+        }
+      },
+      "name": "publish from an unknown builder",
+      "obligations": [],
+      "point": "artefact.publish",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "approvals": {
+          "int": "2"
+        },
+        "authorIsApprover": {
+          "bool": false
+        },
+        "builder": {
+          "text": "https://ci.example.org/builders/fieldseal-publish"
+        },
+        "inclusionProof": {
+          "bool": false
+        },
+        "kind": {
+          "text": "Instrument"
+        },
+        "publisherSignatures": {
+          "int": "2"
+        },
+        "source": {
+          "text": "https://git.example.org/authority/artefacts"
+        },
+        "witnessCosignatures": {
+          "int": "0"
+        }
+      },
+      "name": "publish without inclusion proof",
+      "obligations": [],
+      "point": "artefact.publish",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "qualityFailures": {
+          "int": "0"
+        },
+        "sizeBytes": {
+          "int": "1024"
+        }
+      },
+      "name": "intake small clean",
+      "obligations": [],
+      "point": "intake.accept",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "qualityFailures": {
+          "int": "0"
+        },
+        "sizeBytes": {
+          "int": "629145600"
+        }
+      },
+      "name": "intake too large",
+      "obligations": [],
+      "point": "intake.accept",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "qualityFailures": {
+          "int": "2"
+        },
+        "sizeBytes": {
+          "int": "1024"
+        }
+      },
+      "name": "intake quality failure",
+      "obligations": [],
+      "point": "intake.accept",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "hasEvidence": {
+          "bool": true
+        },
+        "heuristicHits": {
+          "array": []
+        },
+        "sampleDraw": {
+          "decimal": {
+            "exponent": -2,
+            "mantissa": "50"
+          }
+        }
+      },
+      "name": "consent with evidence, not sampled",
+      "obligations": [],
+      "point": "consent.decide",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "hasEvidence": {
+          "bool": true
+        },
+        "heuristicHits": {
+          "array": []
+        },
+        "sampleDraw": {
+          "decimal": {
+            "exponent": -2,
+            "mantissa": "1"
+          }
+        }
+      },
+      "name": "consent with evidence, sampled",
+      "obligations": [
+        "sample-for-review"
+      ],
+      "point": "consent.decide",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "hasEvidence": {
+          "bool": false
+        },
+        "heuristicHits": {
+          "array": []
+        },
+        "sampleDraw": {
+          "decimal": {
+            "exponent": -2,
+            "mantissa": "50"
+          }
+        }
+      },
+      "name": "consent without evidence",
+      "obligations": [],
+      "point": "consent.decide",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "custody-bound"
+        },
+        "mode": {
+          "text": "cold"
+        },
+        "purpose": {
+          "text": "root"
+        },
+        "thresholdMet": {
+          "bool": true
+        }
+      },
+      "name": "root issued cold, custody-bound, threshold met",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "attested"
+        },
+        "mode": {
+          "text": "cold"
+        },
+        "purpose": {
+          "text": "root"
+        },
+        "thresholdMet": {
+          "bool": false
+        }
+      },
+      "name": "root issued cold without its threshold",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "hold"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "attested"
+        },
+        "mode": {
+          "text": "hot"
+        },
+        "purpose": {
+          "text": "root"
+        },
+        "thresholdMet": {
+          "bool": true
+        }
+      },
+      "name": "root issued hot",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "development"
+        },
+        "mode": {
+          "text": "hot"
+        },
+        "purpose": {
+          "text": "registration"
+        },
+        "thresholdMet": {
+          "bool": true
+        }
+      },
+      "name": "development key",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "deny"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "attested"
+        },
+        "mode": {
+          "text": "hot"
+        },
+        "purpose": {
+          "text": "registration"
+        },
+        "thresholdMet": {
+          "bool": true
+        }
+      },
+      "name": "registration key hot and attested",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "assurance": {
+          "text": "custody-bound"
+        },
+        "mode": {
+          "text": "cold"
+        },
+        "purpose": {
+          "text": "registration"
+        },
+        "thresholdMet": {
+          "bool": true
+        }
+      },
+      "name": "registration key cold",
+      "obligations": [],
+      "point": "key.issue",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "fastRunning": {
+          "bool": false
+        },
+        "lateSeconds": {
+          "int": "864000"
+        },
+        "provablyLate": {
+          "bool": true
+        }
+      },
+      "name": "tenancy within grace",
+      "obligations": [],
+      "point": "tenancy.late",
+      "policy": "default-deployment",
+      "verdict": "allow"
+    },
+    {
+      "facts": {
+        "fastRunning": {
+          "bool": false
+        },
+        "lateSeconds": {
+          "int": "3456000"
+        },
+        "provablyLate": {
+          "bool": true
+        }
+      },
+      "name": "tenancy provably late",
+      "obligations": [],
+      "point": "tenancy.late",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "fastRunning": {
+          "bool": true
+        },
+        "lateSeconds": {
+          "int": "86400"
+        },
+        "provablyLate": {
+          "bool": false
+        }
+      },
+      "name": "tenancy clock running fast",
+      "obligations": [],
+      "point": "tenancy.late",
+      "policy": "default-deployment",
+      "verdict": "flag"
+    },
+    {
+      "facts": {
+        "activeDevices": {
+          "int": "1"
+        }
+      },
+      "name": "a programme layer lowers the device limit",
+      "obligations": [],
+      "point": "device.add",
+      "policy": "programme-one-device",
+      "verdict": "deny"
+    }
+  ],
+  "description": "Every decision point under the default deployment policy (and a programme layer), with the verdict and obligations every PolicyEngine must reach (POL-030, POL-033); facts an engine must refuse; and what a caller decides when the engine fails (POL-034).",
+  "failures": [
+    {
+      "point": "registration.token.issue",
+      "verdict": "hold"
+    },
+    {
+      "point": "registration.approve",
+      "verdict": "hold"
+    },
+    {
+      "point": "device.add",
+      "verdict": "hold"
+    },
+    {
+      "point": "key.roll",
+      "verdict": "hold"
+    },
+    {
+      "point": "bundle.release",
+      "verdict": "hold"
+    },
+    {
+      "point": "posture.recheck",
+      "verdict": "hold"
+    },
+    {
+      "point": "artefact.publish",
+      "verdict": "hold"
+    },
+    {
+      "point": "intake.accept",
+      "verdict": "flag"
+    },
+    {
+      "point": "consent.decide",
+      "verdict": "flag"
+    },
+    {
+      "point": "tenancy.late",
+      "verdict": "flag"
+    },
+    {
+      "point": "key.issue",
+      "verdict": "hold"
+    }
+  ],
+  "invalid": [
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "registration.token.issue"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "registration.approve"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "device.add"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "key.roll"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "bundle.release"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "posture.recheck"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "artefact.publish"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "intake.accept"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "consent.decide"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "tenancy.late"
+    },
+    {
+      "error": "missing-fact",
+      "facts": {},
+      "point": "key.issue"
+    },
+    {
+      "error": "bad-fact",
+      "facts": {
+        "activeDevices": {
+          "text": "two"
+        }
+      },
+      "point": "device.add"
+    }
+  ],
+  "policies": {
+    "default-deployment": [
+      {
+        "map": {
+          "apiVersion": {
+            "text": "fieldseal.dev/v1alpha1"
+          },
+          "kind": {
+            "text": "Policy"
+          },
+          "metadata": {
+            "map": {
+              "name": {
+                "text": "authority-baseline"
+              },
+              "version": {
+                "text": "3.1.0"
+              }
+            }
+          },
+          "spec": {
+            "map": {
+              "factory": {
+                "map": {
+                  "attestation": {
+                    "map": {
+                      "acceptedFormats": {
+                        "array": [
+                          {
+                            "text": "android-key-attestation"
+                          },
+                          {
+                            "text": "apple-app-attest"
+                          },
+                          {
+                            "text": "tpm2-quote"
+                          }
+                        ]
+                      },
+                      "acceptedRuntimeVersions": {
+                        "text": ">=1.0.0 <2.0.0"
+                      },
+                      "minOsPatchLevel": {
+                        "text": "2026-06-01"
+                      },
+                      "minSecurityLevel": {
+                        "text": "tee"
+                      },
+                      "requireBootloaderLocked": {
+                        "bool": true
+                      },
+                      "requireVerifiedBoot": {
+                        "bool": true
+                      }
+                    }
+                  },
+                  "cohorts": {
+                    "map": {
+                      "maxActiveTenanciesPerCohort": {
+                        "int": "1"
+                      }
+                    }
+                  },
+                  "posture": {
+                    "map": {
+                      "onFailure": {
+                        "text": "pause-release"
+                      },
+                      "recheckInterval": {
+                        "text": "7d"
+                      }
+                    }
+                  },
+                  "registration": {
+                    "map": {
+                      "airGappedTokenTtl": {
+                        "text": "24h"
+                      },
+                      "batchTokens": {
+                        "map": {
+                          "allowed": {
+                            "bool": true
+                          },
+                          "maxUses": {
+                            "int": "50"
+                          },
+                          "roles": {
+                            "array": [
+                              {
+                                "text": "device-preparation"
+                              }
+                            ]
+                          },
+                          "ttl": {
+                            "text": "4h"
+                          }
+                        }
+                      },
+                      "deviceNonceRegistrations": {
+                        "text": "flag"
+                      },
+                      "maxDevicesPerAccount": {
+                        "int": "2"
+                      },
+                      "requireFingerprintConfirmation": {
+                        "bool": true
+                      },
+                      "requirePhishingResistantAuth": {
+                        "bool": true
+                      },
+                      "serialCheck": {
+                        "text": "optional"
+                      },
+                      "tokenTtl": {
+                        "text": "10m"
+                      }
+                    }
+                  }
+                }
+              },
+              "intake": {
+                "map": {
+                  "consent": {
+                    "map": {
+                      "autoAcceptWithEvidence": {
+                        "bool": true
+                      },
+                      "excludePendingFromAnalysis": {
+                        "bool": true
+                      },
+                      "sampleRate": {
+                        "decimal": {
+                          "exponent": -2,
+                          "mantissa": "5"
+                        }
+                      },
+                      "withoutEvidence": {
+                        "text": "review"
+                      }
+                    }
+                  },
+                  "ticks": {
+                    "map": {
+                      "fastRunning": {
+                        "text": "flag"
+                      }
+                    }
+                  },
+                  "time": {
+                    "map": {
+                      "grace": {
+                        "text": "30d"
+                      },
+                      "provablyLate": {
+                        "text": "flag"
+                      }
+                    }
+                  }
+                }
+              },
+              "layer": {
+                "map": {
+                  "scope": {
+                    "text": "deployment"
+                  }
+                }
+              },
+              "publishing": {
+                "map": {
+                  "allowedBuilders": {
+                    "array": [
+                      {
+                        "text": "https://ci.example.org/builders/fieldseal-publish"
+                      }
+                    ]
+                  },
+                  "allowedSources": {
+                    "array": [
+                      {
+                        "text": "https://git.example.org/authority/artefacts"
+                      }
+                    ]
+                  },
+                  "authorMayApprove": {
+                    "bool": false
+                  },
+                  "publisherThreshold": {
+                    "map": {
+                      "m": {
+                        "int": "2"
+                      },
+                      "n": {
+                        "int": "3"
+                      }
+                    }
+                  },
+                  "requireTransparencyLog": {
+                    "bool": true
+                  },
+                  "requiredApprovals": {
+                    "map": {
+                      "Deployment": {
+                        "int": "2"
+                      },
+                      "Instrument": {
+                        "int": "2"
+                      },
+                      "Policy": {
+                        "int": "2"
+                      },
+                      "TrustBundle": {
+                        "int": "2"
+                      }
+                    }
+                  }
+                }
+              },
+              "runtime": {
+                "map": {
+                  "device": {
+                    "map": {
+                      "kiosk": {
+                        "bool": false
+                      }
+                    }
+                  },
+                  "export": {
+                    "map": {
+                      "allowParityOff": {
+                        "bool": true
+                      },
+                      "destinations": {
+                        "array": [
+                          {
+                            "text": "upload"
+                          },
+                          {
+                            "text": "local"
+                          },
+                          {
+                            "text": "removable"
+                          },
+                          {
+                            "text": "share"
+                          },
+                          {
+                            "text": "cloud"
+                          }
+                        ]
+                      },
+                      "parityDefault": {
+                        "text": "on"
+                      }
+                    }
+                  },
+                  "pin": {
+                    "map": {
+                      "failuresBeforeLockout": {
+                        "int": "5"
+                      },
+                      "lockoutSteps": {
+                        "array": [
+                          {
+                            "text": "30s"
+                          },
+                          {
+                            "text": "1m"
+                          },
+                          {
+                            "text": "5m"
+                          },
+                          {
+                            "text": "15m"
+                          },
+                          {
+                            "text": "1h"
+                          }
+                        ]
+                      },
+                      "minLength": {
+                        "int": "6"
+                      }
+                    }
+                  },
+                  "publishing": {
+                    "map": {
+                      "maxTreeHeadAge": {
+                        "text": "90d"
+                      }
+                    }
+                  },
+                  "retention": {
+                    "map": {
+                      "offerClearOnReceipt": {
+                        "bool": true
+                      },
+                      "remindAfter": {
+                        "text": "7d"
+                      }
+                    }
+                  },
+                  "session": {
+                    "map": {
+                      "idleLock": {
+                        "text": "2m"
+                      },
+                      "lockOnBackground": {
+                        "bool": true
+                      },
+                      "lockOnScreenOff": {
+                        "bool": true
+                      }
+                    }
+                  },
+                  "upload": {
+                    "map": {
+                      "background": {
+                        "bool": true
+                      }
+                    }
+                  }
+                }
+              },
+              "schemaVersion": {
+                "text": "1.0.0"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "programme-one-device": [
+      {
+        "map": {
+          "apiVersion": {
+            "text": "fieldseal.dev/v1alpha1"
+          },
+          "kind": {
+            "text": "Policy"
+          },
+          "metadata": {
+            "map": {
+              "name": {
+                "text": "authority-baseline"
+              },
+              "version": {
+                "text": "3.1.0"
+              }
+            }
+          },
+          "spec": {
+            "map": {
+              "factory": {
+                "map": {
+                  "attestation": {
+                    "map": {
+                      "acceptedFormats": {
+                        "array": [
+                          {
+                            "text": "android-key-attestation"
+                          },
+                          {
+                            "text": "apple-app-attest"
+                          },
+                          {
+                            "text": "tpm2-quote"
+                          }
+                        ]
+                      },
+                      "acceptedRuntimeVersions": {
+                        "text": ">=1.0.0 <2.0.0"
+                      },
+                      "minOsPatchLevel": {
+                        "text": "2026-06-01"
+                      },
+                      "minSecurityLevel": {
+                        "text": "tee"
+                      },
+                      "requireBootloaderLocked": {
+                        "bool": true
+                      },
+                      "requireVerifiedBoot": {
+                        "bool": true
+                      }
+                    }
+                  },
+                  "cohorts": {
+                    "map": {
+                      "maxActiveTenanciesPerCohort": {
+                        "int": "1"
+                      }
+                    }
+                  },
+                  "posture": {
+                    "map": {
+                      "onFailure": {
+                        "text": "pause-release"
+                      },
+                      "recheckInterval": {
+                        "text": "7d"
+                      }
+                    }
+                  },
+                  "registration": {
+                    "map": {
+                      "airGappedTokenTtl": {
+                        "text": "24h"
+                      },
+                      "batchTokens": {
+                        "map": {
+                          "allowed": {
+                            "bool": true
+                          },
+                          "maxUses": {
+                            "int": "50"
+                          },
+                          "roles": {
+                            "array": [
+                              {
+                                "text": "device-preparation"
+                              }
+                            ]
+                          },
+                          "ttl": {
+                            "text": "4h"
+                          }
+                        }
+                      },
+                      "deviceNonceRegistrations": {
+                        "text": "flag"
+                      },
+                      "maxDevicesPerAccount": {
+                        "int": "2"
+                      },
+                      "requireFingerprintConfirmation": {
+                        "bool": true
+                      },
+                      "requirePhishingResistantAuth": {
+                        "bool": true
+                      },
+                      "serialCheck": {
+                        "text": "optional"
+                      },
+                      "tokenTtl": {
+                        "text": "10m"
+                      }
+                    }
+                  }
+                }
+              },
+              "intake": {
+                "map": {
+                  "consent": {
+                    "map": {
+                      "autoAcceptWithEvidence": {
+                        "bool": true
+                      },
+                      "excludePendingFromAnalysis": {
+                        "bool": true
+                      },
+                      "sampleRate": {
+                        "decimal": {
+                          "exponent": -2,
+                          "mantissa": "5"
+                        }
+                      },
+                      "withoutEvidence": {
+                        "text": "review"
+                      }
+                    }
+                  },
+                  "ticks": {
+                    "map": {
+                      "fastRunning": {
+                        "text": "flag"
+                      }
+                    }
+                  },
+                  "time": {
+                    "map": {
+                      "grace": {
+                        "text": "30d"
+                      },
+                      "provablyLate": {
+                        "text": "flag"
+                      }
+                    }
+                  }
+                }
+              },
+              "layer": {
+                "map": {
+                  "scope": {
+                    "text": "deployment"
+                  }
+                }
+              },
+              "publishing": {
+                "map": {
+                  "allowedBuilders": {
+                    "array": [
+                      {
+                        "text": "https://ci.example.org/builders/fieldseal-publish"
+                      }
+                    ]
+                  },
+                  "allowedSources": {
+                    "array": [
+                      {
+                        "text": "https://git.example.org/authority/artefacts"
+                      }
+                    ]
+                  },
+                  "authorMayApprove": {
+                    "bool": false
+                  },
+                  "publisherThreshold": {
+                    "map": {
+                      "m": {
+                        "int": "2"
+                      },
+                      "n": {
+                        "int": "3"
+                      }
+                    }
+                  },
+                  "requireTransparencyLog": {
+                    "bool": true
+                  },
+                  "requiredApprovals": {
+                    "map": {
+                      "Deployment": {
+                        "int": "2"
+                      },
+                      "Instrument": {
+                        "int": "2"
+                      },
+                      "Policy": {
+                        "int": "2"
+                      },
+                      "TrustBundle": {
+                        "int": "2"
+                      }
+                    }
+                  }
+                }
+              },
+              "runtime": {
+                "map": {
+                  "device": {
+                    "map": {
+                      "kiosk": {
+                        "bool": false
+                      }
+                    }
+                  },
+                  "export": {
+                    "map": {
+                      "allowParityOff": {
+                        "bool": true
+                      },
+                      "destinations": {
+                        "array": [
+                          {
+                            "text": "upload"
+                          },
+                          {
+                            "text": "local"
+                          },
+                          {
+                            "text": "removable"
+                          },
+                          {
+                            "text": "share"
+                          },
+                          {
+                            "text": "cloud"
+                          }
+                        ]
+                      },
+                      "parityDefault": {
+                        "text": "on"
+                      }
+                    }
+                  },
+                  "pin": {
+                    "map": {
+                      "failuresBeforeLockout": {
+                        "int": "5"
+                      },
+                      "lockoutSteps": {
+                        "array": [
+                          {
+                            "text": "30s"
+                          },
+                          {
+                            "text": "1m"
+                          },
+                          {
+                            "text": "5m"
+                          },
+                          {
+                            "text": "15m"
+                          },
+                          {
+                            "text": "1h"
+                          }
+                        ]
+                      },
+                      "minLength": {
+                        "int": "6"
+                      }
+                    }
+                  },
+                  "publishing": {
+                    "map": {
+                      "maxTreeHeadAge": {
+                        "text": "90d"
+                      }
+                    }
+                  },
+                  "retention": {
+                    "map": {
+                      "offerClearOnReceipt": {
+                        "bool": true
+                      },
+                      "remindAfter": {
+                        "text": "7d"
+                      }
+                    }
+                  },
+                  "session": {
+                    "map": {
+                      "idleLock": {
+                        "text": "2m"
+                      },
+                      "lockOnBackground": {
+                        "bool": true
+                      },
+                      "lockOnScreenOff": {
+                        "bool": true
+                      }
+                    }
+                  },
+                  "upload": {
+                    "map": {
+                      "background": {
+                        "bool": true
+                      }
+                    }
+                  }
+                }
+              },
+              "schemaVersion": {
+                "text": "1.0.0"
+              }
+            }
+          }
+        }
+      },
+      {
+        "map": {
+          "apiVersion": {
+            "text": "fieldseal.dev/v1alpha1"
+          },
+          "kind": {
+            "text": "Policy"
+          },
+          "metadata": {
+            "map": {
+              "name": {
+                "text": "one-device"
+              },
+              "version": {
+                "text": "1.0.0"
+              }
+            }
+          },
+          "spec": {
+            "map": {
+              "factory": {
+                "map": {
+                  "registration": {
+                    "map": {
+                      "maxDevicesPerAccount": {
+                        "int": "1"
+                      }
+                    }
+                  }
+                }
+              },
+              "layer": {
+                "map": {
+                  "programme": {
+                    "text": "one-device"
+                  },
+                  "scope": {
+                    "text": "programme"
+                  }
+                }
+              },
+              "schemaVersion": {
+                "text": "1.0.0"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-policy --test vectors",
+  "requirements": "POL-030 POL-032 POL-033 POL-034",
+  "spec": "docs/reference/spec/policy.md"
+}

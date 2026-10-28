@@ -1,0 +1,23 @@
+[package]
+name = "fieldseal-instrument"
+description = "Fieldseal Instrument bounded context: domain, use cases and ports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+thiserror.workspace = true
+icu_calendar.workspace = true
+icu_datetime.workspace = true
+icu_decimal.workspace = true
+icu_locale_core.workspace = true
+icu_plurals.workspace = true
+fixed_decimal.workspace = true
+
+[dev-dependencies]
+serde_json = "1"
+
+[lints]
+workspace = true

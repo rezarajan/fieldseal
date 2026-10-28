@@ -1,0 +1,624 @@
+{
+  direction: "ltr"
+  instrument: {
+    administration: "interviewer"
+    name: "food-intake-baseline"
+    title: "Baseline food, snack and drink survey"
+    version: "1.0.0"
+  }
+  language: "en"
+  layout: bytes(0707070707070707070707070707070707070707070707070707070707070707)
+  layoutWindowClass: "expanded"
+  steps: [
+    {
+      children: [
+        {
+          children: [
+            {
+              bind: "about.sex"
+              control: {
+                options: [
+                  {
+                    code: "male"
+                    icon: "👦"
+                    label: "Male"
+                  }
+                  {
+                    code: "female"
+                    icon: "👧"
+                    label: "Female"
+                  }
+                ]
+                type: "choice"
+              }
+              dataType: "code"
+              disabledDisplay: "hidden"
+              id: 2
+              kind: "question"
+              label: "Sex"
+              nonresponse: [
+                "dont-know"
+              ]
+              prefix: "2"
+            }
+          ]
+          disabledDisplay: "hidden"
+          icon: "🧒"
+          id: 1
+          kind: "card"
+          title: "Basic details"
+        }
+        {
+          children: [
+            {
+              bind: "about.weight"
+              control: {
+                decimals: 1
+                entryUnits: [
+                  "kg"
+                ]
+                max: 300e0
+                min: 40e0
+                tolerance: 2e-1
+                type: "measurement-pair"
+                unit: {
+                  code: "[lb_av]"
+                  label: "lbs"
+                }
+              }
+              dataType: "decimal"
+              disabledDisplay: "hidden"
+              guidance: "Weigh twice. The two readings must match."
+              id: 4
+              kind: "question"
+              label: "Weight"
+              nonresponse: [
+                "dont-know"
+              ]
+              prefix: "6"
+            }
+          ]
+          disabledDisplay: "hidden"
+          icon: "📏"
+          id: 3
+          kind: "card"
+          title: "Measurements"
+        }
+        {
+          children: [
+            {
+              bind: "about.money_gets"
+              control: {
+                type: "yes-no"
+              }
+              dataType: "boolean"
+              disabledDisplay: "hidden"
+              help: "Not travel money"
+              id: 6
+              kind: "question"
+              label: "Do you get spending money?"
+              nonresponse: [
+                "dont-know"
+              ]
+              prefix: "10a"
+            }
+            {
+              bind: "about.money_per_day"
+              control: {
+                currency: "TTD"
+                max: 200e0
+                min: 0e0
+                minorDigits: 2
+                step: 5e0
+                type: "money"
+              }
+              dataType: "money"
+              disabledDisplay: "protected"
+              id: 7
+              kind: "question"
+              label: "How much money do you get to spend each day?"
+              nonresponse: [
+                "dont-know"
+              ]
+              prefix: "10b"
+            }
+          ]
+          disabledDisplay: "hidden"
+          icon: "💵"
+          id: 5
+          kind: "card"
+          title: "Spending money"
+        }
+      ]
+      disabledDisplay: "hidden"
+      id: 0
+      kind: "step"
+      navigation: "linear"
+      title: "About you"
+    }
+    {
+      children: [
+        {
+          bind: "diet_intro"
+          disabledDisplay: "hidden"
+          id: 9
+          kind: "display"
+          role: "instruction"
+          text: "These questions are about foods and drinks over the past month or week, and yesterday."
+        }
+        {
+          children: [
+            {
+              children: [
+                {
+                  bind: "staples"
+                  children: [
+                    {
+                      bind: "staples.bread"
+                      children: [
+                        {
+                          bind: "staples.bread.freq"
+                          column: "freq"
+                          control: {
+                            steps: [
+                              {
+                                code: "never"
+                                label: "Never"
+                              }
+                              {
+                                code: "m_le1"
+                                label: "≤1/month"
+                              }
+                              {
+                                code: "m_2_3"
+                                label: "2–3/month"
+                              }
+                              {
+                                code: "w_1_2"
+                                label: "1–2/week"
+                              }
+                              {
+                                code: "w_3_4"
+                                label: "3–4/week"
+                              }
+                              {
+                                code: "w_5_6"
+                                label: "5–6/week"
+                              }
+                              {
+                                code: "d_1"
+                                label: "1/day"
+                              }
+                              {
+                                code: "d_2_3"
+                                label: "2–3/day"
+                              }
+                              {
+                                code: "d_gt3"
+                                label: ">3/day"
+                              }
+                            ]
+                            type: "scale"
+                          }
+                          dataType: "code"
+                          disabledDisplay: "hidden"
+                          id: 14
+                          kind: "question"
+                          label: "How often?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "segments"
+                        }
+                        {
+                          bind: "staples.bread.amount"
+                          column: "amount"
+                          control: {
+                            max: 20e0
+                            min: 5e-1
+                            start: 1e0
+                            step: 5e-1
+                            type: "stepper"
+                            unit: {
+                              code: "[oz_av]"
+                              label: "oz"
+                            }
+                          }
+                          dataType: "decimal"
+                          disabledDisplay: "protected"
+                          id: 15
+                          kind: "question"
+                          label: "Amount each time"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                        }
+                        {
+                          bind: "staples.bread.yesterday"
+                          column: "yesterday"
+                          control: {
+                            type: "yes-no"
+                          }
+                          dataType: "boolean"
+                          disabledDisplay: "hidden"
+                          id: 16
+                          kind: "question"
+                          label: "Had it yesterday?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "switch"
+                        }
+                      ]
+                      code: "bread"
+                      description: "White, wholewheat, hops, coconut bake"
+                      disabledDisplay: "hidden"
+                      id: 13
+                      kind: "instance"
+                      label: "Bread"
+                      media: {
+                        alt: "A loaf of bread"
+                        id: "bread"
+                        mediaType: "image/webp"
+                        sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+                      }
+                      referencePeriod: "in the last month"
+                    }
+                    {
+                      bind: "staples.cassava"
+                      children: [
+                        {
+                          bind: "staples.cassava.freq"
+                          column: "freq"
+                          control: {
+                            steps: [
+                              {
+                                code: "never"
+                                label: "Never"
+                              }
+                              {
+                                code: "m_le1"
+                                label: "≤1/month"
+                              }
+                              {
+                                code: "m_2_3"
+                                label: "2–3/month"
+                              }
+                              {
+                                code: "w_1_2"
+                                label: "1–2/week"
+                              }
+                              {
+                                code: "w_3_4"
+                                label: "3–4/week"
+                              }
+                              {
+                                code: "w_5_6"
+                                label: "5–6/week"
+                              }
+                              {
+                                code: "d_1"
+                                label: "1/day"
+                              }
+                              {
+                                code: "d_2_3"
+                                label: "2–3/day"
+                              }
+                              {
+                                code: "d_gt3"
+                                label: ">3/day"
+                              }
+                            ]
+                            type: "scale"
+                          }
+                          dataType: "code"
+                          disabledDisplay: "hidden"
+                          id: 18
+                          kind: "question"
+                          label: "How often?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "segments"
+                        }
+                        {
+                          bind: "staples.cassava.amount"
+                          column: "amount"
+                          control: {
+                            max: 20e0
+                            min: 5e-1
+                            start: 1e0
+                            step: 5e-1
+                            type: "stepper"
+                            unit: {
+                              code: "[oz_av]"
+                              label: "oz"
+                            }
+                          }
+                          dataType: "decimal"
+                          disabledDisplay: "protected"
+                          id: 19
+                          kind: "question"
+                          label: "Amount each time"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                        }
+                        {
+                          bind: "staples.cassava.yesterday"
+                          column: "yesterday"
+                          control: {
+                            type: "yes-no"
+                          }
+                          dataType: "boolean"
+                          disabledDisplay: "hidden"
+                          id: 20
+                          kind: "question"
+                          label: "Had it yesterday?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "switch"
+                        }
+                      ]
+                      code: "cassava"
+                      description: "Boiled, fried, in soup"
+                      disabledDisplay: "hidden"
+                      id: 17
+                      kind: "instance"
+                      label: "Cassava"
+                      referencePeriod: "in the last month"
+                    }
+                    {
+                      bind: "staples.rice"
+                      children: [
+                        {
+                          bind: "staples.rice.freq"
+                          column: "freq"
+                          control: {
+                            steps: [
+                              {
+                                code: "never"
+                                label: "Never"
+                              }
+                              {
+                                code: "m_le1"
+                                label: "≤1/month"
+                              }
+                              {
+                                code: "m_2_3"
+                                label: "2–3/month"
+                              }
+                              {
+                                code: "w_1_2"
+                                label: "1–2/week"
+                              }
+                              {
+                                code: "w_3_4"
+                                label: "3–4/week"
+                              }
+                              {
+                                code: "w_5_6"
+                                label: "5–6/week"
+                              }
+                              {
+                                code: "d_1"
+                                label: "1/day"
+                              }
+                              {
+                                code: "d_2_3"
+                                label: "2–3/day"
+                              }
+                              {
+                                code: "d_gt3"
+                                label: ">3/day"
+                              }
+                            ]
+                            type: "scale"
+                          }
+                          dataType: "code"
+                          disabledDisplay: "hidden"
+                          id: 22
+                          kind: "question"
+                          label: "How often?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "segments"
+                        }
+                        {
+                          bind: "staples.rice.amount"
+                          column: "amount"
+                          control: {
+                            max: 20e0
+                            min: 5e-1
+                            start: 1e0
+                            step: 5e-1
+                            type: "stepper"
+                            unit: {
+                              code: "[oz_av]"
+                              label: "oz"
+                            }
+                          }
+                          dataType: "decimal"
+                          disabledDisplay: "protected"
+                          id: 23
+                          kind: "question"
+                          label: "Amount each time"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                        }
+                        {
+                          bind: "staples.rice.yesterday"
+                          column: "yesterday"
+                          control: {
+                            type: "yes-no"
+                          }
+                          dataType: "boolean"
+                          disabledDisplay: "hidden"
+                          id: 24
+                          kind: "question"
+                          label: "Had it yesterday?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "switch"
+                        }
+                      ]
+                      code: "rice"
+                      description: "White, pelau, fried rice"
+                      disabledDisplay: "hidden"
+                      id: 21
+                      kind: "instance"
+                      label: "Rice"
+                      referencePeriod: "in the last month"
+                    }
+                    {
+                      bind: "staples.other"
+                      children: [
+                        {
+                          bind: "staples.other.other"
+                          column: "other"
+                          control: {
+                            maxLength: 40
+                            type: "text"
+                          }
+                          dataType: "string"
+                          disabledDisplay: "hidden"
+                          id: 26
+                          kind: "question"
+                          label: "Other staple"
+                          optional: true
+                          origin: "instance-name"
+                        }
+                        {
+                          bind: "staples.other.freq"
+                          column: "freq"
+                          control: {
+                            steps: [
+                              {
+                                code: "never"
+                                label: "Never"
+                              }
+                              {
+                                code: "m_le1"
+                                label: "≤1/month"
+                              }
+                              {
+                                code: "m_2_3"
+                                label: "2–3/month"
+                              }
+                              {
+                                code: "w_1_2"
+                                label: "1–2/week"
+                              }
+                              {
+                                code: "w_3_4"
+                                label: "3–4/week"
+                              }
+                              {
+                                code: "w_5_6"
+                                label: "5–6/week"
+                              }
+                              {
+                                code: "d_1"
+                                label: "1/day"
+                              }
+                              {
+                                code: "d_2_3"
+                                label: "2–3/day"
+                              }
+                              {
+                                code: "d_gt3"
+                                label: ">3/day"
+                              }
+                            ]
+                            type: "scale"
+                          }
+                          dataType: "code"
+                          disabledDisplay: "hidden"
+                          id: 27
+                          kind: "question"
+                          label: "How often?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "segments"
+                        }
+                        {
+                          bind: "staples.other.amount"
+                          column: "amount"
+                          control: {
+                            max: 20e0
+                            min: 5e-1
+                            start: 1e0
+                            step: 5e-1
+                            type: "stepper"
+                            unit: {
+                              code: "[oz_av]"
+                              label: "oz"
+                            }
+                          }
+                          dataType: "decimal"
+                          disabledDisplay: "protected"
+                          id: 28
+                          kind: "question"
+                          label: "Amount each time"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                        }
+                        {
+                          bind: "staples.other.yesterday"
+                          column: "yesterday"
+                          control: {
+                            type: "yes-no"
+                          }
+                          dataType: "boolean"
+                          disabledDisplay: "hidden"
+                          id: 29
+                          kind: "question"
+                          label: "Had it yesterday?"
+                          nonresponse: [
+                            "dont-know"
+                          ]
+                          presentation: "switch"
+                        }
+                      ]
+                      code: "other"
+                      disabledDisplay: "hidden"
+                      id: 25
+                      kind: "instance"
+                      label: "Other staple"
+                      referencePeriod: "in the last month"
+                    }
+                  ]
+                  disabledDisplay: "hidden"
+                  id: 12
+                  kind: "list"
+                  label: "Staples"
+                  referencePeriod: "in the last month"
+                }
+              ]
+              disabledDisplay: "hidden"
+              icon: "🍞"
+              id: 11
+              kind: "tab"
+              title: "Staples"
+            }
+          ]
+          disabledDisplay: "hidden"
+          id: 10
+          kind: "tabs"
+        }
+      ]
+      disabledDisplay: "hidden"
+      id: 8
+      kind: "step"
+      navigation: "linear"
+      title: "Foods and drinks"
+    }
+  ]
+  windowClass: "expanded"
+}
