@@ -1,0 +1,56 @@
+# The connected flow's device and delivery leg, for `tools/demo-pipeline.sh` and
+# `fieldseal device simulate --script examples/scenarios/connected-flow.yaml --upload`.
+#
+# A registered device (the simulator enrols it against the practice authority, software keys,
+# never attested) visits three households: a full visit in Spanish with a refused
+# nonresponse, a resurvey that writes only what changed, and a visit with consent attested by
+# the collector. It then uploads in the background to the in-process intake (receiver
+# challenge, proof-of-possession token), imports the receipt the gate returns, and clears
+# the sealed copies it was told arrived (COL-100–COL-107, DEL-002–DEL-008, INT-050).
+#
+#   cd out && fieldseal device simulate --script ../examples/scenarios/connected-flow.yaml --review
+#
+# The export step writes `export.fieldseal` into the current directory.
+pin: "246810"
+seed: 5
+instrument: ../instruments/household-water-access.yaml
+layouts: [../layouts/household-water-access.compact.yaml]
+languages: [es]
+window: compact
+rosters:
+  - cohort: village-a
+    version: 1
+    subjects:
+      - { subject: h-001, consent: unknown, display: { head_name: Ana }, attributes: {} }
+      - { subject: h-002, consent: granted, display: { head_name: Beto }, attributes: {} }
+      - { subject: h-003, consent: refused, display: { head_name: Carla }, attributes: {} }
+steps:
+  - capture:
+      subject: h-002
+      mode: first
+      set:
+        household.members: 5
+        water.source: standpipe
+        water.minutes_to_source: 20
+        water.litres_per_day: 150
+        water.treatments: [boil]
+        sanitation.toilet.type: pit_slab
+        sanitation.toilet.sharing.shared: false
+        hygiene.handwashing_place: fixed
+        hygiene.soap_seen: true
+      nonresponse: { water.monthly_cost: refused }
+      acknowledge: true
+      then: seal
+  - capture:
+      subject: h-002
+      mode: resurvey
+      set: { household.members: 6 }
+      then: seal
+  - status: { subject: h-001, outcome: absent }
+  - review: {}
+  # The same records as a file with parity (kept for `fieldseal export verify` and `fieldseal
+  # intake run`), then the background upload that returns the receipt.
+  - export: { parity: on, to: removable, ingest: true, out: export.fieldseal }
+  - upload: {}
+  - clear: { through: 6 }
+  - review: {}

@@ -1,0 +1,213 @@
+# Spanish for household-water-access 0.1.0. msgctxt is the text's path in the survey.
+
+msgctxt "title"
+msgid "Household water, sanitation and hygiene"
+msgstr "Agua, saneamiento e higiene en el hogar"
+
+msgctxt "description"
+msgid "A short visit to a household to learn where its water comes from and how it is used."
+msgstr "Una visita breve a un hogar para conocer de dónde viene su agua y cómo se usa."
+
+msgctxt "purpose"
+msgid "To plan water and sanitation improvements."
+msgstr "Planificar mejoras de agua y saneamiento."
+
+msgctxt "lists.water-sources.piped_in_dwelling"
+msgid "Piped into the home"
+msgstr "Tubería dentro de la vivienda"
+
+msgctxt "lists.water-sources.piped_yard"
+msgid "Piped into the yard"
+msgstr "Tubería en el patio"
+
+msgctxt "lists.water-sources.standpipe"
+msgid "Public standpipe"
+msgstr "Pila pública"
+
+msgctxt "lists.water-sources.borehole"
+msgid "Borehole or tube well"
+msgstr "Pozo entubado"
+
+msgctxt "lists.water-sources.rainwater"
+msgid "Rainwater"
+msgstr "Agua de lluvia"
+
+msgctxt "lists.water-sources.tanker_truck"
+msgid "Tanker truck"
+msgstr "Camión cisterna"
+
+msgctxt "lists.water-sources.surface_water"
+msgid "River, lake or stream"
+msgstr "Río, lago o quebrada"
+
+msgctxt "lists.water-sources.other"
+msgid "Another source"
+msgstr "Otra fuente"
+
+msgctxt "lists.water-treatments.boil"
+msgid "Boil it"
+msgstr "Hervirla"
+
+msgctxt "lists.water-treatments.chlorine"
+msgid "Add chlorine"
+msgstr "Agregarle cloro"
+
+msgctxt "lists.water-treatments.filter"
+msgid "Filter it"
+msgstr "Filtrarla"
+
+msgctxt "lists.water-treatments.solar"
+msgid "Leave it in the sun"
+msgstr "Exponerla al sol"
+
+msgctxt "lists.water-treatments.none"
+msgid "None of these"
+msgstr "Ninguna de estas"
+
+msgctxt "lists.toilet-types.flush"
+msgid "Flush toilet"
+msgstr "Inodoro con descarga"
+
+msgctxt "lists.toilet-types.pit_slab"
+msgid "Pit latrine with a slab"
+msgstr "Letrina de pozo con losa"
+
+msgctxt "lists.toilet-types.pit_open"
+msgid "Pit latrine without a slab"
+msgstr "Letrina de pozo sin losa"
+
+msgctxt "lists.toilet-types.composting"
+msgid "Composting toilet"
+msgstr "Inodoro ecológico"
+
+msgctxt "lists.toilet-types.none_open"
+msgid "No toilet (open defecation)"
+msgstr "Sin inodoro (al aire libre)"
+
+msgctxt "lists.toilet-types.other"
+msgid "Another kind"
+msgstr "Otro tipo"
+
+msgctxt "lists.handwashing-places.fixed"
+msgid "A fixed place with water"
+msgstr "Un lugar fijo con agua"
+
+msgctxt "lists.handwashing-places.portable"
+msgid "A bucket or portable container"
+msgstr "Un balde o recipiente móvil"
+
+msgctxt "lists.handwashing-places.none"
+msgid "No place"
+msgstr "Ningún lugar"
+
+msgctxt "welcome"
+msgid "Questions about the household of {$roster.head_name}."
+msgstr "Preguntas sobre el hogar de {$roster.head_name}."
+
+msgctxt "household"
+msgid "The household"
+msgstr "El hogar"
+
+msgctxt "household.members"
+msgid "How many people live in this household?"
+msgstr "¿Cuántas personas viven en este hogar?"
+
+msgctxt "household.repaired_on"
+msgid "When was the main water supply last repaired?"
+msgstr "¿Cuándo se reparó por última vez el suministro principal de agua?"
+
+msgctxt "household.repaired_on.help"
+msgid "An estimate is fine."
+msgstr "Una fecha aproximada basta."
+
+msgctxt "water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "water.source"
+msgid "What is the main source of drinking water?"
+msgstr "¿Cuál es la fuente principal de agua para beber?"
+
+msgctxt "water.minutes_to_source"
+msgid "How many minutes does a round trip to the source take?"
+msgstr "¿Cuántos minutos toma ir a la fuente y volver?"
+
+msgctxt "water.minutes_to_source.guidance"
+msgid "Count waiting time at the source too."
+msgstr "Incluya el tiempo de espera en la fuente."
+
+msgctxt "water.litres_per_day"
+msgid "About how much water does the household use in a day?"
+msgstr "¿Cuánta agua usa el hogar en un día, aproximadamente?"
+
+msgctxt "water.treatments"
+msgid "How do you make drinking water safer? Choose all that apply."
+msgstr "¿Cómo hace más segura el agua para beber? Elija todas las que correspondan."
+
+msgctxt "water.monthly_cost"
+msgid "How much does the household pay for water each month?"
+msgstr "¿Cuánto paga el hogar por el agua cada mes?"
+
+msgctxt "sanitation"
+msgid "Sanitation"
+msgstr "Saneamiento"
+
+msgctxt "sanitation.toilet"
+msgid "The toilet"
+msgstr "El inodoro"
+
+msgctxt "sanitation.toilet.type"
+msgid "What kind of toilet does the household use?"
+msgstr "¿Qué tipo de inodoro usa el hogar?"
+
+msgctxt "sanitation.toilet.sharing"
+msgid "Sharing"
+msgstr "Uso compartido"
+
+msgctxt "sanitation.toilet.sharing.shared"
+msgid "Is the toilet shared with other households?"
+msgstr "¿Se comparte el inodoro con otros hogares?"
+
+msgctxt "sanitation.toilet.sharing.households"
+msgid "How many other households share it?"
+msgstr "¿Cuántos otros hogares lo comparten?"
+
+msgctxt "hygiene"
+msgid "Hygiene"
+msgstr "Higiene"
+
+msgctxt "hygiene.handwashing_place"
+msgid "Where do household members wash their hands?"
+msgstr "¿Dónde se lavan las manos los miembros del hogar?"
+
+msgctxt "hygiene.soap_seen"
+msgid "Is there soap or ash at the place?"
+msgstr "¿Hay jabón o ceniza en ese lugar?"
+
+msgctxt "hygiene.soap_seen.guidance"
+msgid "Ask to see it."
+msgstr "Pida verlo."
+
+msgctxt "hygiene.notes"
+msgid "Anything else to note about the household's water?"
+msgstr "¿Algo más que anotar sobre el agua del hogar?"
+
+msgctxt "thanks"
+msgid "Thank you."
+msgstr "Gracias."
+
+msgctxt "checks.low-use"
+msgid "Less than half the usual water per person for this source. Ask again."
+msgstr "Menos de la mitad del agua usual por persona para esta fuente. Pregunte de nuevo."
+
+msgctxt "checks.low-use.dry-season"
+msgid "Dry season"
+msgstr "Temporada seca"
+
+msgctxt "checks.low-use.not-sure"
+msgid "Not sure"
+msgstr "No está seguro"
+
+msgctxt "field-checks.quick-visits"
+msgid "This visit was very short or very long. Check the answers."
+msgstr "Esta visita fue muy corta o muy larga. Revise las respuestas."

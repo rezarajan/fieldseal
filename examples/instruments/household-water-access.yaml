@@ -1,0 +1,166 @@
+# Household water, sanitation and hygiene, in the compact dialect (ADR 0040). English is
+# written here; Spanish is in i18n/household-water-access/es.po. Nothing is derived (ADR 0037):
+# the usual-use check divides the litres by the members inside its condition.
+survey: {name: household-water-access, version: 0.1.0}
+language: en
+title: Household water, sanitation and hygiene
+description: A short visit to a household to learn where its water comes from and how it is used.
+purpose: To plan water and sanitation improvements.
+administration: both
+publisher: Example Authority
+copyright: {notice: © 2026 Example Authority, licence: CC-BY-4.0}
+translations:
+  es: {method: human, reviewed-by: 2, notes: Reviewed by two native speakers.}
+nonresponse: [refused]
+defaults:
+  other-text: {max-length: 60}
+consent: {required: false}
+lists:
+  water-sources:
+    other: Another source
+    items:
+    - label: Piped into the home
+      code: piped_in_dwelling
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: Piped into the yard
+      code: piped_yard
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: Public standpipe
+      code: standpipe
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: Borehole or tube well
+      code: borehole
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: Rainwater
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: Tanker truck
+      concept:
+      - {system: 'urn:example:water-class', code: improved, display: Improved}
+    - label: River, lake or stream
+      code: surface_water
+      concept:
+      - {system: 'urn:example:water-class', code: unimproved, display: Unimproved}
+  water-treatments:
+  - {label: Boil it, code: boil}
+  - {label: Add chlorine, code: chlorine}
+  - {label: Filter it, code: filter}
+  - {label: Leave it in the sun, code: solar}
+  - {label: None of these, code: none, exclusive: true}
+  toilet-types:
+    other: Another kind
+    items:
+    - {label: Flush toilet, code: flush}
+    - {label: Pit latrine with a slab, code: pit_slab}
+    - {label: Pit latrine without a slab, code: pit_open}
+    - {label: Composting toilet, code: composting}
+    - {label: No toilet (open defecation), code: none_open}
+  handwashing-places:
+  - {label: A fixed place with water, code: fixed}
+  - {label: A bucket or portable container, code: portable}
+  - {label: No place, code: none}
+tables:
+  usual_litres_per_person: {piped_in_dwelling: 60, piped_yard: 40, standpipe: 20, borehole: 25, rainwater: 20, tanker_truck: 20, surface_water: 15, other: 15}
+sections:
+- welcome: {display: 'Questions about the household of {$roster.head_name}.', role: introduction}
+- household:
+    group: The household
+    elements:
+    - members: {type: number, min: 1, max: 30, decimals: 0, prefix: '1', label: 'How many people live in this household?'}
+    - repaired_on:
+        type: date
+        min: '2000-01-01'
+        max: '2030-12-31'
+        prefix: '2'
+        label: When was the main water supply last repaired?
+        help: An estimate is fine.
+        optional: true
+        nonresponse: [dont-know, refused]
+- water:
+    group: Water
+    concept:
+    - {system: 'urn:example:topic', code: drinking-water}
+    elements:
+    - source: {type: choice, list: water-sources, prefix: '3', label: 'What is the main source of drinking water?'}
+    - minutes_to_source:
+        type: number
+        min: 0
+        max: 600
+        decimals: 0
+        unit: min
+        prefix: '4'
+        label: How many minutes does a round trip to the source take?
+        guidance: Count waiting time at the source too.
+        if:
+          ne: [source, piped_in_dwelling]
+        disabled-display: protected
+    - litres_per_day:
+        type: number
+        min: 1
+        max: 5000
+        decimals: 0
+        unit: L
+        also: [gal]
+        value: decimal
+        prefix: '5'
+        label: About how much water does the household use in a day?
+    - treatments: {type: choices, list: water-treatments, prefix: '6', label: 'How do you make drinking water safer? Choose all that apply.'}
+    - monthly_cost:
+        type: money
+        currency: PEN
+        min: 0
+        max: 500
+        step: 0.5
+        presentation: entry
+        prefix: '7'
+        label: How much does the household pay for water each month?
+        nonresponse: [dont-know, refused]
+- sanitation:
+    group: Sanitation
+    elements:
+    - toilet:
+        group: The toilet
+        elements:
+        - type: {type: choice, list: toilet-types, prefix: '8', label: 'What kind of toilet does the household use?'}
+        - sharing:
+            group: Sharing
+            if:
+              ne: [type, none_open]
+            disabled-display: protected
+            elements:
+            - shared: {type: binary, prefix: 9a, label: 'Is the toilet shared with other households?'}
+            - households:
+                type: number
+                min: 1
+                max: 50
+                decimals: 0
+                prefix: 9b
+                label: How many other households share it?
+                if: {is: shared}
+- hygiene:
+    group: Hygiene
+    elements:
+    - handwashing_place: {type: choice, list: handwashing-places, prefix: '10', label: 'Where do household members wash their hands?'}
+    - soap_seen: {type: binary, presentation: buttons, prefix: '11', label: 'Is there soap or ash at the place?', guidance: Ask to see it.}
+    - notes: {type: text, max-length: 500, multiline: true, description: Free-text note, label: 'Anything else to note about the household''s water?', optional: true}
+- thanks: {display: Thank you., role: end}
+checks:
+- id: no-place-no-soap
+  when:
+    eq: [handwashing_place, none]
+  skip: [soap_seen]
+- id: low-use
+  when:
+    lt:
+    - div: [litres_per_day, members]
+    - div:
+      - lookup: [usual_litres_per_person, source]
+      - 2
+  soft: Less than half the usual water per person for this source. Ask again.
+  reasons: [Dry season, Not sure]
+field-checks:
+- {id: quick-visits, type: timing, min-seconds: 60, max-seconds: 3600, message: This visit was very short or very long. Check the answers.}

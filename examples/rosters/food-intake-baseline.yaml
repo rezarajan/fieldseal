@@ -1,0 +1,16 @@
+# A roster for the food intake instrument: one cohort, two participants.
+#
+# The instrument reads `roster.name`, `roster.school`, `roster.class` and `roster.age`
+# (read-only items); `guardian_phone` is not referenced, so the builder drops it (DIS-013).
+cohort: cohort-a
+version: 1
+subjects:
+  - subject: p-0001
+    display: Participant 1
+    consent: granted
+    fields: { name: Participant 1, school: North School, class: 2B, age: 12, guardian_phone: "000" }
+  - subject: p-0002
+    display: Participant 2
+    consent: unknown
+    prior_status: enrolled
+    fields: { name: Participant 2, school: North School, class: 2B, age: 13, guardian_phone: "000" }

@@ -1,0 +1,78 @@
+# A day with the household water instrument, for `fieldseal device simulate`.
+#
+#   fieldseal device simulate --script examples/scenarios/household-water-access.yaml --review
+#
+# Covers: the compact layout and a second language (COL-108), a refused nonresponse
+# (INS-141), a soft rule confirmed with a reason (COL-035), a pause and resume (COL-033,
+# COL-034), refused consent (COL-030), a resurvey that writes only changes (COL-032),
+# review with the timing field check (COL-060–COL-063), a receipt, a clear (COL-100–COL-107)
+# and closing the tenancy (COL-006). Names below exist only in the simulated device's
+# memory; the output never shows them (CLI-008).
+pin: "246810"
+seed: 3
+instrument: ../instruments/household-water-access.yaml
+layouts: [../layouts/household-water-access.compact.yaml]
+languages: [es]
+window: compact
+rosters:
+  - cohort: village-a
+    version: 1
+    subjects:
+      - { subject: h-001, consent: unknown, display: { head_name: Ana }, attributes: {} }
+      - { subject: h-002, consent: granted, display: { head_name: Beto }, attributes: {} }
+      - { subject: h-003, consent: refused, display: { head_name: Carla }, attributes: {} }
+steps:
+  # A full visit: a refused nonresponse, and the unanswered optional items acknowledged.
+  - capture:
+      subject: h-001
+      mode: first
+      set:
+        household.members: 5
+        water.source: standpipe
+        water.minutes_to_source: 20
+        water.litres_per_day: 150
+        water.treatments: [boil, chlorine]
+        sanitation.toilet.type: pit_slab
+        sanitation.toilet.sharing.shared: false
+        hygiene.handwashing_place: fixed
+        hygiene.soap_seen: true
+      nonresponse: { water.monthly_cost: refused }
+      acknowledge: true
+      then: seal
+  - wait: 100
+  # Little water for a large household: the soft rule asks again; the collector keeps it.
+  - capture:
+      subject: h-002
+      mode: first
+      set:
+        household.members: 8
+        water.source: borehole
+        water.minutes_to_source: 45
+      then: pause
+  - capture:
+      subject: h-002
+      mode: resume
+      set:
+        water.litres_per_day: 40
+        water.treatments: [none]
+        water.monthly_cost: 12.5
+        sanitation.toilet.type: none_open
+        hygiene.handwashing_place: none
+      override: { low-use: dry-season }
+      acknowledge: true
+      then: seal
+  # Refused consent: nothing at all may be recorded.
+  - status: { subject: h-003, outcome: absent }
+    expect: consent refused
+  - wait: 90
+  # A resurvey: only what changed is written.
+  - capture:
+      subject: h-001
+      mode: resurvey
+      set: { household.members: 6, water.litres_per_day: 180 }
+      then: seal
+  - review: {}
+  - receipt: { through: 6 }
+  - clear: { through: 6 }
+  - review: {}
+  - close: {}

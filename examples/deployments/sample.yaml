@@ -1,0 +1,58 @@
+# A complete deployment manifest for a local, all-in-memory deployment of the sample
+# instruments (DEP §6). Every adapter is an in-memory or file adapter, so nothing here may
+# run in production: `fieldseal deployment validate` refuses these adapters in an environment
+# named `production` (DEP-023). Secrets would appear only as `{ secretRef: <name> }`.
+#
+#   fieldseal deployment validate examples/deployments/sample.yaml
+#   fieldseal deployment render examples/deployments/sample.yaml --environment development
+apiVersion: fieldseal.dev/v1alpha1
+kind: Deployment
+metadata:
+  name: local-sample
+  schemaVersion: 1.0.0
+spec:
+  authority:
+    displayName: Local Sample Authority
+    trustBundle: { ref: trust/development-root, channel: development }
+  registries:
+    artefacts: { url: "http://127.0.0.1:9000", transparencyLog: "http://127.0.0.1:9001" }
+    builds: { container: "localhost:5000/fieldseal", runtime: "http://127.0.0.1:9002" }
+  policies:
+    layers:
+      - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+  instruments:
+    - { ref: instrument/food-intake-baseline, channel: development }
+    - { ref: instrument/household-water-access, channel: development }
+  components:
+    factory:
+      bind: "127.0.0.1:8080"
+      adapters:
+        IdentityProvider:
+          adapter: memory-dev
+          config: { users: "alice=collector:hwk,olga=operator+device-preparation:hwk" }
+        Signer:
+          adapter: memory
+          config: { trustBundleOut: ./trust-bundle.bin }
+        AttestationVerifier: { adapter: software, config: {} }
+        PolicyEngine: { adapter: built-in, config: {} }
+        TenancyRegistry: { adapter: memory, config: {} }
+      scaling: { replicas: 1 }
+    intake:
+      adapters:
+        RecordKeyUnsealer: { adapter: memory, config: {} }
+        SubmissionStore: { adapter: memory, config: {} }
+        DataPlatform: { adapter: landing-files, config: { directory: ./landing } }
+        PolicyEngine: { adapter: built-in, config: {} }
+        TenancyRegistry: { adapter: memory, config: {} }
+      scaling: { replicas: 1 }
+    publishing:
+      adapters:
+        TransparencyLog: { adapter: memory, config: {} }
+        Signer: { adapter: memory, config: {} }
+  runtime:
+    provisioning:
+      factoryUrl: "http://127.0.0.1:8080"
+      platforms:
+        android: { management: self-managed, deviceOwner: fieldseal, lockTask: false }
+  environments:
+    development: {}

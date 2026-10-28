@@ -1,0 +1,24 @@
+# A roster for the household water instrument: one cohort, three households.
+#
+# `fields` holds only values the instrument reads as `roster.<field>`; the household
+# instrument reads `head_name`. The bundle builder drops every other field before the
+# roster is sealed (DIS-013), so `village_code` below never reaches a device.
+#
+# Subject IDs are pseudonymous; `display` is the text the collector sees when choosing a
+# household. Consent is `granted`, `refused` or `unknown` (default); a refused subject can
+# never be recorded.
+cohort: village-a
+version: 3
+subjects:
+  - subject: hh-0001
+    display: Household 1
+    consent: unknown
+    fields: { head_name: Amina, village_code: V-17 }
+  - subject: hh-0002
+    display: Household 2
+    consent: granted
+    fields: { head_name: Tomas, village_code: V-17 }
+  - subject: hh-0003
+    display: Household 3
+    consent: refused
+    fields: { head_name: Lucia, village_code: V-18 }

@@ -1,0 +1,37 @@
+# Spanish for layout household-water-access-compact. msgctxt is the title's position.
+
+msgctxt "steps.0"
+msgid "The household"
+msgstr "El hogar"
+
+msgctxt "steps.0.contents.1.card"
+msgid "Who lives here"
+msgstr "Quién vive aquí"
+
+msgctxt "steps.1"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "steps.1.contents.0.card"
+msgid "The source"
+msgstr "La fuente"
+
+msgctxt "steps.1.contents.1.card"
+msgid "Use and treatment"
+msgstr "Uso y tratamiento"
+
+msgctxt "steps.1.contents.2.card"
+msgid "Cost"
+msgstr "Costo"
+
+msgctxt "steps.2"
+msgid "Sanitation and hygiene"
+msgstr "Saneamiento e higiene"
+
+msgctxt "steps.2.contents.0.card"
+msgid "The toilet"
+msgstr "El inodoro"
+
+msgctxt "steps.2.contents.1.card"
+msgid "Hygiene"
+msgstr "Higiene"

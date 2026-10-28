@@ -1,0 +1,29 @@
+# The capture leg of the local stack's demo (`just demo`): the device that registered with the
+# factory (`registration request --device-dir`) visits two households of the roster in its
+# bundle. Run by `fieldseal device capture --script … --device-dir … --trust-bundle … --bundle …`;
+# the instrument and roster come from the bundle, so this file holds only the PIN and the visits.
+pin: "246810"
+steps:
+  - capture:
+      subject: hh-0002
+      mode: first
+      set:
+        household.members: 5
+        water.source: standpipe
+        water.minutes_to_source: 20
+        water.litres_per_day: 150
+        water.treatments: [boil]
+        sanitation.toilet.type: pit_slab
+        sanitation.toilet.sharing.shared: false
+        hygiene.handwashing_place: fixed
+        hygiene.soap_seen: true
+      nonresponse: { water.monthly_cost: refused }
+      acknowledge: true
+      then: seal
+  - capture:
+      subject: hh-0002
+      mode: resurvey
+      set: { household.members: 6 }
+      then: seal
+  - status: { subject: hh-0001, outcome: absent }
+  - review: {}
