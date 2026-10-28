@@ -1,0 +1,73 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/kernel",
+  "crates/contexts/*",
+  "crates/adapters/*",
+  "crates/bindings/*",
+  "crates/apps/*",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[workspace.dependencies]
+thiserror = "2.0.21"
+fieldseal-kernel = { path = "crates/kernel" }
+fieldseal-trust = { path = "crates/contexts/trust" }
+fieldseal-publishing = { path = "crates/contexts/publishing" }
+fieldseal-instrument = { path = "crates/contexts/instrument" }
+fieldseal-policy = { path = "crates/contexts/policy" }
+fieldseal-registration = { path = "crates/contexts/registration" }
+fieldseal-distribution = { path = "crates/contexts/distribution" }
+fieldseal-collection = { path = "crates/contexts/collection" }
+fieldseal-delivery = { path = "crates/contexts/delivery" }
+fieldseal-intake = { path = "crates/contexts/intake" }
+fieldseal-deployment = { path = "crates/contexts/deployment" }
+fieldseal-adapters-memory = { path = "crates/adapters/memory" }
+fieldseal-adapters-authoring = { path = "crates/adapters/authoring" }
+fieldseal-adapters-rekor = { path = "crates/adapters/rekor" }
+fieldseal-adapters-translog = { path = "crates/adapters/translog" }
+fieldseal-adapters-opa = { path = "crates/adapters/opa" }
+fieldseal-adapters-policy = { path = "crates/adapters/policy" }
+fieldseal-adapters-html = { path = "crates/adapters/html" }
+fieldseal-adapters-web = { path = "crates/adapters/web" }
+fieldseal-adapters-landing-files = { path = "crates/adapters/landing-files" }
+fieldseal-adapters-file = { path = "crates/adapters/file" }
+fieldseal-adapters-upload-http = { path = "crates/adapters/upload-http" }
+# Format core (issue #42): pure crates only, no default features that reach the OS.
+aes-gcm = { version = "0.11", default-features = false, features = ["aes", "alloc"] }
+hkdf = "0.13"
+hpke = { version = "0.15", default-features = false, features = ["alloc", "x25519", "chacha", "aes", "nistp"] }
+p256 = { version = "0.14", default-features = false, features = ["ecdsa", "arithmetic"] }
+rand_core = { version = "0.10", default-features = false }
+sha2 = { version = "0.11", default-features = false }
+unicode-normalization = { version = "0.1.26", default-features = false }
+zeroize = "1.9"
+# Locale formatting (INS-088): ICU4X, pure Rust, with its compiled CLDR data.
+icu_calendar = { version = "2.4", default-features = false, features = ["compiled_data"] }
+icu_datetime = { version = "2.4", default-features = false, features = ["compiled_data"] }
+icu_decimal = { version = "2.4", default-features = false, features = ["compiled_data"] }
+icu_locale_core = { version = "2.4", default-features = false }
+icu_plurals = { version = "2.4", default-features = false, features = ["compiled_data"] }
+fixed_decimal = { version = "0.7", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+# Tests run in the dev profile. Third-party crates (the P-256, HPKE, Argon2 and Reed-Solomon
+# arithmetic among them) are optimised there too: they are built once and cached, and unoptimised
+# they dominated the suite's run time. Fieldseal's own crates stay at opt-level 0 for fast
+# rebuilds and full debug information.
+[profile.dev.package."*"]
+opt-level = 2

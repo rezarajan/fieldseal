@@ -1,0 +1,16 @@
+/target/
+/dist/
+/result
+/result-*
+.direnv/
+# Android
+*.jks
+*.keystore
+/.android/
+__pycache__/
+/runtimes/android/.gradle/
+/runtimes/android/build/
+/runtimes/android/app/build/
+/runtimes/android/.kotlin/
+/runtimes/android/local.properties
+/release-docs/

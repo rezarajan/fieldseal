@@ -1,0 +1,15 @@
+.android
+dist
+docs
+!docs/reference/spec
+.git
+.jj
+resources
+result
+result-*
+target
+runtimes/android/build
+runtimes/android/app/build
+runtimes/android/.gradle
+runtimes/android/.kotlin
+legacy

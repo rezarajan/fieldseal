@@ -1,0 +1,59 @@
+# Checks every pull request (and main) with the flake's Rust checks, run with Nix on
+# the runner itself. Third-party crates are compiled once into their own store
+# derivation (crane `buildDepsOnly`), so a cached run rebuilds only Fieldseal's crates.
+# The container, Android and artefact build is in build.yml and runs on main and tags.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "!docs/reference/spec/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The Nix caches, each its own switch, so both may be on: the Actions cache
+# (repository variable FIELDSEAL_CACHE_GHA, on unless set to off) and Cachix
+# (FIELDSEAL_CACHIX, a cache name, with the secret CACHIX_AUTH_TOKEN; off unless set).
+env:
+  FIELDSEAL_CACHE_GHA: ${{ vars.FIELDSEAL_CACHE_GHA || 'on' }}
+  FIELDSEAL_CACHIX: ${{ vars.FIELDSEAL_CACHIX }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Rust checks (clippy, tests, architecture)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            keep-outputs = true
+            keep-env-derivations = true
+      # Every store path built here, by its own hash: in the Actions cache and,
+      # where one is named, in Cachix; each fetched by the next run instead of built.
+      - if: env.FIELDSEAL_CACHE_GHA == 'on'
+        uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false
+          use-gha-cache: true
+      - if: env.FIELDSEAL_CACHIX != ''
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ env.FIELDSEAL_CACHIX }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build the checks
+        run: |
+          nix build -L --no-link \
+            path:.#checks.x86_64-linux.clippy \
+            path:.#checks.x86_64-linux.tests \
+            path:.#checks.x86_64-linux.architecture

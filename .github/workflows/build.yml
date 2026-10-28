@@ -1,0 +1,220 @@
+# Build Fieldseal with the same Nix toolchain developers use, and publish:
+#   ghcr.io/<owner>/<repo>/builder:<key>   the provisioned toolchain (Containerfile
+#                                          `toolchain` stage), reused by later builds
+#   ghcr.io/<owner>/<repo>/artifacts:<tag> dist/ as an image (FROM scratch)
+#   ghcr.io/<owner>/<repo>/<service>:<tag>  for a release (v*): the Nix-built service images
+#                                          (factory, upload, translog, web, cli), each signed
+#                                          with cosign (keyless, the workflow's identity), and
+#                                          the release's documentation bundle (DEP, #54)
+# and upload dist/ as a workflow artifact. See docs/reference/toolchain.md, "Continuous integration".
+name: build
+
+# Pull requests and main are checked by ci.yml (cached Nix checks). This full container,
+# Android and artefact build runs only for tagged releases (v*) and on demand.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  toolchain:
+    name: Toolchain image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      builder: ${{ steps.result.outputs.builder }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compute toolchain key
+        id: key
+        run: |
+          # The key covers everything the toolchain stage depends on, so an
+          # image with this tag always holds exactly this toolchain.
+          key=$({ cat flake.nix flake.lock rust-toolchain.toml
+                  sed -n '/ AS toolchain$/,/^WORKDIR \/src$/p' Containerfile; } | sha256sum | cut -c1-16)
+          image="${REGISTRY}/${GITHUB_REPOSITORY,,}/builder"
+          tags="$image:$key"
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then tags="$tags,$image:latest"; fi
+          {
+            echo "key=$key"
+            echo "image=$image"
+            echo "tags=$tags"
+          } >> "$GITHUB_OUTPUT"
+          echo "Toolchain image: $image:$key"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for an existing image
+        id: exists
+        run: |
+          if docker manifest inspect "${{ steps.key.outputs.image }}:${{ steps.key.outputs.key }}" >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Free disk space
+        if: steps.exists.outputs.found == 'false' && github.event_name != 'pull_request'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.exists.outputs.found == 'false' && github.event_name != 'pull_request'
+
+      # Pull requests never publish: they fall back to building the toolchain
+      # stage inline if no image exists for their flake inputs yet.
+      - name: Build and push toolchain image
+        if: steps.exists.outputs.found == 'false' && github.event_name != 'pull_request'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Containerfile
+          target: toolchain
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.key.outputs.tags }}
+
+      - name: Result
+        id: result
+        run: |
+          if [[ "${{ steps.exists.outputs.found }}" == true || "${{ github.event_name }}" != pull_request ]]; then
+            echo "builder=${{ steps.key.outputs.image }}:${{ steps.key.outputs.key }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "builder=toolchain" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build, check and publish artefacts
+    needs: toolchain
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Build, run tools/build.sh and tools/check-portable.sh, export dist/.
+      - name: Build artefacts
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Containerfile
+          target: artifacts
+          platforms: linux/amd64
+          build-args: BUILDER_IMAGE=${{ needs.toolchain.outputs.builder }}
+          outputs: type=local,dest=dist
+
+      - name: Smoke test the wheel on plain Debian
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Containerfile
+          target: smoke
+          platforms: linux/amd64
+          build-args: BUILDER_IMAGE=${{ needs.toolchain.outputs.builder }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fieldseal-dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Artefacts image name
+        id: name
+        if: github.event_name != 'pull_request'
+        run: echo "image=${REGISTRY}/${GITHUB_REPOSITORY,,}/artifacts" >> "$GITHUB_OUTPUT"
+
+      - name: Image tags for the artefacts image
+        id: meta
+        if: github.event_name != 'pull_request'
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.name.outputs.image }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Publish artefacts image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Containerfile
+          target: artifacts
+          platforms: linux/amd64
+          build-args: BUILDER_IMAGE=${{ needs.toolchain.outputs.builder }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # One image per service and release (DEP, ADR 0025): the same Nix derivations `just images`
+  # builds locally, pushed by tag and signed by digest. Only for tagged releases.
+  release:
+    name: Service images and documentation for the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false
+          use-gha-cache: true
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, push and sign the service images
+        run: tools/release-images.sh "${REGISTRY}/${GITHUB_REPOSITORY,,}" "${GITHUB_REF_NAME}" --push --sign
+      - name: Documentation bundle
+        env:
+          FIELDSEAL_RELEASE_SIGNING_KEY: ${{ secrets.FIELDSEAL_RELEASE_SIGNING_KEY }}
+        run: |
+          if [ -n "$FIELDSEAL_RELEASE_SIGNING_KEY" ]; then
+            umask 077; printf %s "$FIELDSEAL_RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/release.key"
+            export FIELDSEAL_RELEASE_SIGNING_KEY_FILE="$RUNNER_TEMP/release.key"
+          fi
+          tools/release-docs.sh "${GITHUB_REF_NAME}" release-docs
+      - name: Attach the documentation bundle to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tar -czf "fieldseal-docs-${GITHUB_REF_NAME}.tar.gz" -C release-docs .
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || gh release create "${GITHUB_REF_NAME}" --verify-tag --title "${GITHUB_REF_NAME}" --notes "Fieldseal ${GITHUB_REF_NAME}"
+          gh release upload "${GITHUB_REF_NAME}" "fieldseal-docs-${GITHUB_REF_NAME}.tar.gz" release-docs/images.txt release-docs/release.cbor release-docs/release.txt --clobber

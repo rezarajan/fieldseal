@@ -1,0 +1,66 @@
+# Fieldseal's dependency rule (ADR 0028), checked by tools/check-architecture.py.
+# Every workspace crate belongs to one layer; source dependencies point inward only.
+#
+#   kernel  <-  contexts  <-  adapters  <-  bindings, apps
+#
+# Within the contexts layer, the allowed edges follow the context map (ADR 0004).
+
+[layers]
+kernel = ["fieldseal-kernel"]
+contexts = [
+  "fieldseal-trust", "fieldseal-instrument", "fieldseal-policy", "fieldseal-publishing",
+  "fieldseal-registration", "fieldseal-distribution", "fieldseal-collection",
+  "fieldseal-delivery", "fieldseal-intake", "fieldseal-deployment",
+]
+# Matched by prefix.
+adapters = ["fieldseal-adapters-"]
+bindings = ["fieldseal-uniffi", "fieldseal-py", "fieldseal-wasm"]
+apps = ["fieldseal-cli", "fieldseal-factory", "fieldseal-translog", "fieldseal-security-tests", "fieldseal-e2e", "fieldseal-web"]
+
+# Inward edges between contexts. A context not listed may depend only on the kernel.
+[context_edges]
+fieldseal-publishing = ["fieldseal-trust", "fieldseal-instrument", "fieldseal-policy"]
+fieldseal-registration = ["fieldseal-trust", "fieldseal-policy"]
+fieldseal-distribution = ["fieldseal-trust", "fieldseal-policy", "fieldseal-instrument", "fieldseal-publishing", "fieldseal-registration"]
+fieldseal-collection = ["fieldseal-trust", "fieldseal-policy", "fieldseal-instrument", "fieldseal-publishing", "fieldseal-distribution"]
+fieldseal-delivery = ["fieldseal-trust", "fieldseal-policy", "fieldseal-collection"]
+fieldseal-intake = ["fieldseal-trust", "fieldseal-policy", "fieldseal-instrument", "fieldseal-publishing", "fieldseal-registration", "fieldseal-delivery"]
+fieldseal-deployment = ["fieldseal-trust", "fieldseal-policy", "fieldseal-publishing"]
+
+# Layers each layer may depend on (besides itself where noted).
+[layer_edges]
+kernel = []
+contexts = ["kernel"]
+adapters = ["kernel", "contexts"]
+bindings = ["kernel", "contexts", "adapters"]
+apps = ["kernel", "contexts", "adapters"]
+
+# Third-party crates the kernel and contexts may use as normal dependencies: pure
+# libraries only (no I/O, runtimes, frameworks or SDKs). Dev-dependencies are free.
+[inner_external_allow]
+crates = [
+  "thiserror", "sha2", "p256", "ecdsa", "hkdf", "hmac", "chacha20poly1305", "aes-gcm",
+  "x25519-dalek", "hpke", "ciborium", "serde", "serde_bytes", "zeroize", "subtle",
+  "argon2", "reed-solomon-simd", "base32",
+  "semver", "minicbor",
+  # Format core (issue #42). unicode-normalization: NFC checks (WIRE-004), tables only.
+  # rand_core: the CryptoRng trait the caller's random source implements; without its
+  # OS features it reads no randomness itself.
+  "unicode-normalization", "rand_core",
+  # Locale formatting (INS-088, ADR 0034, issue #83): ICU4X, pure Rust, with its CLDR data
+  # compiled in as static tables (no I/O, no runtime data loading, no allocation of
+  # providers). Used only by the Instrument context's `locale` module. We use the compiled
+  # data for the decimal, plural-rule and date components only: the data of the other ICU4X
+  # components (collation, segmentation, normalisation, case mapping, ...) is never linked,
+  # and the linker drops the date patterns of calendars and field sets we don't format.
+  # fixed_decimal is ICU4X's exact decimal type; icu_locale_core parses tags and carries no data.
+  "icu_calendar", "icu_datetime", "icu_decimal", "icu_locale_core", "icu_plurals", "fixed_decimal",
+]
+
+# Ambient dependencies the kernel and contexts must not reach for directly: time,
+# randomness, I/O, environment and process access go through ports.
+[inner_forbidden_source]
+patterns = [
+  "std::fs", "std::net", "std::env", "std::process", "std::io::stdin", "std::io::stdout",
+  "SystemTime", "Instant::now", "thread_rng", "OsRng", "getrandom", "println!", "eprintln!",
+]

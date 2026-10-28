@@ -1,0 +1,5 @@
+# cargo-nextest (`just test`): every test binary in parallel. A test that runs longer than 5 s is
+# reported as slow; the whole suite has a 20 s budget (tools/test-budget.sh).
+[profile.default]
+slow-timeout = { period = "5s" }
+failure-output = "immediate-final"
