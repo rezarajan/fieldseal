@@ -1,0 +1,17 @@
+[package]
+name = "fieldseal-adapters-authoring"
+description = "Strict decoding of YAML and JSON authoring documents into the canonical data model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+saphyr-parser = "0.3.3"
+base64 = "0.22"
+unicode-normalization = "0.1"
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,22 @@
+[package]
+name = "fieldseal-adapters-policy"
+description = "Policy-context adapters: policy sources (artefact registry, bundle) and a tamper-evident file decision log"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-distribution.workspace = true
+serde_json = "1"
+thiserror.workspace = true
+
+[dev-dependencies]
+fieldseal-adapters-memory.workspace = true
+
+[lints]
+workspace = true

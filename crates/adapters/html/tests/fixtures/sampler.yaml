@@ -1,0 +1,106 @@
+# A small two-language instrument (one right-to-left) that uses every control and display
+# role, for the HTML page tests. Not a survey.
+apiVersion: fieldseal.dev/v1alpha1
+kind: Instrument
+metadata: { name: sampler, version: 1.0.0 }
+spec:
+  schema: "^1.0"
+  title: { en: "Sampler \"1\" < 2 & 3 > '0'", ar: "عينة" }
+  administration: interviewer
+  languages: [en, ar]
+  defaultLanguage: en
+  translations: { ar: { method: human, reviewedBy: 1 } }
+  nonresponse: [dont-know, refused]
+  consent: { required: false }
+  media:
+    dot: { mediaType: image/png, sha256: "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6", bytes: !!binary "iVBORw0KGgo=", alt: { en: A dot, ar: "نقطة" } }
+  codeLists:
+    pick:
+      ordered: false
+      other: { code: other, label: { en: Something else, ar: "شيء آخر" }, maxLength: 20 }
+      codes:
+        - { code: a, label: { en: "A < 1 & \"B\" > 'c'", ar: "أ" }, icon: "🍞", media: dot }
+        - { code: b, label: { en: B, ar: "ب" }, description: { en: The second, ar: "الثاني" } }
+        - { code: other, label: { en: Other, ar: "آخر" } }
+    many:
+      ordered: false
+      codes:
+        - { code: x, label: { en: X, ar: "س" } }
+        - { code: y, label: { en: Y, ar: "ص" } }
+        - { code: none, label: { en: None of these, ar: "لا شيء" }, exclusive: true }
+    size:
+      ordered: true
+      codes: [ { code: s, label: { en: Small, ar: "صغير" } }, { code: m, label: { en: Medium, ar: "متوسط" } }, { code: l, label: { en: Large, ar: "كبير" } } ]
+    things:
+      ordered: false
+      other: { code: other, label: { en: Which thing?, ar: "أي شيء؟" }, maxLength: 30 }
+      codes: [ { code: cup, label: { en: Cup, ar: "كوب" }, icon: "🥤" }, { code: other, label: { en: Another thing, ar: "شيء آخر" } } ]
+  elements:
+    - { kind: display, id: hello, role: introduction, text: { en: "Hello {$roster.name}.", ar: "مرحبا {$roster.name}." } }
+    - kind: group
+      id: g
+      label: { en: First, ar: "الأول" }
+      description: { en: About you, ar: "عنك" }
+      elements:
+        - { kind: display, id: how, role: instruction, text: { en: "Ask each question.\nRead the options aloud.", ar: "اسأل كل سؤال." } }
+        - { kind: question, path: who, label: { en: Name, ar: "الاسم" }, from: roster.name, nonresponse: [], data: { type: string } }
+        - kind: question
+          path: pick
+          prefix: "1"
+          label: { en: Pick one, ar: "اختر" }
+          help: { en: Only one, ar: "واحد فقط" }
+          guidance: { en: Show the card, ar: "اعرض البطاقة" }
+          control: { type: choice, codes: pick }
+          data: { type: code, codeList: pick }
+        - kind: question
+          path: n
+          label: { en: How much?, ar: "كم؟" }
+          when: '$g.pick == "a"'
+          disabledDisplay: protected
+          control: { type: number, min: 0, max: 9.5, decimals: 1, unit: kg, unitLabel: { en: kilograms, ar: "كغ" }, entryUnits: ["[lb_av]"] }
+          data: { type: decimal, unit: kg }
+        - { kind: question, path: hidden_unless_b, label: { en: Only for B, ar: "فقط لـ ب" }, when: '$g.pick == "b"', control: { type: yes-no }, data: { type: boolean } }
+        - { kind: question, path: many, label: { en: Any of these, ar: "أي من هذه" }, control: { type: multi-choice, codes: many }, data: { type: codes, codeList: many } }
+        - { kind: question, path: size, label: { en: Size, ar: "الحجم" }, control: { type: scale, codes: size }, data: { type: code, codeList: size } }
+        - { kind: question, path: count, label: { en: Count, ar: "العدد" }, control: { type: stepper, min: 1, max: 9, start: 1 }, data: { type: integer } }
+        - { kind: question, path: cost, label: { en: Cost, ar: "التكلفة" }, control: { type: money, currency: JOD, min: 0, max: 100 }, data: { type: money } }
+        - kind: question
+          path: weight
+          label: { en: Weight, ar: "الوزن" }
+          control: { type: measurement-pair, unit: kg, min: 2, max: 250, decimals: 1, tolerance: 0.5 }
+          data: { type: decimal, unit: kg }
+        - { kind: question, path: notes, label: { en: Notes, ar: "ملاحظات" }, optional: true, control: { type: text, maxLength: 200, multiline: true }, data: { type: string } }
+        - { kind: question, path: when, label: { en: Date, ar: "التاريخ" }, control: { type: date, min: "2020-01-01", max: "2030-12-31" }, data: { type: date } }
+        - { kind: question, path: ok, label: { en: OK?, ar: "حسنا؟" }, control: { type: yes-no, presentation: buttons }, data: { type: boolean } }
+        - { kind: display, id: aside, role: note, text: { en: A note, ar: "ملاحظة" }, media: dot }
+    - kind: group
+      id: r
+      label: { en: Things, ar: "أشياء" }
+      referencePeriod: { en: in the last week, ar: "في الأسبوع الماضي" }
+      repeat: { over: things }
+      elements:
+        - { kind: question, path: size, label: { en: Size, ar: "الحجم" }, control: { type: scale, codes: size }, data: { type: code, codeList: size } }
+        - { kind: question, path: cost, label: { en: Cost, ar: "التكلفة" }, nonresponse: [], control: { type: money, currency: JOD, min: 0, max: 100 }, data: { type: money } }
+    - kind: group
+      id: s
+      label: { en: More things, ar: "أشياء أخرى" }
+      repeat: { over: things }
+      elements:
+        - { kind: question, path: fine, label: { en: Fine?, ar: "جيد؟" }, control: { type: yes-no }, data: { type: boolean } }
+    - kind: display
+      id: tally
+      role: note
+      text:
+        en: |-
+          .input {$g.count :integer}
+          .match $g.count
+          one {{{$g.count} item}}
+          * {{{$g.count} items}}
+        ar: |-
+          .input {$g.count :integer}
+          .match $g.count
+          one {{عنصر واحد}}
+          two {{عنصران}}
+          few {{{$g.count} عناصر}}
+          * {{{$g.count} عنصرًا}}
+    - { kind: display, id: bye, role: end, text: { en: Thank you., ar: "شكرا." } }

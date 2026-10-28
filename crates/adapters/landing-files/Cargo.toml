@@ -1,0 +1,15 @@
+[package]
+name = "fieldseal-adapters-landing-files"
+description = "File-based data-platform adapter for Intake: the long format as CSV, data contracts as JSON"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-adapters-memory.workspace = true
+
+[lints]
+workspace = true

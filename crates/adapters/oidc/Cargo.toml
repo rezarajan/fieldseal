@@ -1,0 +1,29 @@
+[package]
+name = "fieldseal-adapters-oidc"
+description = "OpenID Connect adapter for the Registration context's IdentityProvider port: authorization code with PKCE, ID-token verification, amr/acr mapping"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-registration.workspace = true
+# ES256 ID-token signatures, through the same P-256 crate the kernel uses.
+p256.workspace = true
+# RS256 ID-token signatures (most identity providers sign with RSA). Already in the tree
+# through rustls.
+ring = "0.17"
+# State, nonce and PKCE verifier come from the operating system's CSPRNG.
+getrandom = "0.2"
+serde_json = "1"
+thiserror.workspace = true
+# Blocking HTTP client for discovery, JWKS and the token endpoint, as in the Rekor adapter.
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+# An in-test mock identity provider.
+tiny_http = "0.12"
+
+[lints]
+workspace = true

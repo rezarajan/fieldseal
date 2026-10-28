@@ -1,0 +1,23 @@
+[package]
+name = "fieldseal-adapters-rekor"
+description = "Sigstore Rekor adapter for the Publishing context's transparency-log port (hashedrekord entries)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-publishing.workspace = true
+serde_json = "1"
+thiserror.workspace = true
+# Blocking HTTP/1.1 client: small, pure Rust, rustls (ring) for TLS with the webpki roots,
+# no async runtime (the CLI is synchronous). Default features are off: no gzip, brotli or
+# cookies.
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+fieldseal-trust.workspace = true
+
+[lints]
+workspace = true

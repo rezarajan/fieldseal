@@ -1,0 +1,18 @@
+[package]
+name = "fieldseal-adapters-translog"
+description = "Self-hosted, file-backed RFC 9162 transparency log: store, HTTP API handler and client for the Publishing context's log port"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-publishing.workspace = true
+thiserror.workspace = true
+# Blocking HTTP/1.1 client, as in the Rekor adapter: no async runtime, no default features.
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[lints]
+workspace = true

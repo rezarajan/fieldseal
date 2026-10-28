@@ -1,0 +1,33 @@
+[package]
+name = "fieldseal-adapters-web-demo"
+description = "A demo authority for the showcase web app: the real factory, publishing, bundle and intake contexts over in-memory ports with development keys (unattested, development only)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-distribution.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-authoring.workspace = true
+fieldseal-adapters-factory-http = { path = "../factory-http" }
+fieldseal-adapters-upload-http.workspace = true
+tiny_http = "0.12"
+getrandom = "0.2"
+serde_json = "1"
+
+[dev-dependencies]
+fieldseal-delivery.workspace = true
+ureq = { version = "3.5", default-features = false }
+
+[lints]
+workspace = true

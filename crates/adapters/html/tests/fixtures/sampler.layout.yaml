@@ -1,0 +1,38 @@
+# A layout for sampler.yaml using a card, a row, tabs, a table and a list.
+apiVersion: fieldseal.dev/v1alpha1
+kind: Layout
+metadata: { name: sampler-medium, version: 1.0.0 }
+spec:
+  schema: "^1.0"
+  instrument: sampler.yaml
+  windowClass: medium
+  steps:
+    - title: { en: Start, ar: "البداية" }
+      navigation: free
+      contents:
+        - { element: hello }
+        - card:
+            title: { en: Choose, ar: "اختر" }
+            icon: "🧭"
+            contents:
+              - { element: g.how }
+              - { element: g.who }
+              - { row: { contents: [ { element: g.pick }, { element: g.n } ] } }
+              - { element: g.hidden_unless_b }
+              - { element: g.many }
+              - { element: g.size }
+              - { element: g.count }
+              - { element: g.cost }
+              - { element: g.weight }
+              - { element: g.notes }
+              - { element: g.when }
+              - { element: g.ok }
+              - { element: g.aside }
+    - title: { en: Things, ar: "أشياء" }
+      navigation: linear
+      emphasis: compact
+      contents:
+        - tabs:
+            - tab: { title: { en: Table, ar: "جدول" }, icon: "📋", contents: [ { repeat: r, as: table } ] }
+            - tab: { title: { en: List, ar: "قائمة" }, contents: [ { repeat: s, as: list } ] }
+        - { element: bye }

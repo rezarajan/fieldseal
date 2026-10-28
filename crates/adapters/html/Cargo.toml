@@ -1,0 +1,17 @@
+[package]
+name = "fieldseal-adapters-html"
+description = "Draws a render plan as one self-contained, accessible HTML page (instrument preview)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-instrument.workspace = true
+
+[dev-dependencies]
+fieldseal-adapters-authoring.workspace = true
+
+[lints]
+workspace = true

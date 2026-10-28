@@ -1,0 +1,35 @@
+[package]
+name = "fieldseal-adapters-upload-http"
+description = "HTTP upload adapter: the runtime's client and intake's upload endpoint (receiver challenge, PoP tokens, receipts)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "fieldseal-upload-server"
+path = "src/bin/server.rs"
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-adapters-file.workspace = true
+fieldseal-adapters-landing-files.workspace = true
+getrandom = "0.2"
+# The same small synchronous HTTP/1.1 server and blocking client the factory adapter uses.
+# TLS is terminated in front of the endpoint; the client speaks https through rustls.
+tiny_http = "0.12"
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+fieldseal-instrument.workspace = true
+fieldseal-adapters-authoring.workspace = true
+fieldseal-distribution.workspace = true
+
+[lints]
+workspace = true

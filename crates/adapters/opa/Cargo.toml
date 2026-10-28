@@ -1,0 +1,21 @@
+[package]
+name = "fieldseal-adapters-opa"
+description = "Open Policy Agent adapter for the Policy context's PolicyEngine port (opa eval or the REST API)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-policy.workspace = true
+serde_json = "1"
+# Blocking HTTP client for OPA's REST API; plain http to a sidecar needs no TLS, but the
+# workspace's configuration (rustls) is kept so an https endpoint works too.
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+fieldseal-adapters-memory.workspace = true
+
+[lints]
+workspace = true

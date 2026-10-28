@@ -1,0 +1,20 @@
+[package]
+name = "fieldseal-adapters-attestation"
+description = "AttestationVerifier adapters for authority-key evidence: TPM 2.0 key certification (TPM2_Certify) verified offline against X.509 roots"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+p256.workspace = true
+sha2.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json = "1"
+zeroize.workspace = true
