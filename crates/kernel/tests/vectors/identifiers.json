@@ -1,0 +1,93 @@
+{
+  "content_addresses": [
+    {
+      "address": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": "",
+      "id": "empty",
+      "requirement": "WIRE-011"
+    },
+    {
+      "address": "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "bytes": "616263",
+      "id": "abc",
+      "requirement": "WIRE-011"
+    },
+    {
+      "address": "sha256:cd32adc401a979531e8f393773616391f5a2d4fc97615639ceb73ae4deaee026",
+      "bytes": "a2617601646e616d656178",
+      "id": "canonical-map",
+      "requirement": "WIRE-011"
+    }
+  ],
+  "description": "Content addresses (WIRE-011), key IDs (WIRE-010) and salted instrument fingerprints (WIRE-185..187). The two fingerprints share content and differ only by salt.",
+  "fingerprints": [
+    {
+      "canonical": "a2646b696e646a696e737472756d656e74656974656d7380",
+      "fingerprint": "9da579cd229b8fcde4f1c103fc856fad03145038efc56a876ee668a6c814f845",
+      "id": "salt-a",
+      "requirement": "WIRE-185",
+      "salt": "32069b8530339f048718404d1d3816faa6d11b0674bf37b74b5b26582a8ab898",
+      "short_form": "KPJQKK92KE7WT"
+    },
+    {
+      "canonical": "a2646b696e646a696e737472756d656e74656974656d7380",
+      "fingerprint": "d923d2958a759d38007cfbda92c10008f84b79e674fd1c1e73d381d57a63d631",
+      "id": "salt-b",
+      "requirement": "WIRE-185",
+      "salt": "1fc5c0b75d7d8745a7fad4ae54be5bab5c9b29c66590a85c2f956cd4ae9c16d9",
+      "short_form": "V4HX55CAEPEKG"
+    }
+  ],
+  "invalid_content_addresses": [
+    {
+      "error": "E_HASH",
+      "id": "uppercase-hex",
+      "offset": 7,
+      "requirement": "WIRE-011",
+      "text": "sha256:E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "error": "E_HASH",
+      "id": "missing-prefix",
+      "offset": 0,
+      "requirement": "WIRE-011",
+      "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "error": "E_HASH",
+      "id": "short",
+      "offset": 7,
+      "requirement": "WIRE-011",
+      "text": "sha256:e3b0c442"
+    },
+    {
+      "error": "E_HASH",
+      "id": "wrong-algorithm",
+      "offset": 0,
+      "requirement": "WIRE-011",
+      "text": "sha512:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "key_ids": [
+    {
+      "id": "p256-signing",
+      "key_id": "db591a310a8ed126eff48de55d001a3c",
+      "public_key": "0442bf8835247e1d9837008233f9d652a7fa738a4b76b2d5e8161eca97ffcee934e49ef4310afac5cfcc82e30f52a82d37cd03e6e6261f11e1355aff40766adabc",
+      "requirement": "WIRE-010"
+    },
+    {
+      "id": "p256-agreement",
+      "key_id": "2e726f9db885ed2c5175af694cf26e3f",
+      "public_key": "046cd9677f0e00a3d8b72c3fd920566b110df86a77589902a366e0952a6c895c01d4813237fa0b98a4c3fa23c295fb7cd99e51259e5f5a4822de961b39983731e4",
+      "requirement": "WIRE-010"
+    },
+    {
+      "id": "x25519-record",
+      "key_id": "fe86ac179084511f0b35b05bba954ce4",
+      "public_key": "47356c09ef0e8bede9e14da1df40668bc07c57321c7b14a8e0eb7dadc1dc0f26",
+      "requirement": "WIRE-010"
+    }
+  ],
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-kernel --test vectors",
+  "spec": "docs/reference/spec/wire-formats.md"
+}

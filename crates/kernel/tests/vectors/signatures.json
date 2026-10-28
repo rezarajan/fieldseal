@@ -1,0 +1,304 @@
+{
+  "description": "Domain-tagged ECDSA P-256 signatures (WIRE-020..022). message = canonical CBOR [tag, structure]; signature = r || s, low s, RFC 6979 deterministic. The private key is SHA-256(\"fieldseal.dev/vectors/authority-signing-key\").",
+  "invalid": [
+    {
+      "error": "E_SIG",
+      "id": "high-s",
+      "offset": 0,
+      "requirement": "WIRE-022",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e4caa605fef0622b8905181bbafe5efa68a5712ba3c7340a2033777aae6fc36478",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v1"
+    },
+    {
+      "error": "E_SIG",
+      "id": "bit-flip",
+      "offset": 0,
+      "requirement": "WIRE-021",
+      "signature": "82d2723ab02efd5aec0e8880a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v1"
+    },
+    {
+      "error": "E_SIG",
+      "id": "truncated",
+      "offset": 0,
+      "requirement": "WIRE-022",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v1"
+    },
+    {
+      "error": "E_SIG",
+      "id": "der-encoded",
+      "offset": 0,
+      "requirement": "WIRE-022",
+      "signature": "3044022082d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e402203559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v1"
+    },
+    {
+      "error": "E_SIG",
+      "id": "other-known-tag",
+      "offset": 0,
+      "requirement": "WIRE-020",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/time-token/v1"
+    },
+    {
+      "error": "E_TAG",
+      "id": "unknown-tag",
+      "offset": 0,
+      "requirement": "WIRE-020",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v2"
+    },
+    {
+      "error": "E_TAG",
+      "id": "seal-tag",
+      "offset": 0,
+      "requirement": "WIRE-020",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/record-seal/v1"
+    }
+  ],
+  "private_key": "76f3eea7c2a913105272e0a4aa040a16b64f75b4e5ae6ff832dbd9ad3bd141c8",
+  "public_key": "0425509b8960f74cdcfb1989e5ffb47eda70388e42c51ebac60e6660a928872e96c9f6a2e00bbef6125c05d4d0af20e72f8564e346a5bc778bef24f71ec045e02a",
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-kernel --test vectors",
+  "spec": "docs/reference/spec/wire-formats.md",
+  "valid": [
+    {
+      "id": "receipt",
+      "message": "8278186669656c647365616c2e6465762f726563656970742f7631a7617601626f665820eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501667369676e657250520df54ce1f42f3dca02d88a60e1a4b067686173685f61745820cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f6774656e616e63795820827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669686c6173745f73657118296872656365697665641b0000019b76daa800",
+      "requirement": "WIRE-142",
+      "signature": "82d2723ab02efd5aec0e8980a2e4252a5eb559eee508cbfd4b1c140db154c6e43559fa000f9dd477fae7e44501a105971775cf09dfe39464c04250148c9fc0d9",
+      "structure": {
+        "map": {
+          "hash_at": {
+            "bytes": "cc5f282aef032147da2681ed4a2a0b0ddbbb50bbde8dbf2b64a159ec51a99e8f"
+          },
+          "last_seq": {
+            "int": "41"
+          },
+          "of": {
+            "bytes": "eb44c63561cb9014c639fcb65cfb68d665b3547236ff287ea4e4ef70e05c0501"
+          },
+          "received": {
+            "int": "1767225600000"
+          },
+          "signer": {
+            "bytes": "520df54ce1f42f3dca02d88a60e1a4b0"
+          },
+          "tenancy": {
+            "bytes": "827bf9ee52fc64ca345773855a64a3147b1107232bd551714bae95d1e0866669"
+          },
+          "v": {
+            "int": "1"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/receipt/v1"
+    },
+    {
+      "id": "publication-statement",
+      "message": "82781c6669656c647365616c2e6465762f7075626c69636174696f6e2f7631a36474797065677075626c6973686a70726f76656e616e6365582080c39e2425b7cce35bf4994fec2acfedb842c535f0f77a16aacda754f99403f26b66696e6765727072696e745820761cedfd3622236024c0e4c7c8466c6667f7d54710aa064dfdfa14ac52dab3c1",
+      "requirement": "WIRE-190",
+      "signature": "72c69af6811b9736e1179dd90be97e1c262fbcf86c49949a94de997cae35cb5726a98607ebe871e495a03d1ec57d3f4e655e9f396eeed4c652fb999b8469d1c8",
+      "structure": {
+        "map": {
+          "fingerprint": {
+            "bytes": "761cedfd3622236024c0e4c7c8466c6667f7d54710aa064dfdfa14ac52dab3c1"
+          },
+          "provenance": {
+            "bytes": "80c39e2425b7cce35bf4994fec2acfedb842c535f0f77a16aacda754f99403f2"
+          },
+          "type": {
+            "text": "publish"
+          }
+        }
+      },
+      "tag": "fieldseal.dev/publication/v1"
+    },
+    {
+      "id": "empty-structure",
+      "message": "82781b6669656c647365616c2e6465762f74696d652d746f6b656e2f7631a0",
+      "requirement": "WIRE-021",
+      "signature": "389d6822d72952a696ef163a5b3f9e388b64c98a8eb4988940ad817bb630f13764bcc3a3389a13bece5ac688cb9af48db1871399403038ff61382e40921eb632",
+      "structure": {
+        "map": {}
+      },
+      "tag": "fieldseal.dev/time-token/v1"
+    }
+  ]
+}

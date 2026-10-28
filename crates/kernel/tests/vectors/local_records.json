@@ -1,0 +1,161 @@
+{
+  "description": "Local record entries {seq, nonce, ct} (WIRE-080..082): AES-256-GCM under the session key HKDF-SHA256(unwrapped_secret || pin_hash, info = \"fieldseal.dev/session-key/v1\" || tenancy), with additional data [\"fieldseal.dev/local-record/v1\", tenancy, seq]. Inputs are SHA-256(\"fieldseal.dev/vectors/local/a/...\"); nonces are fixed here and random in use.",
+  "invalid": [
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_DECRYPT",
+      "id": "wrong-pin",
+      "offset": 0,
+      "pin_hash": "3c5664859dc3dccb46a3d76017ce2bf4ff06b58faec7c9118eea2b5eb00f8a4e",
+      "requirement": "WIRE-080",
+      "stage": "open",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_DECRYPT",
+      "id": "wrong-tenancy",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-081",
+      "stage": "open",
+      "tenancy": "18e45273d211d4a05bc8840b82ba5985c7b75ec7c23b050cf5c306f29ee53c24",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657108656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_DECRYPT",
+      "id": "seq-moved",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-081",
+      "stage": "open",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e11c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_DECRYPT",
+      "id": "ciphertext-bit-flipped",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "open",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c698471ca05b800685aed8146",
+      "error": "E_DECRYPT",
+      "id": "nonce-bit-flipped",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "open",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a462637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb637365710765657874726101656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "extra-field",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654b0000000000000000000000",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "nonce-11-bytes",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a26373657107656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "missing-ct",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb637365716137656e6f6e63654c688471ca05b800685aed8146",
+      "error": "E_UNKNOWN_FIELD",
+      "id": "seq-not-integer",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c688471ca05b800685aed814600",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "trailing-byte",
+      "offset": 52,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    },
+    {
+      "cbor": "",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "empty-input",
+      "offset": 0,
+      "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+      "requirement": "WIRE-080",
+      "stage": "decode",
+      "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+      "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef"
+    }
+  ],
+  "max_encryptions": 4294967296,
+  "pin_hash": "d01cd5df44bc98dfd81461ec6f836f9252070a7d36adcd10e74075d6dd4967e8",
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-kernel --test vectors",
+  "spec": "docs/reference/spec/wire-formats.md",
+  "tenancy": "815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de",
+  "unwrapped_secret": "7c8d7780b94975065e47b5886178858a90a16377de0a95ff071577267e98daef",
+  "valid": [
+    {
+      "aad": "83781d6669656c647365616c2e6465762f6c6f63616c2d7265636f72642f76315820815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de00",
+      "cbor": "a3626374503b3f4c9d86b4f0edbf32784f541a49496373657100656e6f6e63654caabaca3fffa51230b9a6e284",
+      "id": "empty-payload",
+      "nonce": "aabaca3fffa51230b9a6e284",
+      "plaintext": "",
+      "requirement": "WIRE-080, WIRE-081",
+      "seq": 0
+    },
+    {
+      "aad": "83781d6669656c647365616c2e6465762f6c6f63616c2d7265636f72642f76315820815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de07",
+      "cbor": "a362637457e01c6b177aa84ad605259497c28a99ba6930cc589065eb6373657107656e6f6e63654c688471ca05b800685aed8146",
+      "id": "short-payload",
+      "nonce": "688471ca05b800685aed8146",
+      "plaintext": "7061796c6f6164",
+      "requirement": "WIRE-080, WIRE-081",
+      "seq": 7
+    },
+    {
+      "aad": "83781d6669656c647365616c2e6465762f6c6f63616c2d7265636f72642f76315820815b3eeb0f55224fee6fc2ba714eb17dc8b60c930667c92b3fd2fc50bb4216de1b0000000100000000",
+      "cbor": "a36263745705568e6605095e48b8b40b3afae095224b65d25e550370637365711b0000000100000000656e6f6e63654cd1a11d1a587711fc6bc61d70",
+      "id": "canonical-cbor-payload",
+      "nonce": "d1a11d1a587711fc6bc61d70",
+      "plaintext": "a2616101616202",
+      "requirement": "WIRE-080, WIRE-081",
+      "seq": 4294967296
+    }
+  ]
+}

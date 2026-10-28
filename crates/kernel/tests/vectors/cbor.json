@@ -1,0 +1,816 @@
+{
+  "description": "Deterministic CBOR (WIRE §5.1): valid values with their only encoding, and inputs a decoder must reject.",
+  "from_json": [
+    {
+      "cbor": "a36162c4822118966163a1626e72677265667573656462616184016178f521",
+      "id": "json-object",
+      "json": "{\"b\": 1.50, \"aa\": [1, \"x\", true, -2], \"c\": {\"nr\": \"refused\"}}",
+      "requirement": "WIRE-006",
+      "value": {
+        "map": {
+          "aa": {
+            "array": [
+              {
+                "int": "1"
+              },
+              {
+                "text": "x"
+              },
+              {
+                "bool": true
+              },
+              {
+                "int": "-2"
+              }
+            ]
+          },
+          "b": {
+            "decimal": {
+              "exponent": -2,
+              "mantissa": "150"
+            }
+          },
+          "c": {
+            "map": {
+              "nr": {
+                "text": "refused"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "cbor": "84c482020fc4822124c48222020a",
+      "id": "json-decimal-exponent",
+      "json": "[1.5e3, -0.05, 2E-3, 10]",
+      "requirement": "WIRE-006",
+      "value": {
+        "array": [
+          {
+            "decimal": {
+              "exponent": 2,
+              "mantissa": "15"
+            }
+          },
+          {
+            "decimal": {
+              "exponent": -2,
+              "mantissa": "-5"
+            }
+          },
+          {
+            "decimal": {
+              "exponent": -3,
+              "mantissa": "2"
+            }
+          },
+          {
+            "int": "10"
+          }
+        ]
+      }
+    },
+    {
+      "cbor": "821bffffffffffffffff3bffffffffffffffff",
+      "id": "json-big-integers",
+      "json": "[18446744073709551615, -18446744073709551616]",
+      "requirement": "WIRE-006",
+      "value": {
+        "array": [
+          {
+            "int": "18446744073709551615"
+          },
+          {
+            "int": "-18446744073709551616"
+          }
+        ]
+      }
+    },
+    {
+      "cbor": "a2646e616d6565436166c3a965656d70747960",
+      "id": "json-text",
+      "json": "{\"name\": \"Café\", \"empty\": \"\"}",
+      "requirement": "WIRE-006",
+      "value": {
+        "map": {
+          "empty": {
+            "text": ""
+          },
+          "name": {
+            "text": "Café"
+          }
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "cbor": "1817",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-uint8",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "1900ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-uint16",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "1a0000ffff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-uint32",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "1b00000000ffffffff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-uint64",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "580161",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-length",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "b800",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "nonshortest-map-length",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "5f4101ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "indefinite-bytes",
+      "offset": 0,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "7f6161ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "indefinite-text",
+      "offset": 0,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "9f01ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "indefinite-array",
+      "offset": 0,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "bf616101ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "indefinite-map",
+      "offset": 0,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "1c",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "reserved-ai-28",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "lone-break",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "a2616201616102",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "unsorted-keys",
+      "offset": 4,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "a262616101616202",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "unsorted-keys-length-first",
+      "offset": 5,
+      "requirement": "WIRE-001"
+    },
+    {
+      "cbor": "a2616101616102",
+      "error": "E_CBOR_DUPLICATE",
+      "id": "duplicate-key",
+      "offset": 4,
+      "requirement": "WIRE-003"
+    },
+    {
+      "cbor": "a1616ba2617801617802",
+      "error": "E_CBOR_DUPLICATE",
+      "id": "duplicate-key-nested",
+      "offset": 7,
+      "requirement": "WIRE-003"
+    },
+    {
+      "cbor": "a10101",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "int-key",
+      "offset": 1,
+      "requirement": "WIRE-004"
+    },
+    {
+      "cbor": "a1416101",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "bytes-key",
+      "offset": 1,
+      "requirement": "WIRE-004"
+    },
+    {
+      "cbor": "6365cc81",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "text-nfd",
+      "offset": 0,
+      "requirement": "WIRE-004"
+    },
+    {
+      "cbor": "a16365cc8101",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "key-nfd",
+      "offset": 1,
+      "requirement": "WIRE-004"
+    },
+    {
+      "cbor": "62c328",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "text-invalid-utf8",
+      "offset": 0,
+      "requirement": "WIRE-004"
+    },
+    {
+      "cbor": "f93c00",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "float16",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "fa47c35000",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "float32",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "fb3ff199999999999a",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "float64",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "c48221f93c00",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "decimal-float-mantissa",
+      "offset": 3,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "c483210102",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "decimal-three-elements",
+      "offset": 1,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "c4821b000000010000000001",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "decimal-exponent-beyond-i32",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "f6",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "null",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "f7",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "undefined",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "f0",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "simple-16",
+      "offset": 0,
+      "requirement": "WIRE-006"
+    },
+    {
+      "cbor": "c074323031332d30332d32315432303a30343a30305a",
+      "error": "E_CBOR_TAG",
+      "id": "tag-0-datetime",
+      "offset": 0,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "c11a514b67b0",
+      "error": "E_CBOR_TAG",
+      "id": "tag-1-epoch",
+      "offset": 0,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "c249010000000000000000",
+      "error": "E_CBOR_TAG",
+      "id": "tag-2-bignum",
+      "offset": 0,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "c5822003",
+      "error": "E_CBOR_TAG",
+      "id": "tag-5-bigfloat",
+      "offset": 0,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "c48221c249010000000000000000",
+      "error": "E_CBOR_TAG",
+      "id": "decimal-bignum-mantissa",
+      "offset": 3,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "8201d82076",
+      "error": "E_CBOR_TAG",
+      "id": "tag-in-array",
+      "offset": 2,
+      "requirement": "WIRE-007"
+    },
+    {
+      "cbor": "0000",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "trailing-bytes",
+      "offset": 1,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "19ff",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "truncated-uint",
+      "offset": 2,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "6461",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "truncated-text",
+      "offset": 2,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "8301",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "truncated-array",
+      "offset": 2,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "",
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "empty-input",
+      "offset": 0,
+      "requirement": "WIRE-002"
+    },
+    {
+      "cbor": "818181818181818181818181818181818100",
+      "error": "E_SIZE",
+      "id": "depth-17",
+      "offset": 16,
+      "requirement": "WIRE-160"
+    },
+    {
+      "cbor": "7a00010001",
+      "error": "E_SIZE",
+      "id": "text-over-64k",
+      "offset": 0,
+      "requirement": "WIRE-160"
+    },
+    {
+      "cbor": "9a00100001",
+      "error": "E_SIZE",
+      "id": "array-over-limit",
+      "offset": 0,
+      "requirement": "WIRE-160"
+    },
+    {
+      "cbor": "ba00100001",
+      "error": "E_SIZE",
+      "id": "map-over-limit",
+      "offset": 0,
+      "requirement": "WIRE-160"
+    }
+  ],
+  "invalid_encode": [
+    {
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "int-2^64",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "18446744073709551616"
+      }
+    },
+    {
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "int-below-min",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "-18446744073709551617"
+      }
+    },
+    {
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "text-nfd",
+      "requirement": "WIRE-004",
+      "value": {
+        "text": "é"
+      }
+    },
+    {
+      "error": "E_CBOR_NONCANONICAL",
+      "id": "key-nfd",
+      "requirement": "WIRE-004",
+      "value": {
+        "map": {
+          "é": {
+            "int": "1"
+          }
+        }
+      }
+    }
+  ],
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-kernel --test vectors",
+  "spec": "docs/reference/spec/wire-formats.md",
+  "valid": [
+    {
+      "cbor": "00",
+      "id": "uint-0",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "0"
+      }
+    },
+    {
+      "cbor": "17",
+      "id": "uint-23",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "23"
+      }
+    },
+    {
+      "cbor": "1818",
+      "id": "uint-24",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "24"
+      }
+    },
+    {
+      "cbor": "18ff",
+      "id": "uint-255",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "255"
+      }
+    },
+    {
+      "cbor": "190100",
+      "id": "uint-256",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "256"
+      }
+    },
+    {
+      "cbor": "19ffff",
+      "id": "uint-65535",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "65535"
+      }
+    },
+    {
+      "cbor": "1a00010000",
+      "id": "uint-65536",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "65536"
+      }
+    },
+    {
+      "cbor": "1affffffff",
+      "id": "uint-2^32-1",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "4294967295"
+      }
+    },
+    {
+      "cbor": "1b0000000100000000",
+      "id": "uint-2^32",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "4294967296"
+      }
+    },
+    {
+      "cbor": "1bffffffffffffffff",
+      "id": "uint-max",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "18446744073709551615"
+      }
+    },
+    {
+      "cbor": "20",
+      "id": "nint-1",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "-1"
+      }
+    },
+    {
+      "cbor": "37",
+      "id": "nint-24",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "-24"
+      }
+    },
+    {
+      "cbor": "3818",
+      "id": "nint-25",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "-25"
+      }
+    },
+    {
+      "cbor": "3bffffffffffffffff",
+      "id": "nint-min",
+      "requirement": "WIRE-001",
+      "value": {
+        "int": "-18446744073709551616"
+      }
+    },
+    {
+      "cbor": "c48221192670",
+      "id": "decimal-98.40",
+      "requirement": "WIRE-006",
+      "value": {
+        "decimal": {
+          "exponent": -2,
+          "mantissa": "9840"
+        }
+      }
+    },
+    {
+      "cbor": "c482201903d8",
+      "id": "decimal-98.4",
+      "requirement": "WIRE-006",
+      "value": {
+        "decimal": {
+          "exponent": -1,
+          "mantissa": "984"
+        }
+      }
+    },
+    {
+      "cbor": "c4822124",
+      "id": "decimal-negative",
+      "requirement": "WIRE-006",
+      "value": {
+        "decimal": {
+          "exponent": -2,
+          "mantissa": "-5"
+        }
+      }
+    },
+    {
+      "cbor": "c482381d1bffffffffffffffff",
+      "id": "decimal-big-mantissa",
+      "requirement": "WIRE-006",
+      "value": {
+        "decimal": {
+          "exponent": -30,
+          "mantissa": "18446744073709551615"
+        }
+      }
+    },
+    {
+      "cbor": "40",
+      "id": "bytes-empty",
+      "requirement": "WIRE-001",
+      "value": {
+        "bytes": ""
+      }
+    },
+    {
+      "cbor": "5818abababababababababababababababababababababababab",
+      "id": "bytes-24",
+      "requirement": "WIRE-001",
+      "value": {
+        "bytes": "abababababababababababababababababababababababab"
+      }
+    },
+    {
+      "cbor": "60",
+      "id": "text-empty",
+      "requirement": "WIRE-004",
+      "value": {
+        "text": ""
+      }
+    },
+    {
+      "cbor": "6c436166c3a920e5908de5898d",
+      "id": "text-nfc",
+      "requirement": "WIRE-004",
+      "value": {
+        "text": "Café 名前"
+      }
+    },
+    {
+      "cbor": "f4",
+      "id": "bool-false",
+      "requirement": "WIRE-001",
+      "value": {
+        "bool": false
+      }
+    },
+    {
+      "cbor": "f5",
+      "id": "bool-true",
+      "requirement": "WIRE-001",
+      "value": {
+        "bool": true
+      }
+    },
+    {
+      "cbor": "84616101c482200ff5",
+      "id": "array-mixed",
+      "requirement": "WIRE-052",
+      "value": {
+        "array": [
+          {
+            "text": "a"
+          },
+          {
+            "int": "1"
+          },
+          {
+            "decimal": {
+              "exponent": -1,
+              "mantissa": "15"
+            }
+          },
+          {
+            "bool": true
+          }
+        ]
+      }
+    },
+    {
+      "cbor": "a361610361620262616101",
+      "id": "map-key-order-length-first",
+      "requirement": "WIRE-001",
+      "value": {
+        "map": {
+          "a": {
+            "int": "3"
+          },
+          "aa": {
+            "int": "1"
+          },
+          "b": {
+            "int": "2"
+          }
+        }
+      }
+    },
+    {
+      "cbor": "a1626e7269646f6e742d6b6e6f77",
+      "id": "map-nonresponse",
+      "requirement": "WIRE-052",
+      "value": {
+        "map": {
+          "nr": {
+            "text": "dont-know"
+          }
+        }
+      }
+    },
+    {
+      "cbor": "a169726574726163746564f5",
+      "id": "map-retracted",
+      "requirement": "WIRE-052",
+      "value": {
+        "map": {
+          "retracted": {
+            "bool": true
+          }
+        }
+      }
+    },
+    {
+      "cbor": "a0",
+      "id": "map-empty",
+      "requirement": "WIRE-001",
+      "value": {
+        "map": {}
+      }
+    },
+    {
+      "cbor": "8181818181818181818181818181818100",
+      "id": "depth-16",
+      "requirement": "WIRE-160",
+      "value": {
+        "array": [
+          {
+            "array": [
+              {
+                "array": [
+                  {
+                    "array": [
+                      {
+                        "array": [
+                          {
+                            "array": [
+                              {
+                                "array": [
+                                  {
+                                    "array": [
+                                      {
+                                        "array": [
+                                          {
+                                            "array": [
+                                              {
+                                                "array": [
+                                                  {
+                                                    "array": [
+                                                      {
+                                                        "array": [
+                                                          {
+                                                            "array": [
+                                                              {
+                                                                "array": [
+                                                                  {
+                                                                    "array": [
+                                                                      {
+                                                                        "int": "0"
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

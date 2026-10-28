@@ -1,0 +1,107 @@
+{
+  "description": "HPKE seals (WIRE-023, WIRE-024): RFC 9180 base mode, info = the domain tag's UTF-8 bytes, empty AAD. ikm_e is the randomness the sender's random source yielded; the ephemeral key is DeriveKeyPair(ikm_e).",
+  "invalid": [
+    {
+      "error": "E_SUITE",
+      "id": "suite-mismatch",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-024",
+      "sealed": "a462637458282965fec53ed338f3b02f14f0f9b7d388bcb4aeeb1da593f8529362e0b1319f0d7063723de9dcbb4863656e635841047489582466fe4afc65854edfa0d6bbfca683f366ff730658be2ff4409847b9c55a6c006367092d9fdc0fe75fbd39aa27607cd2106aa08f98b720b7078d34685d657375697465656673312d7069726563697069656e74502e726f9db885ed2c5175af694cf26e3f",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    },
+    {
+      "error": "E_RECIPIENT",
+      "id": "other-recipient",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-024",
+      "sealed": "a462637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e74508e5966554908cc04840d0975ab4d5870",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    },
+    {
+      "error": "E_DECRYPT",
+      "id": "tampered-ct",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-023",
+      "sealed": "a462637458289df57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    },
+    {
+      "error": "E_DECRYPT",
+      "id": "other-seal-tag",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-023",
+      "sealed": "a462637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/export-manifest-seal/v1"
+    },
+    {
+      "error": "E_TAG",
+      "id": "signature-tag",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-020",
+      "sealed": "a462637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record/v1"
+    },
+    {
+      "error": "E_SUITE",
+      "id": "unknown-suite",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-024",
+      "sealed": "a462637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673322d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    },
+    {
+      "error": "E_UNKNOWN_FIELD",
+      "id": "unknown-field",
+      "offset": 0,
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "requirement": "WIRE-005",
+      "sealed": "a562637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b2636161644063656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite_of_key": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    }
+  ],
+  "regenerate": "FIELDSEAL_REGENERATE_VECTORS=1 cargo test -p fieldseal-kernel --test vectors",
+  "spec": "docs/reference/spec/wire-formats.md",
+  "valid": [
+    {
+      "ct": "9cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b2",
+      "enc": "07de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39",
+      "id": "fs1-x-record-seal",
+      "ikm_e": "dc53d6b199c2b475c3a2ec691f03853e007310fae9aa1365bead20a01d0d7ab3",
+      "plaintext": "a2616e0764626f64796e7365616c6564207061796c6f6164",
+      "recipient_key_id": "fe86ac179084511f0b35b05bba954ce4",
+      "recipient_private_key": "1d1d0ea19f93e6b50a030a0447f37f488951b2d472281755944b668032434cfc",
+      "recipient_public_key": "47356c09ef0e8bede9e14da1df40668bc07c57321c7b14a8e0eb7dadc1dc0f26",
+      "requirement": "WIRE-023",
+      "sealed": "a462637458289cf57a1707726725cee940550b930eb56b264b49b912575809231e94429c808f283416e7313df9b263656e63582007de8a5d6ff7c217711d9357788987cac195c275143ec9d46fce57c6f8371e39657375697465656673312d7869726563697069656e7450fe86ac179084511f0b35b05bba954ce4",
+      "suite": "fs1-x",
+      "tag": "fieldseal.dev/record-seal/v1"
+    },
+    {
+      "ct": "2965fec53ed338f3b02f14f0f9b7d388bcb4aeeb1da593f8529362e0b1319f0d7063723de9dcbb48",
+      "enc": "047489582466fe4afc65854edfa0d6bbfca683f366ff730658be2ff4409847b9c55a6c006367092d9fdc0fe75fbd39aa27607cd2106aa08f98b720b7078d34685d",
+      "id": "fs1-p-bundle-seal",
+      "ikm_e": "41bd6dbb10f33ecdfdefe44201bcfddfc69841d3c0a60e04242677ef722f8d12",
+      "plaintext": "a2616e0764626f64796e7365616c6564207061796c6f6164",
+      "recipient_key_id": "2e726f9db885ed2c5175af694cf26e3f",
+      "recipient_private_key": "51c5d08eb0b46493376cb62ac2e2682b3370730daffc0d2168f3216314f9855f",
+      "recipient_public_key": "046cd9677f0e00a3d8b72c3fd920566b110df86a77589902a366e0952a6c895c01d4813237fa0b98a4c3fa23c295fb7cd99e51259e5f5a4822de961b39983731e4",
+      "requirement": "WIRE-023",
+      "sealed": "a462637458282965fec53ed338f3b02f14f0f9b7d388bcb4aeeb1da593f8529362e0b1319f0d7063723de9dcbb4863656e635841047489582466fe4afc65854edfa0d6bbfca683f366ff730658be2ff4409847b9c55a6c006367092d9fdc0fe75fbd39aa27607cd2106aa08f98b720b7078d34685d657375697465656673312d7069726563697069656e74502e726f9db885ed2c5175af694cf26e3f",
+      "suite": "fs1-p",
+      "tag": "fieldseal.dev/bundle-seal/v1"
+    }
+  ]
+}
