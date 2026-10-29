@@ -71,6 +71,10 @@ publish_artefact() {
       [ -f "$po" ] || continue
       mkdir -p i18n; cat "$po" > "i18n/$(basename "$po")"
     done
+  elif [ "$(basename "$(dirname "$file")")" = layouts ]; then
+    # A layout is read in its survey folder, as `just publish` does: its translations are in the
+    # survey's catalogues and its `spec.instrument` is resolved from there.
+    doc="$file"
   else
     cat "$file" > "$doc"
   fi
