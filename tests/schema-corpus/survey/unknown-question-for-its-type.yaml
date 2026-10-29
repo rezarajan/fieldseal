@@ -1,0 +1,7 @@
+# A key that belongs to another question type.
+# expect: UnknownField /sections/0/q/list
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    list: l

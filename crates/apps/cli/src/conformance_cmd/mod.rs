@@ -32,6 +32,7 @@ mod publishing;
 mod reg;
 mod reg_attacks;
 mod rules;
+mod strict_schema;
 mod trust;
 mod wire;
 
@@ -116,6 +117,7 @@ fn units() -> Vec<Unit> {
     all.extend(ins::units());
     all.extend(reg_attacks::units());
     all.extend(contracts::units());
+    all.extend(strict_schema::units());
     all
 }
 
@@ -148,6 +150,7 @@ const SUITES: &[(&str, &str)] = &[
     ("ins-codes", "code lists: exclusive, other, ordered, numeric values (INS-131..136, 048)"),
     ("ins-nonresponse", "nonresponse recorded, cleared and counted as answered (INS-140..143)"),
     ("ins-units", "entry units and money convert exactly (INS-160..163)"),
+    ("strict-schema", "the invalid-document corpus (WIRE-213) through every reader"),
     ("all", "everything above"),
 ];
 

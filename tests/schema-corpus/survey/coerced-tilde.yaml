@@ -1,0 +1,8 @@
+# A tilde, which would be null.
+# expect: CoercionRefused /title
+survey: {name: corpus, version: 0.1.0}
+title: ~
+sections:
+- q:
+    type: binary
+    label: Is it so?

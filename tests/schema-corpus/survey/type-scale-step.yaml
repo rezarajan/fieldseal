@@ -1,0 +1,9 @@
+# A number where a scale step is required.
+# expect: TypeMismatch /scales/s/0
+survey: {name: corpus, version: 0.1.0}
+scales:
+  s: [5]
+sections:
+- q:
+    type: binary
+    label: Is it so?

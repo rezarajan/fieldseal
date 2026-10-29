@@ -1,0 +1,8 @@
+# An unknown key in the defaults.
+# expect: UnknownField /defaults/extra
+survey: {name: corpus, version: 0.1.0}
+defaults: {extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

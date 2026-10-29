@@ -1,0 +1,8 @@
+# An unknown key in a question inside a group.
+# expect: UnknownField /sections/0/g/elements/0/q/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g:
+    group: G
+    elements:
+    - q: {type: binary, extra: 1}

@@ -1,0 +1,9 @@
+# A list with settings has no items.
+# expect: MissingField /lists/l/items
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l: {ordered: true}
+sections:
+- q:
+    type: binary
+    label: Is it so?

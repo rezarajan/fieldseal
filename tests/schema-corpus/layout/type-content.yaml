@@ -1,0 +1,7 @@
+# A content item with none of the six kinds.
+# expect: TypeMismatch /steps/0/contents/0
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {note: Hello}

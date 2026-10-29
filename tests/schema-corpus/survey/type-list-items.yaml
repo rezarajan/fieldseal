@@ -1,0 +1,9 @@
+# A map where the items of a list are required.
+# expect: TypeMismatch /lists/l/items
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l: {items: {a: b}}
+sections:
+- q:
+    type: binary
+    label: Is it so?

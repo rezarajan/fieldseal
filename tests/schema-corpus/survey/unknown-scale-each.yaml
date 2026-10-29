@@ -1,0 +1,10 @@
+# An unknown key in a scale step's range.
+# expect: UnknownField /scales/s/0/each/extra
+survey: {name: corpus, version: 0.1.0}
+scales:
+  s:
+  - {per: week, each: {from: 1, to: 2, extra: 1}}
+sections:
+- q:
+    type: binary
+    label: Is it so?

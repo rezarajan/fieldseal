@@ -1,0 +1,9 @@
+# A number where a list is required.
+# expect: TypeMismatch /lists/l
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l: 5
+sections:
+- q:
+    type: binary
+    label: Is it so?

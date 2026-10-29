@@ -1,0 +1,5 @@
+# A section entry with two keys.
+# expect: TypeMismatch /sections/0
+survey: {name: corpus, version: 0.1.0}
+sections:
+- {a: {type: binary}, b: {type: binary}}

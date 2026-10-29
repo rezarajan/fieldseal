@@ -212,7 +212,7 @@ fn build(args: &Args) -> Result<u8, String> {
 
     let world = DemoWorld::new(seed, now)?;
     let salt = match args.value("--salt") {
-        None => world.next_salt(),
+        None => DemoWorld::salt_for(&metadata(&instrument, "name", instrument_path)?),
         Some(h) => Salt::from(<[u8; 32]>::try_from(unhex(h).ok_or("--salt is 64 hex digits")?).map_err(|_| "--salt is 64 hex digits".to_owned())?),
     };
     let bytes = cbor::encode(&instrument).map_err(|e| e.to_string())?;

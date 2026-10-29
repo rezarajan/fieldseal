@@ -1,0 +1,5 @@
+# An unknown key in a display text.
+# expect: UnknownField /sections/0/note/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- note: {display: Hello, extra: 1}

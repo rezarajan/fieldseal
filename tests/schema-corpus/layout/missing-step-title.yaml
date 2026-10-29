@@ -1,0 +1,5 @@
+# A step has no title.
+# expect: MissingField /steps/0/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- contents: []

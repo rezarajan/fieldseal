@@ -148,7 +148,6 @@ pub struct DemoWorld {
     root: KeyCertificate,
     builder: KeyId,
     next_anchor: AtomicU64,
-    salts: AtomicU64,
 }
 
 fn err(e: impl std::fmt::Display) -> String {
@@ -329,7 +328,6 @@ impl DemoWorld {
             root,
             builder,
             next_anchor: AtomicU64::new(now.0 + AuthorityTime::SECOND),
-            salts: AtomicU64::new(seed),
         })
     }
 
@@ -357,10 +355,11 @@ impl DemoWorld {
         .publish(kind, name, version, bytes, salt)
     }
 
-    /// A fresh salt for an instrument, from the world's seed.
-    pub fn next_salt(&self) -> Salt {
-        let n = self.salts.fetch_add(1, Ordering::SeqCst);
-        Salt::from(*sha256(&[b"fieldseal.dev/demo/salt".as_slice(), &n.to_be_bytes()].concat()).as_bytes())
+    /// The salt an instrument is published with: a fixed function of its name, so the salted
+    /// fingerprint of a survey is the same in every world and on every run.
+    #[must_use]
+    pub fn salt_for(name: &str) -> Salt {
+        Salt::from(*sha256(&[b"fieldseal.dev/demo/salt".as_slice(), name.as_bytes()].concat()).as_bytes())
     }
 
     /// Withdraws a publication, signed by both publishers and logged.

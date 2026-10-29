@@ -1,0 +1,9 @@
+# An unknown key in a list written with settings.
+# expect: UnknownField /lists/l/extra
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l: {items: [a, b], extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

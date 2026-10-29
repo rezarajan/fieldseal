@@ -1,0 +1,7 @@
+# The layout has no window class.
+# expect: MissingField /layout/window
+layout: {name: corpus, instrument: i.yaml}
+steps:
+- title: One
+  contents:
+  - {element: q}

@@ -1,0 +1,7 @@
+# A number with a leading zero.
+# expect: CoercionRefused /layout/version
+layout: {name: corpus, instrument: i.yaml, window: compact, version: 007}
+steps:
+- title: One
+  contents:
+  - {element: q}

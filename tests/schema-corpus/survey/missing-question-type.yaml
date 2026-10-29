@@ -1,0 +1,6 @@
+# A section entry with neither type, display nor group.
+# expect: MissingField /sections/0/q/group
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    label: Is it so?

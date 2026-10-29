@@ -1,0 +1,9 @@
+# A rule has no id.
+# expect: MissingField /checks/0/id
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?
+checks:
+- {when: {is: q}, soft: Check it}

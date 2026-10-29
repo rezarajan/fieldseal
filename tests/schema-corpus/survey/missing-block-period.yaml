@@ -1,0 +1,14 @@
+# A block of categories has no reference period.
+# expect: MissingField /sections/0/g/categories/blocks/0/period
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g:
+    group: Foods
+    categories:
+      ask:
+      - amount: {type: binary}
+      blocks:
+      - categories:
+        - fruit:
+            label: Fruit
+            foods: [Apple, Pear]

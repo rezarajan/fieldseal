@@ -22,6 +22,7 @@ Crate root re-exports: `ErrorCode`, `KernelError`, `WireError`, `Decimal`, `Valu
 |---|---|
 | `value` | `Value` (Int, Decimal, Bytes, Text, Bool, Array, Map; no null, no float), `Decimal`, `DecimalError` |
 | `cbor` | `encode`, `encode_into`, `decode`, `decode_limited`, `map`; limits `MAX_DEPTH` (16), `MAX_TEXT` (64 KiB), `MAX_ELEMENTS` (1,048,576), `INT_MIN`, `INT_MAX` |
+| `schema` | The declarative schema of the compact authoring dialect (WIRE-209 to WIRE-211; pure, no I/O): `DocKind` (`Survey`, `Layout`, `Roster`; `detect`), the table (`shapes`, `shape`, `root`, `keys_of`, `resolve`, `paths`), `check(doc, kind) -> Vec<SchemaError>` and `check_shape`, `shapes_in`, `json_schema(kind)` (closed JSON Schema, draft 2020-12, generated from the same table), `Reader` (typed reads that refuse an undeclared key in debug builds), `SchemaError { pointer, kind, message }` and `SchemaErrorKind` (the six WIRE-211 kinds), `escape_segment`, `child_pointer` |
 | `structure` | `Fields` (typed reads, then `finish` rejects leftovers), `expect_bytes`, `expect_bytes_n`, `expect_uint` |
 | `error` | `KernelError` (constructor invariant failures), `ErrorCode` (WIRE section 6.8 codes), `WireError` (code plus byte offset) |
 | `id` | Fixed-length byte ids `Digest`, `KeyId` (16 bytes), `Fingerprint`, `ContentAddress`, `TenancyId`, `TenancyHandle`, `RecordId`, `Challenge`, `Salt`; text ids `SubjectId`, `CohortId`, `CollectionPeriodId`, `ReviewerId`, `CollectorRef`; `ItemPath`, `Seq`, `Generation` |

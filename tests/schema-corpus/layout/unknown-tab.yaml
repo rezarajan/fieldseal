@@ -1,0 +1,8 @@
+# An unknown key in a tab.
+# expect: UnknownField /steps/0/contents/0/tabs/0/extra
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - tabs:
+    - {title: Tab, contents: [], extra: 1}

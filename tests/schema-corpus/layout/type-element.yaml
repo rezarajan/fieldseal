@@ -1,0 +1,7 @@
+# A list where a path is required.
+# expect: TypeMismatch /steps/0/contents/0/element
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {element: [a, b]}

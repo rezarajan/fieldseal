@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-84 tests prove 84 requirements.
+114 tests prove 92 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -17,6 +17,23 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `tru_062_evidence_in_another_format_is_refused` ([tpm2.rs:182](../../crates/adapters/attestation/tests/tpm2.rs#L182)) | TRU-062 | TRU-062 (trust) |
 | `tru_110_formats_without_an_adapter_are_refused_not_trusted` ([tpm2.rs:194](../../crates/adapters/attestation/tests/tpm2.rs#L194)) | TRU-110 | TRU-110 (trust) |
 | `tru_110_the_recorded_corpus_is_current_and_holds` ([tpm2.rs:258](../../crates/adapters/attestation/tests/tpm2.rs#L258)) | TRU-110 | TRU-110 (trust) |
+| `wire_211_a_misspelled_key_reports_its_line_and_column` ([error_positions.rs:38](../../crates/adapters/authoring/tests/error_positions.rs#L38)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_a_wrong_type_reports_the_value_position` ([error_positions.rs:43](../../crates/adapters/authoring/tests/error_positions.rs#L43)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_an_out_of_range_enum_reports_the_value_position` ([error_positions.rs:48](../../crates/adapters/authoring/tests/error_positions.rs#L48)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_findings_carry_a_json_pointer_and_one_of_the_six_kinds` ([error_positions.rs:53](../../crates/adapters/authoring/tests/error_positions.rs#L53)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_a_repeated_key_reports_duplicate_key_at_its_position` ([error_positions.rs:73](../../crates/adapters/authoring/tests/error_positions.rs#L73)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_a_refused_value_is_a_coercion_finding` ([error_positions.rs:89](../../crates/adapters/authoring/tests/error_positions.rs#L89)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_spans_give_the_key_and_the_value_of_each_pointer` ([error_positions.rs:102](../../crates/adapters/authoring/tests/error_positions.rs#L102)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_an_io_error_keeps_position_zero_and_names_the_file` ([error_positions.rs:115](../../crates/adapters/authoring/tests/error_positions.rs#L115)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_210_every_example_is_accepted_by_decoder_and_json_schema` ([schema_differential.rs:132](../../crates/adapters/authoring/tests/schema_differential.rs#L132)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_compact_roster_is_judged_alike_by_decoder_and_json_schema` ([schema_differential.rs:166](../../crates/adapters/authoring/tests/schema_differential.rs#L166)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_dropping_a_required_key_is_rejected_by_both` ([schema_differential.rs:181](../../crates/adapters/authoring/tests/schema_differential.rs#L181)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_wrong_type_is_rejected_by_both` ([schema_differential.rs:186](../../crates/adapters/authoring/tests/schema_differential.rs#L186)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_value_outside_an_enum_is_rejected_by_both` ([schema_differential.rs:191](../../crates/adapters/authoring/tests/schema_differential.rs#L191)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_an_unknown_sibling_key_is_rejected_by_both` ([schema_differential.rs:196](../../crates/adapters/authoring/tests/schema_differential.rs#L196)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_the_decoder_refuses_a_mutated_document_with_findings` ([schema_differential.rs:201](../../crates/adapters/authoring/tests/schema_differential.rs#L201)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_209_json_schema_output_is_deterministic` ([schema_differential.rs:214](../../crates/adapters/authoring/tests/schema_differential.rs#L214)) | WIRE-209 | WIRE-209 (wire-formats) |
+| `wire_213_every_document_in_the_schema_corpus_is_rejected_by_both` ([schema_differential.rs:239](../../crates/adapters/authoring/tests/schema_differential.rs#L239)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
@@ -32,6 +49,9 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `the_conformance_document_is_generated_from_the_matrix` ([conformance.rs:110](../../crates/apps/cli/tests/conformance.rs#L110)) | CLI-017, PLAT-033 | CLI-017 (cli); PLAT-033 (platform-profiles) |
 | `cli_017_the_context_suites_list_run_and_pass` ([conformance.rs:118](../../crates/apps/cli/tests/conformance.rs#L118)) | CLI-017 | CLI-017 (cli) |
 | `cli_006_demo_pipeline_runs_end_to_end_and_exits_zero` ([demo_pipeline.rs:10](../../crates/apps/cli/tests/demo_pipeline.rs#L10)) | CLI-006 | CLI-006 (cli) |
+| `wire_213_the_embedded_corpus_lists_every_file` ([strict_schema_corpus.rs:29](../../crates/apps/cli/tests/strict_schema_corpus.rs#L29)) | WIRE-213 | WIRE-213 (wire-formats) |
+| `cli_043_conformance_list_names_strict_schema` ([strict_schema_corpus.rs:49](../../crates/apps/cli/tests/strict_schema_corpus.rs#L49)) | CLI-043 | CLI-043 (cli) |
+| `cli_043_the_strict_schema_suite_rejects_every_corpus_document` ([strict_schema_corpus.rs:56](../../crates/apps/cli/tests/strict_schema_corpus.rs#L56)) | CLI-043 | CLI-043 (cli) |
 | `reg_006_dis_030_del_042_the_air_gapped_flow_moves_only_files_and_codes` ([air_gapped.rs:43](../../crates/apps/e2e/tests/air_gapped.rs#L43)) | DEL-042, DIS-030, REG-006 | DEL-042 (delivery); DIS-030 (distribution); REG-006 (registration) |
 | `del_002_int_050_the_connected_flow_lands_what_was_captured_and_the_device_clears` ([connected.rs:33](../../crates/apps/e2e/tests/connected.rs#L33)) | DEL-002, INT-050 | DEL-002 (delivery); INT-050 (intake) |
 | `reg_006_an_expired_registration_token_is_refused_by_the_factory_and_registers_nothing` ([faults_authority.rs:22](../../crates/apps/e2e/tests/faults_authority.rs#L22)) | REG-006 | REG-006 (registration) |
@@ -49,6 +69,10 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `wire_030_036_int_008_reordered_duplicated_and_missing_frames_are_refused_at_the_chain` ([faults_export.rs:220](../../crates/apps/e2e/tests/faults_export.rs#L220)) | INT-008, WIRE-030 | INT-008 (intake); WIRE-030 (wire-formats) |
 | `int_013_sending_the_same_records_twice_changes_nothing_that_landed` ([faults_export.rs:253](../../crates/apps/e2e/tests/faults_export.rs#L253)) | INT-013 | INT-013 (intake) |
 | `del_003_a_replayed_upload_token_is_refused_but_the_records_can_be_sent_again_with_a_fresh_one` ([faults_export.rs:286](../../crates/apps/e2e/tests/faults_export.rs#L286)) | DEL-003 | DEL-003 (delivery) |
+| `wire_011_every_example_instrument_keeps_its_address` ([migration_gate.rs:143](../../crates/apps/e2e/tests/migration_gate.rs#L143)) | WIRE-011 | WIRE-011 (wire-formats) |
+| `wire_185_every_example_keeps_its_salted_fingerprint` ([migration_gate.rs:153](../../crates/apps/e2e/tests/migration_gate.rs#L153)) | WIRE-185 | WIRE-185 (wire-formats) |
+| `ins_200_every_bound_layout_keeps_its_address` ([migration_gate.rs:163](../../crates/apps/e2e/tests/migration_gate.rs#L163)) | INS-200 | INS-200 (instrument) |
+| `ins_200_expanded_documents_match_the_golden_text` ([migration_gate.rs:176](../../crates/apps/e2e/tests/migration_gate.rs#L176)) | INS-200 | INS-200 (instrument) |
 | `reg_042_dis_042_int_054_two_devices_are_registered_apart_and_intake_orders_their_records` ([multi_device.rs:33](../../crates/apps/e2e/tests/multi_device.rs#L33)) | DIS-042, INT-054, REG-042 | DIS-042 (distribution); INT-054 (intake); REG-042 (registration) |
 | `reg_042_the_device_limit_is_checked_again_when_the_words_are_confirmed` ([multi_device.rs:144](../../crates/apps/e2e/tests/multi_device.rs#L144)) | REG-042 | REG-042 (registration) |
 | `adr_0007_bundle_is_authenticated_before_it_is_decrypted_or_parsed` ([bundle_attacks.rs:120](../../crates/apps/security-tests/tests/bundle_attacks.rs#L120)) | ADR-0007 | ADR-0007 (ADR 0007) |
@@ -82,6 +106,12 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:60](../../crates/apps/web/tests/parity.rs#L60)) | WEB-120 | WEB-120 (web-app) |
+| `wire_209_every_key_of_both_kinds_is_declared_once` ([schema.rs:1117](../../crates/kernel/src/schema.rs#L1117)) | WIRE-209 | WIRE-209 (wire-formats) |
+| `wire_209_the_json_schema_is_generated_from_the_same_table` ([schema.rs:1159](../../crates/kernel/src/schema.rs#L1159)) | WIRE-209 | WIRE-209 (wire-formats) |
+| `wire_211_pointer_segments_escape_tilde_and_slash` ([schema.rs:1183](../../crates/kernel/src/schema.rs#L1183)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_211_every_error_kind_is_one_of_the_six` ([schema.rs:1194](../../crates/kernel/src/schema.rs#L1194)) | WIRE-211 | WIRE-211 (wire-formats) |
+| `wire_210_a_valid_minimal_document_has_no_findings_and_a_reader_resolves_its_shape` ([schema.rs:1211](../../crates/kernel/src/schema.rs#L1211)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_condition_names_exactly_one_operator` ([schema.rs:1225](../../crates/kernel/src/schema.rs#L1225)) | WIRE-210 | WIRE-210 (wire-formats) |
 | `wire_001_to_007_cbor_vectors` ([vectors.rs:308](../../crates/kernel/tests/vectors.rs#L308)) | WIRE-001 | WIRE-001 (wire-formats) |
 | `wire_010_011_185_identifier_vectors` ([vectors.rs:379](../../crates/kernel/tests/vectors.rs#L379)) | WIRE-010 | WIRE-010 (wire-formats) |
 | `wire_020_021_022_signature_vectors` ([vectors.rs:480](../../crates/kernel/tests/vectors.rs#L480)) | WIRE-020, WIRE-021 | WIRE-020 (wire-formats); WIRE-021 (wire-formats) |

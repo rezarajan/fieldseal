@@ -1,0 +1,6 @@
+# A number where a title is required.
+# expect: TypeMismatch /steps/0/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: 5
+  contents: []

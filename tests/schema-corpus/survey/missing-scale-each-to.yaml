@@ -1,0 +1,10 @@
+# A scale step's range has no end.
+# expect: MissingField /scales/s/0/each/to
+survey: {name: corpus, version: 0.1.0}
+scales:
+  s:
+  - {per: week, each: {from: 1}}
+sections:
+- q:
+    type: binary
+    label: Is it so?

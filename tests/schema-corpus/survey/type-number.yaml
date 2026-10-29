@@ -1,0 +1,8 @@
+# Text where a number is required.
+# expect: TypeMismatch /sections/0/q/max
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: stepper
+    unit: kg
+    max: many

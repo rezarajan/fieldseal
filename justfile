@@ -110,6 +110,10 @@ lint:
 check:
     for c in clippy tests architecture; do nix build "path:.#checks.x86_64-linux.$c" --no-link --print-build-logs; done
 
+# The migration gate for address-preserving changes: every example's expanded documents and addresses equal the golden set (Technical Plan §5).
+migration-gate:
+    cargo nextest run -p fieldseal-e2e --test migration_gate
+
 # Workspace tests (in parallel, within the 20 s budget), clippy, the architecture check and the example licence check.
 test:
     python3 tools/test-inventory.py --check

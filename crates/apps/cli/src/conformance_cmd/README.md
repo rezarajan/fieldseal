@@ -16,7 +16,7 @@ Subcommands:
 
 Flags (parsed strictly by `parse_flags`): `--json`; `--suite` (repeatable, comma lists, empty names refused); `--adapter` (once); `--child <unit-id>` (once; internal, runs one unit and prints its rows as a JSON array). `--flag=value` is accepted. Any other flag is a usage error (CLI-022). `--adapter` keeps units whose id ends in `:<adapter>` (case-insensitive).
 
-Suites (`SUITES`): `wire`, `trust`, `publishing`, `transparency-log`, `distribution` (alias `dis-verify`), `ins-rules` (alias `ins-eval`), `policy`, `contracts`, `collection`, `delivery`, `deployment`, `instrument`, `intake`, `registration`, `col-lifecycle`, `col-session`, `col-crash`, `reg-token`, `reg-verify`, `reg-revoke`, `reg-attacks`, `dis-release`, `ins-checks`, `ins-locale`, `ins-codes`, `ins-nonresponse`, `ins-units`, `all`.
+Suites (`SUITES`): `wire`, `trust`, `publishing`, `transparency-log`, `distribution` (alias `dis-verify`), `ins-rules` (alias `ins-eval`), `policy`, `contracts`, `collection`, `delivery`, `deployment`, `instrument`, `intake`, `registration`, `col-lifecycle`, `col-session`, `col-crash`, `reg-token`, `reg-verify`, `reg-revoke`, `reg-attacks`, `dis-release`, `ins-checks`, `ins-locale`, `ins-codes`, `ins-nonresponse`, `ins-units`, `strict-schema`, `all`.
 
 Source files:
 
@@ -25,6 +25,7 @@ Source files:
 - `contracts.rs`: `Entry`, `Location` (`Here(fn())` or `CargoTest(&str)`), `entries()`; port contracts against each in-process adapter.
 - Vector suites: `wire.rs`, `trust.rs`, `publishing.rs`, `distribution.rs`, `rules.rs`.
 - Scenario suites: `col.rs`, `reg.rs`, `reg_attacks.rs`, `dis_release.rs`.
+- `strict_schema.rs`: the `strict-schema` suite (CLI-043, WIRE-213): the invalid-document corpus of `tests/schema-corpus/`, embedded with `include_str!`, through the authoring decoder and the kernel validator.
 - Instrument suites: `ins.rs` with `ins_clinic.rs`, `ins_invalid.rs`, `ins_render.rs`, `ins_spec.rs` (checks copied from the instrument context's integration tests; support code is included by `#[path]` from `crates/contexts/instrument/tests/support/mod.rs`).
 
 ## Invariants

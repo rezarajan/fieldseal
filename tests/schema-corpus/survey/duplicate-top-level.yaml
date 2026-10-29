@@ -1,0 +1,9 @@
+# A top-level key written twice.
+# expect: DuplicateKey /title
+survey: {name: corpus, version: 0.1.0}
+title: One
+title: Two
+sections:
+- q:
+    type: binary
+    label: Is it so?

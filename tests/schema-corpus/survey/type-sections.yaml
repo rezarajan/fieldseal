@@ -1,0 +1,4 @@
+# A map where a list of entries is required.
+# expect: TypeMismatch /sections
+survey: {name: corpus, version: 0.1.0}
+sections: {q: {type: binary}}

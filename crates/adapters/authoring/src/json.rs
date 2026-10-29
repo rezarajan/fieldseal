@@ -9,12 +9,20 @@ use std::collections::BTreeMap;
 
 use fieldseal_kernel::value::Value;
 
-use crate::error::{AuthoringError, ErrorKind};
+use fieldseal_kernel::schema::{SchemaErrorKind, child_pointer};
+
+use crate::error::{AuthoringError, ErrorKind, Position};
 use crate::scalar::{MAX_DEPTH, ScalarError, canonical_number, check_nfc};
+use crate::spans::Spans;
 
 struct Parser<'a> {
     text: &'a str,
     pos: usize,
+    /// The byte offset where each line starts.
+    line_starts: Vec<usize>,
+    /// The JSON Pointer segments of the node being read.
+    path: Vec<String>,
+    spans: Spans,
 }
 
 type Res<T> = Result<T, AuthoringError>;
@@ -22,10 +30,20 @@ type Res<T> = Result<T, AuthoringError>;
 impl<'a> Parser<'a> {
     /// Line and column (both from 1, the column in characters) of a byte offset.
     fn position(&self, offset: usize) -> (usize, usize) {
-        let before = &self.text[..offset.min(self.text.len())];
-        let line = before.bytes().filter(|b| *b == b'\n').count() + 1;
-        let line_start = before.rfind('\n').map_or(0, |i| i + 1);
-        (line, before[line_start..].chars().count() + 1)
+        let offset = offset.min(self.text.len());
+        let line = self.line_starts.partition_point(|start| *start <= offset);
+        let line_start = self.line_starts[line - 1];
+        (line, self.text[line_start..offset].chars().count() + 1)
+    }
+
+    fn at(&self, offset: usize) -> Position {
+        let (line, column) = self.position(offset);
+        Position { line, column }
+    }
+
+    /// The JSON Pointer of the node being read.
+    fn pointer(&self) -> String {
+        self.path.iter().fold(String::new(), |p, segment| child_pointer(&p, segment))
     }
 
     fn error_at(&self, offset: usize, kind: ErrorKind, message: impl Into<String>) -> AuthoringError {
@@ -33,12 +51,21 @@ impl<'a> Parser<'a> {
         AuthoringError::new(kind, line, column, message)
     }
 
+    /// An error that is also a WIRE-211 finding at `pointer`.
+    fn finding_at(&self, offset: usize, kind: ErrorKind, finding: SchemaErrorKind, pointer: &str, message: impl Into<String>) -> AuthoringError {
+        let (line, column) = self.position(offset);
+        AuthoringError::finding(kind, finding, pointer, line, column, message)
+    }
+
     fn syntax(&self, message: impl Into<String>) -> AuthoringError {
         self.error_at(self.pos, ErrorKind::Syntax, message)
     }
 
     fn scalar_error(&self, offset: usize) -> impl Fn(ScalarError) -> AuthoringError + '_ {
-        move |(kind, message)| self.error_at(offset, kind, message)
+        move |(kind, message)| match AuthoringError::schema_kind(kind) {
+            Some(finding) => self.finding_at(offset, kind, finding, &self.pointer(), message),
+            None => self.error_at(offset, kind, message),
+        }
     }
 
     fn peek(&self) -> Option<u8> {
@@ -75,15 +102,18 @@ impl<'a> Parser<'a> {
 
     fn value(&mut self, depth: usize) -> Res<Value> {
         self.skip_whitespace();
+        self.spans.note_value(self.pointer(), self.at(self.pos));
         match self.peek() {
             Some(b'{') => self.object(depth),
             Some(b'[') => self.array(depth),
             Some(b'"') => self.string().map(Value::Text),
             Some(b't') => self.literal("true", Value::Bool(true)),
             Some(b'f') => self.literal("false", Value::Bool(false)),
-            Some(b'n') if self.text[self.pos..].starts_with("null") => Err(self.error_at(
+            Some(b'n') if self.text[self.pos..].starts_with("null") => Err(self.finding_at(
                 self.pos,
                 ErrorKind::Null,
+                SchemaErrorKind::CoercionRefused,
+                &self.pointer(),
                 "null is not allowed; omit the field instead",
             )),
             Some(b'-' | b'0'..=b'9') => self.number(),
@@ -109,7 +139,7 @@ impl<'a> Parser<'a> {
             Some(b'0') => {
                 p += 1;
                 if bytes.get(p).is_some_and(u8::is_ascii_digit) {
-                    return Err(self.error_at(start, ErrorKind::Number, "a leading zero is not allowed in JSON numbers"));
+                    return Err(self.finding_at(start, ErrorKind::Number, SchemaErrorKind::CoercionRefused, &self.pointer(), "a leading zero is not allowed in JSON numbers"));
                 }
             }
             Some(b'1'..=b'9') => {
@@ -124,9 +154,11 @@ impl<'a> Parser<'a> {
             }
         }
         if matches!(bytes.get(p), Some(b'e' | b'E')) {
-            return Err(self.error_at(
+            return Err(self.finding_at(
                 start,
                 ErrorKind::Float,
+                SchemaErrorKind::CoercionRefused,
+                &self.pointer(),
                 "exponent notation is not allowed; write a plain decimal such as 1000 or 0.001",
             ));
         }
@@ -217,7 +249,9 @@ impl<'a> Parser<'a> {
             return Ok(Value::Array(items));
         }
         loop {
+            self.path.push(items.len().to_string());
             items.push(self.value(depth + 1)?);
+            self.path.pop();
             self.skip_whitespace();
             match self.peek() {
                 Some(b',') => self.pos += 1,
@@ -247,11 +281,15 @@ impl<'a> Parser<'a> {
             }
             let key = self.string()?;
             if entries.contains_key(&key) {
-                return Err(self.error_at(key_at, ErrorKind::DuplicateKey, format!("duplicate key {key:?}")));
+                let pointer = child_pointer(&self.pointer(), &key);
+                return Err(self.finding_at(key_at, ErrorKind::DuplicateKey, SchemaErrorKind::DuplicateKey, &pointer, format!("duplicate key {key:?}")));
             }
+            self.path.push(key.clone());
+            self.spans.note_key(self.pointer(), self.at(key_at));
             self.skip_whitespace();
             self.expect(b':')?;
             let value = self.value(depth + 1)?;
+            self.path.pop();
             entries.insert(key, value);
             self.skip_whitespace();
             match self.peek() {
@@ -279,7 +317,13 @@ impl<'a> Parser<'a> {
 
 /// Decodes one JSON document.
 pub(crate) fn decode(text: &str) -> Result<Value, AuthoringError> {
-    let mut parser = Parser { text, pos: 0 };
+    decode_with_spans(text).map(|(value, _)| value)
+}
+
+/// Decodes one JSON document and notes where each key and value is, by JSON Pointer.
+pub(crate) fn decode_with_spans(text: &str) -> Result<(Value, Spans), AuthoringError> {
+    let line_starts = std::iter::once(0).chain(text.match_indices('\n').map(|(i, _)| i + 1)).collect();
+    let mut parser = Parser { text, pos: 0, line_starts, path: Vec::new(), spans: Spans::default() };
     parser.skip_whitespace();
     if parser.pos >= text.len() {
         return Err(AuthoringError::new(ErrorKind::EmptyDocument, 1, 1, "the file holds no document"));
@@ -289,5 +333,5 @@ pub(crate) fn decode(text: &str) -> Result<Value, AuthoringError> {
     if parser.pos < text.len() {
         return Err(parser.syntax(format!("unexpected {} after the document", parser.describe_next())));
     }
-    Ok(value)
+    Ok((value, parser.spans))
 }

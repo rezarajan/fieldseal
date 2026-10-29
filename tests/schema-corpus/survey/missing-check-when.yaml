@@ -1,0 +1,9 @@
+# A rule has no condition.
+# expect: MissingField /checks/0/when
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?
+checks:
+- {id: c, soft: Check it}

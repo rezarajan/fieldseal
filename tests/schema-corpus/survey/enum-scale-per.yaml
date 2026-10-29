@@ -1,0 +1,10 @@
+# A scale period that does not exist.
+# expect: EnumValue /scales/s/0/per
+survey: {name: corpus, version: 0.1.0}
+scales:
+  s:
+  - {per: year, exactly: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

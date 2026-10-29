@@ -1,0 +1,8 @@
+# A tab has no contents.
+# expect: MissingField /steps/0/contents/0/tabs/0/contents
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - tabs:
+    - {title: Tab}

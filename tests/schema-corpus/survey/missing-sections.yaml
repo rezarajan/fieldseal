@@ -1,0 +1,4 @@
+# The survey has no sections.
+# expect: MissingField /sections
+survey: {name: corpus, version: 0.1.0}
+title: Nothing

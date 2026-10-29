@@ -99,6 +99,7 @@
               ./architecture.toml
               ./crates
               ./examples
+              ./tests
               ./tools/check-architecture.py
               ./tools/demo-pipeline.sh
               ./tools/check-coverage.py

@@ -24,6 +24,7 @@ Each unit (a golden vector file, or one contract against one adapter) runs in it
 | `ins-rules`, `ins-eval` | Rule grammar and bounds, unset propagation and verdicts |
 | `policy` | The policy engine cases and the policy ports' contracts |
 | `contracts` | Every port contract against every in-process adapter |
+| `strict-schema` | The invalid-document corpus (`tests/schema-corpus/`, WIRE-213): an unknown field at every nesting level, a missing required field, a wrong type, a value outside an enumeration, a repeated key and a refused value, each rejected by the authoring decoder and the kernel validator (the generated JSON Schema is checked against the same corpus by the authoring crate's differential test) |
 | `collection`, `delivery`, `deployment`, `instrument`, `intake`, `registration` | One context's port contracts |
 | `all` (default) | Everything |
 

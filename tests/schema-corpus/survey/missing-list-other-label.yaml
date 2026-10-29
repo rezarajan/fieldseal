@@ -1,0 +1,9 @@
+# A list's other entry has no label.
+# expect: MissingField /lists/l/other/label
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l: {items: [a], other: {max-length: 20}}
+sections:
+- q:
+    type: binary
+    label: Is it so?

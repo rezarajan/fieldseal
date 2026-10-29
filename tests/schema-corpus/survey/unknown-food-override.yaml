@@ -1,0 +1,15 @@
+# An unknown key in a food's override of a question.
+# expect: UnknownField /sections/0/g/categories/blocks/0/categories/0/fruit/foods/0/ask/amount/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g:
+    group: Foods
+    categories:
+      ask:
+      - amount: {type: binary}
+      blocks:
+      - period: Last week
+        categories:
+        - fruit:
+            label: Fruit
+            foods: [{label: Apple, ask: {amount: {extra: 1}}}]

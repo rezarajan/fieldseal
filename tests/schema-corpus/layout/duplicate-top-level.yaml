@@ -1,0 +1,11 @@
+# A top-level key written twice.
+# expect: DuplicateKey /steps
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {element: q}
+steps:
+- title: One
+  contents:
+  - {element: q}

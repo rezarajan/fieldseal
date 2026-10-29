@@ -1,0 +1,7 @@
+# A survey with a question type outside the allowed values. The finding is at the value.
+survey: {name: bad-enum, version: 0.1.0}
+sections:
+- name:
+    label: Your name
+    # expect: EnumValue /sections/0/name/type column 11
+    type: dropdown

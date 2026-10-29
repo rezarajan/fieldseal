@@ -25,6 +25,7 @@ pub mod pop;
 pub mod qr_sequence;
 pub mod payload;
 pub mod record;
+pub mod schema;
 pub mod seal;
 pub mod sign;
 pub mod structure;

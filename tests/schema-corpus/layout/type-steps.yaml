@@ -1,0 +1,4 @@
+# Text where a list of steps is required.
+# expect: TypeMismatch /steps
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps: one

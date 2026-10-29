@@ -1,0 +1,8 @@
+# An unknown key in the consent.
+# expect: UnknownField /consent/extra
+survey: {name: corpus, version: 0.1.0}
+consent: {extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

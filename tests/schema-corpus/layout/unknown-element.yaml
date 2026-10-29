@@ -1,0 +1,7 @@
+# An unknown key beside an element.
+# expect: UnknownField /steps/0/contents/0/extra
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {element: q, extra: 1}

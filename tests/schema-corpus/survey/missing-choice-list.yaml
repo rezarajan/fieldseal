@@ -1,0 +1,6 @@
+# A choice question names no list.
+# expect: MissingField /sections/0/q/list
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: choice

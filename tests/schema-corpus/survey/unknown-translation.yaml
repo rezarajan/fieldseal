@@ -1,0 +1,9 @@
+# An unknown key in a translation's entry.
+# expect: UnknownField /translations/es/extra
+survey: {name: corpus, version: 0.1.0}
+translations:
+  es: {method: human, extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

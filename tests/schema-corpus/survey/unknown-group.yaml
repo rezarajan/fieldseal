@@ -1,0 +1,5 @@
+# An unknown key in a group.
+# expect: UnknownField /sections/0/g/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g: {group: G, extra: 1}

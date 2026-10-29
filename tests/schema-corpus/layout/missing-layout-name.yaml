@@ -1,0 +1,7 @@
+# The layout has no name.
+# expect: MissingField /layout/name
+layout: {instrument: i.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {element: q}

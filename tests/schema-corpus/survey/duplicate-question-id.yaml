@@ -1,0 +1,6 @@
+# The same question id written twice in one entry.
+# expect: DuplicateKey /sections/0/q
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q: {type: binary}
+  q: {type: binary}

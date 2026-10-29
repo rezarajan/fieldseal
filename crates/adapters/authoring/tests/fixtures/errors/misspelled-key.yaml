@@ -1,0 +1,9 @@
+# A survey with one misspelled key, one line below its correct sibling `label`. The line
+# after the `expect:` comment is where the finding is reported.
+survey: {name: misspelled-key, version: 0.1.0}
+sections:
+- name:
+    type: text
+    label: Your name
+    # expect: UnknownField /sections/0/name/hlep column 5
+    hlep: Say it out loud

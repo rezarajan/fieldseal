@@ -1,0 +1,7 @@
+# A number in exponent form.
+# expect: CoercionRefused /layout/version
+layout: {name: corpus, instrument: i.yaml, window: compact, version: 1e2}
+steps:
+- title: One
+  contents:
+  - {element: q}

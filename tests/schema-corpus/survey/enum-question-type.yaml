@@ -1,0 +1,6 @@
+# A question type that does not exist.
+# expect: EnumValue /sections/0/q/type
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: dropdown

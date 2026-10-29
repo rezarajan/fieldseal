@@ -1,0 +1,7 @@
+# An unknown key in the survey's name block.
+# expect: UnknownField /survey/extra
+survey: {name: corpus, version: 0.1.0, extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

@@ -1,0 +1,9 @@
+# An unknown key in the defaults' other-text.
+# expect: UnknownField /defaults/other-text/extra
+survey: {name: corpus, version: 0.1.0}
+defaults:
+  other-text: {extra: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

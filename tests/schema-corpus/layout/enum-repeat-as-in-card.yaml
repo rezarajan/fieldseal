@@ -1,0 +1,10 @@
+# A way of drawing repeats that does not exist, inside a card.
+# expect: EnumValue /steps/0/contents/0/card/contents/0/as
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - card:
+      title: Card
+      contents:
+      - {repeat: g, as: grid}

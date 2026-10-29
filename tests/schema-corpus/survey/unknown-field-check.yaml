@@ -1,0 +1,9 @@
+# An unknown key in a field check.
+# expect: UnknownField /field-checks/0/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?
+field-checks:
+- {id: f, type: duration, message: Too fast, extra: 1}

@@ -1,0 +1,9 @@
+# A field check has no message.
+# expect: MissingField /field-checks/0/message
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?
+field-checks:
+- {id: f, type: duration}

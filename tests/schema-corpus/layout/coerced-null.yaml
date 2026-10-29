@@ -1,0 +1,6 @@
+# An empty value, which would be null.
+# expect: CoercionRefused /steps/0/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title:
+  contents: []

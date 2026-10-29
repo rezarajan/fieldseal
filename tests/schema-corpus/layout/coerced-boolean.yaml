@@ -1,0 +1,6 @@
+# False written with a capital.
+# expect: CoercionRefused /steps/0/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: FALSE
+  contents: []

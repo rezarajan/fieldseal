@@ -37,3 +37,12 @@ Paths are relative to the repository root. "Orig" is the first example instrumen
 | 31 | `${}` in YAML flow context needs quoting | new | Flow collisions | n/a | Document quoting; lint | L |
 
 Top 10 by impact: 1, 2, 3, 4, 8, 12, 14, 19, then 5/6/10/13/26 (medium group).
+
+## Resolved by the declarative schema (`Check survey sources against a declared schema`)
+
+Two problems found while auditing the decoder are resolved by `crates/kernel/src/schema.rs` and the rewrite of `crates/adapters/authoring/src/compact.rs`:
+
+| # | Problem | Resolution |
+|---|---|---|
+| 32 | Hand-written key checks: about 1,250 lines in `compact.rs` read each key through `Obj::req`, `Obj::text`, `Obj::number` and the like and rejected any key left over (`Obj::done`), so the set of keys was spread over the expander and no editor could read it | Every key of the compact dialect is declared once in `schema.rs`: its type, whether it is required, a line of documentation and the rules the table cannot say. The decoder validates against that table, `compact.rs` reads keys only through `schema::Reader`, and `fieldseal_kernel::schema::json_schema` generates the editor JSON Schema from the same table (WIRE-209) |
+| 33 | Errors in a compact document were reported at line 0, column 0 | The YAML and JSON decoders record the position of every key and value by JSON Pointer (`decode_with_spans`), and each finding carries a pointer, a line and column and one of the six WIRE-211 kinds. Line 0, column 0 is left only for an unreadable file, whose message names the file |

@@ -1,0 +1,7 @@
+# A way of drawing repeats that does not exist.
+# expect: EnumValue /steps/0/contents/0/as
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - {repeat: g, as: grid}

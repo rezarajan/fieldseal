@@ -1,0 +1,148 @@
+{
+  "apiVersion": "fieldseal.dev/v1alpha1",
+  "kind": "Layout",
+  "metadata": {
+    "name": "school-meals-baseline-expanded",
+    "version": "1.0.0"
+  },
+  "spec": {
+    "instrument": "33a682239785203ac02a564ccb0277b3c71bede8821ebb758d04fe0bf69c6fa4",
+    "schema": "^1.0",
+    "steps": [
+      {
+        "contents": [
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "about.school"
+                },
+                {
+                  "element": "about.name"
+                },
+                {
+                  "element": "about.class"
+                },
+                {
+                  "element": "about.age"
+                },
+                {
+                  "element": "about.sex"
+                }
+              ],
+              "title": {
+                "en": "Who",
+                "es": "Quién"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "about.weight"
+                },
+                {
+                  "element": "about.height"
+                }
+              ],
+              "title": {
+                "en": "Measurements",
+                "es": "Medidas"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "about.uses_shop"
+                },
+                {
+                  "element": "about.shop_weekly"
+                },
+                {
+                  "element": "about.shop_buys"
+                }
+              ],
+              "title": {
+                "en": "School shop",
+                "es": "Tienda de la escuela"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "about.meal_programme"
+                },
+                {
+                  "element": "about.meal_which"
+                }
+              ],
+              "title": {
+                "en": "School meals",
+                "es": "Comidas escolares"
+              }
+            }
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "About the pupil",
+          "es": "Sobre el alumno"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.diet_intro"
+          },
+          {
+            "element": "diet.diet_instructions"
+          },
+          {
+            "tabs": [
+              {
+                "tab": {
+                  "contents": [
+                    {
+                      "group": "diet.counted"
+                    }
+                  ],
+                  "title": {
+                    "en": "Main foods",
+                    "es": "Alimentos principales"
+                  }
+                }
+              },
+              {
+                "tab": {
+                  "contents": [
+                    {
+                      "group": "diet.weighed"
+                    }
+                  ],
+                  "title": {
+                    "en": "By weight or volume",
+                    "es": "Por peso o volumen"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "element": "thanks"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Foods and drinks",
+          "es": "Alimentos y bebidas"
+        }
+      }
+    ],
+    "windowClass": "expanded"
+  }
+}

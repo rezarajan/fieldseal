@@ -1,0 +1,135 @@
+{
+  "apiVersion": "fieldseal.dev/v1alpha1",
+  "kind": "Layout",
+  "metadata": {
+    "name": "household-water-access-compact",
+    "version": "1.0.0"
+  },
+  "spec": {
+    "instrument": "a733d5b37f6644839afd1e2023487e98cde5afb10cca9c75922a606bc54cdf61",
+    "schema": "^1.0",
+    "steps": [
+      {
+        "contents": [
+          {
+            "element": "welcome"
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "household.members"
+                },
+                {
+                  "element": "household.repaired_on"
+                }
+              ],
+              "title": {
+                "en": "Who lives here",
+                "es": "Quién vive aquí"
+              }
+            }
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "The household",
+          "es": "El hogar"
+        }
+      },
+      {
+        "contents": [
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "water.source"
+                },
+                {
+                  "element": "water.minutes_to_source"
+                }
+              ],
+              "title": {
+                "en": "The source",
+                "es": "La fuente"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "water.litres_per_day"
+                },
+                {
+                  "element": "water.treatments"
+                }
+              ],
+              "title": {
+                "en": "Use and treatment",
+                "es": "Uso y tratamiento"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "element": "water.monthly_cost"
+                }
+              ],
+              "title": {
+                "en": "Cost",
+                "es": "Costo"
+              }
+            }
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Water",
+          "es": "Agua"
+        }
+      },
+      {
+        "contents": [
+          {
+            "card": {
+              "contents": [
+                {
+                  "group": "sanitation"
+                }
+              ],
+              "title": {
+                "en": "The toilet",
+                "es": "El inodoro"
+              }
+            }
+          },
+          {
+            "card": {
+              "contents": [
+                {
+                  "group": "hygiene"
+                }
+              ],
+              "title": {
+                "en": "Hygiene",
+                "es": "Higiene"
+              }
+            }
+          },
+          {
+            "element": "thanks"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Sanitation and hygiene",
+          "es": "Saneamiento e higiene"
+        }
+      }
+    ],
+    "windowClass": "compact"
+  }
+}

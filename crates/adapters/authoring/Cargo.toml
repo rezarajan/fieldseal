@@ -13,5 +13,10 @@ base64 = "0.22"
 unicode-normalization = "0.1"
 thiserror.workspace = true
 
+[dev-dependencies]
+# The editor JSON Schema is checked against the decoder (tests/schema_differential.rs).
+jsonschema = { version = "0.60", default-features = false }
+serde_json = "1"
+
 [lints]
 workspace = true

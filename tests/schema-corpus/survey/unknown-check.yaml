@@ -1,0 +1,9 @@
+# An unknown key in a rule.
+# expect: UnknownField /checks/0/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?
+checks:
+- {id: c, when: {is: q}, soft: Check it, extra: 1}

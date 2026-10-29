@@ -1,0 +1,7 @@
+# An unknown key in a question.
+# expect: UnknownField /sections/0/q/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    extra: 1

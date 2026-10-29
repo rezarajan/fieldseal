@@ -1,0 +1,7 @@
+# Text where true or false is required.
+# expect: TypeMismatch /sections/0/q/optional
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    optional: yes

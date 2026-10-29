@@ -1,0 +1,7 @@
+# A number with a plus sign.
+# expect: CoercionRefused /sections/0/q/max-length
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: text
+    max-length: +5

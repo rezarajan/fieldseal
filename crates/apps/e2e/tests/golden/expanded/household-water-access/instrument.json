@@ -1,0 +1,719 @@
+{
+  "apiVersion": "fieldseal.dev/v1alpha1",
+  "kind": "Instrument",
+  "metadata": {
+    "name": "household-water-access",
+    "version": "0.1.0"
+  },
+  "spec": {
+    "administration": "both",
+    "codeLists": {
+      "handwashing-places": {
+        "codes": [
+          {
+            "code": "fixed",
+            "label": {
+              "en": "A fixed place with water",
+              "es": "Un lugar fijo con agua"
+            }
+          },
+          {
+            "code": "portable",
+            "label": {
+              "en": "A bucket or portable container",
+              "es": "Un balde o recipiente móvil"
+            }
+          },
+          {
+            "code": "none",
+            "label": {
+              "en": "No place",
+              "es": "Ningún lugar"
+            }
+          }
+        ],
+        "ordered": false
+      },
+      "toilet-types": {
+        "codes": [
+          {
+            "code": "flush",
+            "label": {
+              "en": "Flush toilet",
+              "es": "Inodoro con descarga"
+            }
+          },
+          {
+            "code": "pit_slab",
+            "label": {
+              "en": "Pit latrine with a slab",
+              "es": "Letrina de pozo con losa"
+            }
+          },
+          {
+            "code": "pit_open",
+            "label": {
+              "en": "Pit latrine without a slab",
+              "es": "Letrina de pozo sin losa"
+            }
+          },
+          {
+            "code": "composting",
+            "label": {
+              "en": "Composting toilet",
+              "es": "Inodoro ecológico"
+            }
+          },
+          {
+            "code": "none_open",
+            "label": {
+              "en": "No toilet (open defecation)",
+              "es": "Sin inodoro (al aire libre)"
+            }
+          },
+          {
+            "code": "other",
+            "label": {
+              "en": "Another kind",
+              "es": "Otro tipo"
+            }
+          }
+        ],
+        "ordered": false,
+        "other": {
+          "code": "other",
+          "label": {
+            "en": "Another kind",
+            "es": "Otro tipo"
+          },
+          "maxLength": 60
+        }
+      },
+      "water-sources": {
+        "codes": [
+          {
+            "code": "piped_in_dwelling",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Piped into the home",
+              "es": "Tubería dentro de la vivienda"
+            }
+          },
+          {
+            "code": "piped_yard",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Piped into the yard",
+              "es": "Tubería en el patio"
+            }
+          },
+          {
+            "code": "standpipe",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Public standpipe",
+              "es": "Pila pública"
+            }
+          },
+          {
+            "code": "borehole",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Borehole or tube well",
+              "es": "Pozo entubado"
+            }
+          },
+          {
+            "code": "rainwater",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Rainwater",
+              "es": "Agua de lluvia"
+            }
+          },
+          {
+            "code": "tanker_truck",
+            "concept": [
+              {
+                "code": "improved",
+                "display": "Improved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "Tanker truck",
+              "es": "Camión cisterna"
+            }
+          },
+          {
+            "code": "surface_water",
+            "concept": [
+              {
+                "code": "unimproved",
+                "display": "Unimproved",
+                "system": "urn:example:water-class"
+              }
+            ],
+            "label": {
+              "en": "River, lake or stream",
+              "es": "Río, lago o quebrada"
+            }
+          },
+          {
+            "code": "other",
+            "label": {
+              "en": "Another source",
+              "es": "Otra fuente"
+            }
+          }
+        ],
+        "ordered": false,
+        "other": {
+          "code": "other",
+          "label": {
+            "en": "Another source",
+            "es": "Otra fuente"
+          },
+          "maxLength": 60
+        }
+      },
+      "water-treatments": {
+        "codes": [
+          {
+            "code": "boil",
+            "label": {
+              "en": "Boil it",
+              "es": "Hervirla"
+            }
+          },
+          {
+            "code": "chlorine",
+            "label": {
+              "en": "Add chlorine",
+              "es": "Agregarle cloro"
+            }
+          },
+          {
+            "code": "filter",
+            "label": {
+              "en": "Filter it",
+              "es": "Filtrarla"
+            }
+          },
+          {
+            "code": "solar",
+            "label": {
+              "en": "Leave it in the sun",
+              "es": "Exponerla al sol"
+            }
+          },
+          {
+            "code": "none",
+            "exclusive": true,
+            "label": {
+              "en": "None of these",
+              "es": "Ninguna de estas"
+            }
+          }
+        ],
+        "ordered": false
+      }
+    },
+    "consent": {
+      "required": false
+    },
+    "copyright": {
+      "licence": "CC-BY-4.0",
+      "notice": "© 2026 Example Authority"
+    },
+    "defaultLanguage": "en",
+    "description": {
+      "en": "A short visit to a household to learn where its water comes from and how it is used.",
+      "es": "Una visita breve a un hogar para conocer de dónde viene su agua y cómo se usa."
+    },
+    "elements": [
+      {
+        "id": "welcome",
+        "kind": "display",
+        "role": "introduction",
+        "text": {
+          "en": "Questions about the household of {$roster.head_name}.",
+          "es": "Preguntas sobre el hogar de {$roster.head_name}."
+        }
+      },
+      {
+        "elements": [
+          {
+            "control": {
+              "decimals": 0,
+              "max": 30,
+              "min": 1,
+              "type": "number"
+            },
+            "data": {
+              "type": "integer"
+            },
+            "kind": "question",
+            "label": {
+              "en": "How many people live in this household?",
+              "es": "¿Cuántas personas viven en este hogar?"
+            },
+            "path": "members",
+            "prefix": "1"
+          },
+          {
+            "control": {
+              "max": "2030-12-31",
+              "min": "2000-01-01",
+              "type": "date"
+            },
+            "data": {
+              "type": "date"
+            },
+            "help": {
+              "en": "An estimate is fine.",
+              "es": "Una fecha aproximada basta."
+            },
+            "kind": "question",
+            "label": {
+              "en": "When was the main water supply last repaired?",
+              "es": "¿Cuándo se reparó por última vez el suministro principal de agua?"
+            },
+            "nonresponse": [
+              "dont-know",
+              "refused"
+            ],
+            "optional": true,
+            "path": "repaired_on",
+            "prefix": "2"
+          }
+        ],
+        "id": "household",
+        "kind": "group",
+        "label": {
+          "en": "The household",
+          "es": "El hogar"
+        }
+      },
+      {
+        "concept": [
+          {
+            "code": "drinking-water",
+            "system": "urn:example:topic"
+          }
+        ],
+        "elements": [
+          {
+            "control": {
+              "codes": "water-sources",
+              "type": "choice"
+            },
+            "data": {
+              "codeList": "water-sources",
+              "type": "code"
+            },
+            "kind": "question",
+            "label": {
+              "en": "What is the main source of drinking water?",
+              "es": "¿Cuál es la fuente principal de agua para beber?"
+            },
+            "path": "source",
+            "prefix": "3"
+          },
+          {
+            "control": {
+              "decimals": 0,
+              "max": 600,
+              "min": 0,
+              "type": "number",
+              "unit": "min"
+            },
+            "data": {
+              "type": "integer",
+              "unit": "min"
+            },
+            "disabledDisplay": "protected",
+            "guidance": {
+              "en": "Count waiting time at the source too.",
+              "es": "Incluya el tiempo de espera en la fuente."
+            },
+            "kind": "question",
+            "label": {
+              "en": "How many minutes does a round trip to the source take?",
+              "es": "¿Cuántos minutos toma ir a la fuente y volver?"
+            },
+            "path": "minutes_to_source",
+            "prefix": "4",
+            "when": "$water.source != \"piped_in_dwelling\""
+          },
+          {
+            "control": {
+              "decimals": 0,
+              "entryUnits": [
+                "[gal_us]"
+              ],
+              "max": 5000,
+              "min": 1,
+              "type": "number",
+              "unit": "L"
+            },
+            "data": {
+              "type": "decimal",
+              "unit": "L"
+            },
+            "kind": "question",
+            "label": {
+              "en": "About how much water does the household use in a day?",
+              "es": "¿Cuánta agua usa el hogar en un día, aproximadamente?"
+            },
+            "path": "litres_per_day",
+            "prefix": "5"
+          },
+          {
+            "control": {
+              "codes": "water-treatments",
+              "type": "multi-choice"
+            },
+            "data": {
+              "codeList": "water-treatments",
+              "type": "codes"
+            },
+            "kind": "question",
+            "label": {
+              "en": "How do you make drinking water safer? Choose all that apply.",
+              "es": "¿Cómo hace más segura el agua para beber? Elija todas las que correspondan."
+            },
+            "path": "treatments",
+            "prefix": "6"
+          },
+          {
+            "control": {
+              "currency": "PEN",
+              "max": 500,
+              "min": 0,
+              "presentation": "entry",
+              "step": 0.5,
+              "type": "money"
+            },
+            "data": {
+              "type": "money"
+            },
+            "kind": "question",
+            "label": {
+              "en": "How much does the household pay for water each month?",
+              "es": "¿Cuánto paga el hogar por el agua cada mes?"
+            },
+            "nonresponse": [
+              "dont-know",
+              "refused"
+            ],
+            "path": "monthly_cost",
+            "prefix": "7"
+          }
+        ],
+        "id": "water",
+        "kind": "group",
+        "label": {
+          "en": "Water",
+          "es": "Agua"
+        }
+      },
+      {
+        "elements": [
+          {
+            "elements": [
+              {
+                "control": {
+                  "codes": "toilet-types",
+                  "type": "choice"
+                },
+                "data": {
+                  "codeList": "toilet-types",
+                  "type": "code"
+                },
+                "kind": "question",
+                "label": {
+                  "en": "What kind of toilet does the household use?",
+                  "es": "¿Qué tipo de inodoro usa el hogar?"
+                },
+                "path": "type",
+                "prefix": "8"
+              },
+              {
+                "disabledDisplay": "protected",
+                "elements": [
+                  {
+                    "control": {
+                      "type": "yes-no"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "Is the toilet shared with other households?",
+                      "es": "¿Se comparte el inodoro con otros hogares?"
+                    },
+                    "path": "shared",
+                    "prefix": "9a"
+                  },
+                  {
+                    "control": {
+                      "decimals": 0,
+                      "max": 50,
+                      "min": 1,
+                      "type": "number"
+                    },
+                    "data": {
+                      "type": "integer"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "How many other households share it?",
+                      "es": "¿Cuántos otros hogares lo comparten?"
+                    },
+                    "path": "households",
+                    "prefix": "9b",
+                    "when": "$sanitation.toilet.sharing.shared == true"
+                  }
+                ],
+                "id": "sharing",
+                "kind": "group",
+                "label": {
+                  "en": "Sharing",
+                  "es": "Uso compartido"
+                },
+                "when": "$sanitation.toilet.type != \"none_open\""
+              }
+            ],
+            "id": "toilet",
+            "kind": "group",
+            "label": {
+              "en": "The toilet",
+              "es": "El inodoro"
+            }
+          }
+        ],
+        "id": "sanitation",
+        "kind": "group",
+        "label": {
+          "en": "Sanitation",
+          "es": "Saneamiento"
+        }
+      },
+      {
+        "elements": [
+          {
+            "control": {
+              "codes": "handwashing-places",
+              "type": "choice"
+            },
+            "data": {
+              "codeList": "handwashing-places",
+              "type": "code"
+            },
+            "kind": "question",
+            "label": {
+              "en": "Where do household members wash their hands?",
+              "es": "¿Dónde se lavan las manos los miembros del hogar?"
+            },
+            "path": "handwashing_place",
+            "prefix": "10"
+          },
+          {
+            "control": {
+              "presentation": "buttons",
+              "type": "yes-no"
+            },
+            "data": {
+              "type": "boolean"
+            },
+            "guidance": {
+              "en": "Ask to see it.",
+              "es": "Pida verlo."
+            },
+            "kind": "question",
+            "label": {
+              "en": "Is there soap or ash at the place?",
+              "es": "¿Hay jabón o ceniza en ese lugar?"
+            },
+            "path": "soap_seen",
+            "prefix": "11"
+          },
+          {
+            "control": {
+              "maxLength": 500,
+              "multiline": true,
+              "type": "text"
+            },
+            "data": {
+              "description": "Free-text note",
+              "type": "string"
+            },
+            "kind": "question",
+            "label": {
+              "en": "Anything else to note about the household's water?",
+              "es": "¿Algo más que anotar sobre el agua del hogar?"
+            },
+            "optional": true,
+            "path": "notes"
+          }
+        ],
+        "id": "hygiene",
+        "kind": "group",
+        "label": {
+          "en": "Hygiene",
+          "es": "Higiene"
+        }
+      },
+      {
+        "id": "thanks",
+        "kind": "display",
+        "role": "end",
+        "text": {
+          "en": "Thank you.",
+          "es": "Gracias."
+        }
+      }
+    ],
+    "fieldChecks": [
+      {
+        "id": "quick-visits",
+        "maxSeconds": 3600,
+        "message": {
+          "en": "This visit was very short or very long. Check the answers.",
+          "es": "Esta visita fue muy corta o muy larga. Revise las respuestas."
+        },
+        "minSeconds": 60,
+        "type": "timing"
+      }
+    ],
+    "languages": [
+      "en",
+      "es"
+    ],
+    "nonresponse": [
+      "refused"
+    ],
+    "publisher": "Example Authority",
+    "purpose": {
+      "en": "To plan water and sanitation improvements.",
+      "es": "Planificar mejoras de agua y saneamiento."
+    },
+    "rules": [
+      {
+        "id": "no-place-no-soap",
+        "kind": "skip",
+        "targets": [
+          "hygiene.soap_seen"
+        ],
+        "when": "$hygiene.handwashing_place == \"none\""
+      },
+      {
+        "id": "low-use",
+        "kind": "soft",
+        "message": {
+          "en": "Less than half the usual water per person for this source. Ask again.",
+          "es": "Menos de la mitad del agua usual por persona para esta fuente. Pregunte de nuevo."
+        },
+        "reasons": [
+          {
+            "code": "dry-season",
+            "label": {
+              "en": "Dry season",
+              "es": "Temporada seca"
+            }
+          },
+          {
+            "code": "not-sure",
+            "label": {
+              "en": "Not sure",
+              "es": "No está seguro"
+            }
+          }
+        ],
+        "when": "($water.litres_per_day / $household.members) < (lookup(\"usual_litres_per_person\", $water.source) / 2)"
+      }
+    ],
+    "schema": "^1.0",
+    "tables": {
+      "usual_litres_per_person": {
+        "rows": [
+          {
+            "key": "borehole",
+            "value": 25
+          },
+          {
+            "key": "other",
+            "value": 15
+          },
+          {
+            "key": "piped_in_dwelling",
+            "value": 60
+          },
+          {
+            "key": "piped_yard",
+            "value": 40
+          },
+          {
+            "key": "rainwater",
+            "value": 20
+          },
+          {
+            "key": "standpipe",
+            "value": 20
+          },
+          {
+            "key": "surface_water",
+            "value": 15
+          },
+          {
+            "key": "tanker_truck",
+            "value": 20
+          }
+        ]
+      }
+    },
+    "title": {
+      "en": "Household water, sanitation and hygiene",
+      "es": "Agua, saneamiento e higiene en el hogar"
+    },
+    "translations": {
+      "es": {
+        "method": "human",
+        "notes": "Reviewed by two native speakers.",
+        "reviewedBy": 2
+      }
+    }
+  }
+}

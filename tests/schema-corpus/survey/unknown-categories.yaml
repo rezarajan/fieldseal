@@ -1,0 +1,16 @@
+# An unknown key in a group's categories.
+# expect: UnknownField /sections/0/g/categories/extra
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g:
+    group: Foods
+    categories:
+      ask:
+      - amount: {type: binary}
+      blocks:
+      - period: Last week
+        categories:
+        - fruit:
+            label: Fruit
+            foods: [Apple, Pear]
+      extra: 1

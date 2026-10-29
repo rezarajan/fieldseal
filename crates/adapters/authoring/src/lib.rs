@@ -42,14 +42,24 @@
 //! what most libraries lack.
 //!
 //! Every error carries the line and column (from 1) where it was found.
+//!
+//! # Schema
+//!
+//! A compact document (ADR 0040) is checked against the declarative schema in
+//! `fieldseal_kernel::schema` before it is expanded. A failure is one [`AuthoringError`] that holds
+//! every [`LocatedFinding`]: an RFC 6901 JSON Pointer, the line and column found in the text (from
+//! the [`Spans`] the decoders record) and one of the six WIRE-211 kinds. A repeated key and a
+//! refused value are findings too, with their one finding each.
 
 mod error;
 mod json;
 mod scalar;
+mod spans;
 mod yaml;
 
-pub use error::{AuthoringError, ErrorKind};
+pub use error::{AuthoringError, ErrorKind, LocatedFinding, Position};
 pub use fieldseal_kernel::value::Value;
+pub use spans::{Span, Spans};
 
 /// The syntax of an authoring document. The caller chooses it, usually from the file extension
 /// (see [`Format::from_extension`]); the decoder never sniffs content.
@@ -73,9 +83,24 @@ impl Format {
     }
 }
 
+/// Decodes the text of an authoring document and records where each key and value is, by JSON
+/// Pointer. A compact document is not expanded or checked against the schema.
+///
+/// # Errors
+///
+/// An [`AuthoringError`] with the position of the first problem found.
+pub fn decode_with_spans(text: &str, format: Format) -> Result<(Value, Spans), AuthoringError> {
+    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    match format {
+        Format::Yaml => yaml::decode_with_spans(text),
+        Format::Json => json::decode_with_spans(text),
+    }
+}
+
 /// Decodes an authoring document into the canonical data model, strictly.
 ///
-/// A leading UTF-8 byte-order mark is ignored.
+/// A leading UTF-8 byte-order mark is ignored. A compact document is checked against its schema
+/// and then expanded; a schema failure lists every finding with its JSON Pointer and position.
 ///
 /// # Errors
 ///
@@ -92,13 +117,12 @@ pub fn decode(bytes: &[u8], format: Format) -> Result<Value, AuthoringError> {
             line,
             column,
             message: "the file is not valid UTF-8".to_owned(),
+            position: Some(Position { line, column }),
+            findings: Vec::new(),
         }
     })?;
-    let doc = match format {
-        Format::Yaml => yaml::decode(text),
-        Format::Json => json::decode(text),
-    }?;
-    compact::expand(doc)
+    let (doc, spans) = decode_with_spans(text, format)?;
+    compact::expand_in(doc, &compact::Catalogues::new(), Some(&spans), None)
 }
 
 /// Decodes an authoring document without expanding a compact one (ADR 0040): what the file says.
@@ -126,10 +150,7 @@ pub fn decode_path(path: &std::path::Path) -> Result<Value, AuthoringError> {
     let format = path.extension().and_then(|e| e.to_str()).and_then(Format::from_extension).ok_or_else(|| AuthoringError::new(ErrorKind::Encoding, 0, 0, format!("{}: use a .yaml, .yml or .json file", path.display())))?;
     let bytes = std::fs::read(path).map_err(|e| io(path, e))?;
     let text = std::str::from_utf8(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).map_err(|_| AuthoringError::new(ErrorKind::Encoding, 1, 1, "the file is not valid UTF-8"))?;
-    let doc = match format {
-        Format::Yaml => yaml::decode(text),
-        Format::Json => json::decode(text),
-    }?;
+    let (doc, spans) = decode_with_spans(text, format)?;
     if !compact::is_compact(&doc) {
         return Ok(doc);
     }
@@ -145,7 +166,7 @@ pub fn decode_path(path: &std::path::Path) -> Result<Value, AuthoringError> {
             catalogues.insert(lang, cat);
         }
     }
-    compact::expand_with(doc, &catalogues)
+    compact::expand_in(doc, &catalogues, Some(&spans), Some(&path.display().to_string()))
 }
 
 pub mod compact;

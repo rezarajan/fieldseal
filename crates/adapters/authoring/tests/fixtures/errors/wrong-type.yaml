@@ -1,0 +1,7 @@
+# A survey with a number where the label must be text. The finding is at the value.
+survey: {name: wrong-type, version: 0.1.0}
+sections:
+- name:
+    type: text
+    # expect: TypeMismatch /sections/0/name/label column 12
+    label: 42

@@ -1,0 +1,1153 @@
+{
+  "apiVersion": "fieldseal.dev/v1alpha1",
+  "kind": "Instrument",
+  "metadata": {
+    "name": "school-meals-baseline",
+    "version": "1.0.0"
+  },
+  "spec": {
+    "administration": "interviewer",
+    "codeLists": {
+      "extras": {
+        "codes": [
+          {
+            "code": "meat_and_fish",
+            "label": {
+              "en": "Meat and fish",
+              "es": "Carne y pescado"
+            }
+          },
+          {
+            "code": "nuts",
+            "label": {
+              "en": "Nuts",
+              "es": "Frutos secos"
+            }
+          },
+          {
+            "code": "milk_and_yoghurt",
+            "label": {
+              "en": "Milk and yoghurt",
+              "es": "Leche y yogur"
+            }
+          },
+          {
+            "code": "sweets",
+            "label": {
+              "en": "Sweets",
+              "es": "Dulces"
+            }
+          },
+          {
+            "code": "snacks",
+            "label": {
+              "en": "Snacks",
+              "es": "Aperitivos"
+            }
+          },
+          {
+            "code": "sweet_drinks",
+            "label": {
+              "en": "Sweet drinks",
+              "es": "Bebidas azucaradas"
+            }
+          },
+          {
+            "code": "water",
+            "label": {
+              "en": "Water",
+              "es": "Agua"
+            }
+          },
+          {
+            "code": "other",
+            "label": {
+              "en": "Another food or drink",
+              "es": "Otro alimento o bebida"
+            }
+          }
+        ],
+        "ordered": false,
+        "other": {
+          "code": "other",
+          "label": {
+            "en": "Another food or drink",
+            "es": "Otro alimento o bebida"
+          },
+          "maxLength": 40
+        }
+      },
+      "freq-day": {
+        "codes": [
+          {
+            "code": "never",
+            "label": {
+              "en": "Never",
+              "es": "Nunca"
+            },
+            "value": 0
+          },
+          {
+            "code": "d_le1",
+            "label": {
+              "en": "≤ 1 per day",
+              "es": "≤ 1 al día"
+            },
+            "value": 1
+          },
+          {
+            "code": "d2",
+            "label": {
+              "en": "2/day",
+              "es": "2 al día"
+            },
+            "value": 2
+          },
+          {
+            "code": "d3",
+            "label": {
+              "en": "3/day",
+              "es": "3 al día"
+            },
+            "value": 3
+          },
+          {
+            "code": "d4",
+            "label": {
+              "en": "4/day",
+              "es": "4 al día"
+            },
+            "value": 4
+          },
+          {
+            "code": "d5",
+            "label": {
+              "en": "5/day",
+              "es": "5 al día"
+            },
+            "value": 5
+          },
+          {
+            "code": "d6",
+            "label": {
+              "en": "6/day",
+              "es": "6 al día"
+            },
+            "value": 6
+          },
+          {
+            "code": "d7",
+            "label": {
+              "en": "7/day",
+              "es": "7 al día"
+            },
+            "value": 7
+          },
+          {
+            "code": "d_gt7",
+            "label": {
+              "en": ">7/day",
+              "es": ">7 al día"
+            },
+            "value": 8
+          }
+        ],
+        "ordered": true
+      },
+      "freq-week": {
+        "codes": [
+          {
+            "code": "never",
+            "label": {
+              "en": "Never",
+              "es": "Nunca"
+            },
+            "value": 0
+          },
+          {
+            "code": "w_le1",
+            "label": {
+              "en": "≤ 1 per week",
+              "es": "≤ 1 a la semana"
+            },
+            "value": 0.143
+          },
+          {
+            "code": "w2",
+            "label": {
+              "en": "2/week",
+              "es": "2 a la semana"
+            },
+            "value": 0.286
+          },
+          {
+            "code": "w3",
+            "label": {
+              "en": "3/week",
+              "es": "3 a la semana"
+            },
+            "value": 0.429
+          },
+          {
+            "code": "w4",
+            "label": {
+              "en": "4/week",
+              "es": "4 a la semana"
+            },
+            "value": 0.571
+          },
+          {
+            "code": "w5",
+            "label": {
+              "en": "5/week",
+              "es": "5 a la semana"
+            },
+            "value": 0.714
+          },
+          {
+            "code": "w6",
+            "label": {
+              "en": "6/week",
+              "es": "6 a la semana"
+            },
+            "value": 0.857
+          },
+          {
+            "code": "w7",
+            "label": {
+              "en": "7/week",
+              "es": "7 a la semana"
+            },
+            "value": 1
+          },
+          {
+            "code": "w_gt7",
+            "label": {
+              "en": ">7/week",
+              "es": ">7 a la semana"
+            },
+            "value": 1.143
+          }
+        ],
+        "ordered": true
+      },
+      "meals": {
+        "codes": [
+          {
+            "code": "breakfast",
+            "label": {
+              "en": "Breakfast",
+              "es": "Desayuno"
+            }
+          },
+          {
+            "code": "lunch",
+            "label": {
+              "en": "Lunch",
+              "es": "Almuerzo"
+            }
+          },
+          {
+            "code": "breakfast_and_lunch",
+            "label": {
+              "en": "Breakfast and lunch",
+              "es": "Desayuno y almuerzo"
+            }
+          }
+        ],
+        "ordered": false
+      },
+      "plate": {
+        "codes": [
+          {
+            "code": "bread_and_cereals",
+            "label": {
+              "en": "Bread and cereals",
+              "es": "Pan y cereales"
+            }
+          },
+          {
+            "code": "rice_and_pasta",
+            "label": {
+              "en": "Rice and pasta",
+              "es": "Arroz y pasta"
+            }
+          },
+          {
+            "code": "vegetables",
+            "label": {
+              "en": "Vegetables",
+              "es": "Verduras"
+            }
+          },
+          {
+            "code": "fruit",
+            "label": {
+              "en": "Fruit",
+              "es": "Fruta"
+            }
+          },
+          {
+            "code": "eggs",
+            "label": {
+              "en": "Eggs",
+              "es": "Huevos"
+            }
+          },
+          {
+            "code": "beans_and_lentils",
+            "label": {
+              "en": "Beans and lentils",
+              "es": "Frijoles y lentejas"
+            }
+          },
+          {
+            "code": "other",
+            "label": {
+              "en": "Another food",
+              "es": "Otro alimento"
+            }
+          }
+        ],
+        "ordered": false,
+        "other": {
+          "code": "other",
+          "label": {
+            "en": "Another food",
+            "es": "Otro alimento"
+          },
+          "maxLength": 40
+        }
+      },
+      "sex": {
+        "codes": [
+          {
+            "code": "girl",
+            "label": {
+              "en": "Girl",
+              "es": "Niña"
+            }
+          },
+          {
+            "code": "boy",
+            "label": {
+              "en": "Boy",
+              "es": "Niño"
+            }
+          },
+          {
+            "code": "prefer_not_to_say",
+            "label": {
+              "en": "Prefer not to say",
+              "es": "Prefiere no decirlo"
+            }
+          }
+        ],
+        "ordered": false
+      },
+      "shop-items": {
+        "codes": [
+          {
+            "code": "sandwiches",
+            "label": {
+              "en": "Sandwiches",
+              "es": "Sándwiches"
+            }
+          },
+          {
+            "code": "fruit",
+            "label": {
+              "en": "Fruit",
+              "es": "Fruta"
+            }
+          },
+          {
+            "code": "crisps",
+            "label": {
+              "en": "Crisps",
+              "es": "Papas fritas de bolsa"
+            }
+          },
+          {
+            "code": "sweets",
+            "label": {
+              "en": "Sweets",
+              "es": "Dulces"
+            }
+          },
+          {
+            "code": "biscuits",
+            "label": {
+              "en": "Biscuits",
+              "es": "Galletas"
+            }
+          },
+          {
+            "code": "sweet_drinks",
+            "label": {
+              "en": "Sweet drinks",
+              "es": "Bebidas azucaradas"
+            }
+          },
+          {
+            "code": "water",
+            "label": {
+              "en": "Water",
+              "es": "Agua"
+            }
+          },
+          {
+            "code": "milk",
+            "label": {
+              "en": "Milk",
+              "es": "Leche"
+            }
+          },
+          {
+            "code": "other",
+            "label": {
+              "en": "Something else",
+              "es": "Otra cosa"
+            }
+          }
+        ],
+        "ordered": false,
+        "other": {
+          "code": "other",
+          "label": {
+            "en": "Something else",
+            "es": "Otra cosa"
+          },
+          "maxLength": 40
+        }
+      }
+    },
+    "consent": {
+      "bases": [
+        {
+          "code": "form-seen",
+          "label": {
+            "en": "Signed form seen",
+            "es": "Formulario firmado a la vista"
+          }
+        },
+        {
+          "code": "told-aloud",
+          "label": {
+            "en": "Consent given aloud",
+            "es": "Consentimiento dado de palabra"
+          }
+        }
+      ],
+      "evidence": "optional",
+      "required": true,
+      "statement": {
+        "text": {
+          "en": "I confirm that consent was given for this pupil.",
+          "es": "Confirmo que se dio el consentimiento para este alumno."
+        },
+        "version": 1
+      }
+    },
+    "copyright": {
+      "licence": "Apache-2.0",
+      "notice": "© 2026 Fieldseal contributors"
+    },
+    "defaultLanguage": "en",
+    "description": {
+      "en": "A short interview with a pupil about the foods and drinks they have in a usual week and a usual day.",
+      "es": "Una entrevista breve con un alumno sobre los alimentos y bebidas que toma en una semana y en un día normales."
+    },
+    "elements": [
+      {
+        "elements": [
+          {
+            "data": {
+              "type": "string"
+            },
+            "from": "roster.school",
+            "kind": "question",
+            "label": {
+              "en": "School",
+              "es": "Escuela"
+            },
+            "nonresponse": [],
+            "path": "school"
+          },
+          {
+            "data": {
+              "type": "string"
+            },
+            "from": "roster.name",
+            "kind": "question",
+            "label": {
+              "en": "Pupil",
+              "es": "Alumno"
+            },
+            "nonresponse": [],
+            "path": "name"
+          },
+          {
+            "data": {
+              "type": "string"
+            },
+            "from": "roster.class",
+            "kind": "question",
+            "label": {
+              "en": "Class",
+              "es": "Clase"
+            },
+            "nonresponse": [],
+            "path": "class"
+          },
+          {
+            "data": {
+              "type": "integer"
+            },
+            "from": "roster.age",
+            "kind": "question",
+            "label": {
+              "en": "Age in years",
+              "es": "Edad en años"
+            },
+            "nonresponse": [],
+            "path": "age"
+          },
+          {
+            "control": {
+              "codes": "sex",
+              "type": "choice"
+            },
+            "data": {
+              "codeList": "sex",
+              "type": "code"
+            },
+            "kind": "question",
+            "label": {
+              "en": "Is the pupil a girl or a boy?",
+              "es": "¿El alumno es una niña o un niño?"
+            },
+            "path": "sex"
+          },
+          {
+            "control": {
+              "decimals": 1,
+              "entryUnits": [
+                "[lb_av]"
+              ],
+              "max": 150,
+              "min": 10,
+              "tolerance": 0.2,
+              "type": "measurement-pair",
+              "unit": "kg"
+            },
+            "data": {
+              "concept": [
+                {
+                  "code": "29463-7",
+                  "display": "Body weight",
+                  "system": "http://loinc.org"
+                }
+              ],
+              "type": "decimal",
+              "unit": "kg"
+            },
+            "guidance": {
+              "en": "Weigh the pupil twice. The two readings must agree.",
+              "es": "Pese al alumno dos veces. Las dos lecturas deben coincidir."
+            },
+            "kind": "question",
+            "label": {
+              "en": "Weight",
+              "es": "Peso"
+            },
+            "path": "weight"
+          },
+          {
+            "control": {
+              "decimals": 1,
+              "entryUnits": [
+                "[in_i]"
+              ],
+              "max": 220,
+              "min": 80,
+              "tolerance": 1,
+              "type": "measurement-pair",
+              "unit": "cm"
+            },
+            "data": {
+              "concept": [
+                {
+                  "code": "8302-2",
+                  "display": "Body height",
+                  "system": "http://loinc.org"
+                }
+              ],
+              "type": "decimal",
+              "unit": "cm"
+            },
+            "guidance": {
+              "en": "Measure twice, without shoes.",
+              "es": "Mida dos veces, sin zapatos."
+            },
+            "kind": "question",
+            "label": {
+              "en": "Height",
+              "es": "Estatura"
+            },
+            "path": "height"
+          },
+          {
+            "control": {
+              "type": "yes-no"
+            },
+            "data": {
+              "type": "boolean"
+            },
+            "kind": "question",
+            "label": {
+              "en": "Does the pupil buy anything at the school shop?",
+              "es": "¿El alumno compra algo en la tienda de la escuela?"
+            },
+            "path": "uses_shop"
+          },
+          {
+            "control": {
+              "currency": "USD",
+              "max": 100,
+              "min": 0,
+              "presentation": "entry",
+              "step": 0.5,
+              "type": "money"
+            },
+            "data": {
+              "type": "money"
+            },
+            "disabledDisplay": "protected",
+            "kind": "question",
+            "label": {
+              "en": "About how much does the pupil spend there in a week?",
+              "es": "¿Más o menos cuánto gasta el alumno ahí en una semana?"
+            },
+            "path": "shop_weekly",
+            "when": "$about.uses_shop == true"
+          },
+          {
+            "control": {
+              "codes": "shop-items",
+              "max": 4,
+              "type": "multi-choice"
+            },
+            "data": {
+              "codeList": "shop-items",
+              "type": "codes"
+            },
+            "kind": "question",
+            "label": {
+              "en": "What would the pupil buy at the school shop? Choose up to four.",
+              "es": "¿Qué compraría el alumno en la tienda de la escuela? Elija hasta cuatro."
+            },
+            "path": "shop_buys"
+          },
+          {
+            "control": {
+              "type": "yes-no"
+            },
+            "data": {
+              "type": "boolean"
+            },
+            "kind": "question",
+            "label": {
+              "en": "Does the school serve meals?",
+              "es": "¿La escuela sirve comidas?"
+            },
+            "path": "meal_programme"
+          },
+          {
+            "control": {
+              "codes": "meals",
+              "type": "choice"
+            },
+            "data": {
+              "codeList": "meals",
+              "type": "code"
+            },
+            "disabledDisplay": "protected",
+            "kind": "question",
+            "label": {
+              "en": "Which meals does the pupil eat at school?",
+              "es": "¿Qué comidas toma el alumno en la escuela?"
+            },
+            "path": "meal_which",
+            "when": "$about.meal_programme == true"
+          }
+        ],
+        "id": "about",
+        "kind": "group",
+        "label": {
+          "en": "General information",
+          "es": "Información general"
+        }
+      },
+      {
+        "elements": [
+          {
+            "id": "diet_intro",
+            "kind": "display",
+            "role": "introduction",
+            "text": {
+              "en": "These questions are about what the pupil eats and drinks in a usual week and a usual day.",
+              "es": "Estas preguntas son sobre lo que el alumno come y bebe en una semana y en un día normales."
+            }
+          },
+          {
+            "id": "diet_instructions",
+            "kind": "display",
+            "role": "instruction",
+            "text": {
+              "en": "Ask about each item in turn. Record the amount of one serving.",
+              "es": "Pregunte por cada alimento por turno. Anote la cantidad de una porción."
+            }
+          },
+          {
+            "elements": [
+              {
+                "elements": [
+                  {
+                    "control": {
+                      "codes": "freq-week",
+                      "presentation": "segments",
+                      "type": "scale"
+                    },
+                    "data": {
+                      "codeList": "freq-week",
+                      "type": "code"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "How often?",
+                      "es": "¿Con qué frecuencia?"
+                    },
+                    "path": "freq"
+                  },
+                  {
+                    "control": {
+                      "max": 20,
+                      "min": 0.5,
+                      "start": 1,
+                      "step": 0.5,
+                      "type": "stepper",
+                      "unit": "{each}",
+                      "unitLabel": {
+                        "en": "each",
+                        "es": "unidades"
+                      }
+                    },
+                    "data": {
+                      "type": "decimal",
+                      "unit": "{each}"
+                    },
+                    "disabledDisplay": "protected",
+                    "kind": "question",
+                    "label": {
+                      "en": "Amount eaten each time",
+                      "es": "Cantidad que come cada vez"
+                    },
+                    "path": "amount",
+                    "when": "@freq != \"never\""
+                  },
+                  {
+                    "control": {
+                      "presentation": "switch",
+                      "type": "yes-no"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "Had it yesterday?",
+                      "es": "¿Lo tomó ayer?"
+                    },
+                    "path": "yesterday"
+                  }
+                ],
+                "id": "plate",
+                "kind": "group",
+                "label": {
+                  "en": "On the plate",
+                  "es": "En el plato"
+                },
+                "overrides": {
+                  "beans_and_lentils": {
+                    "amount": {
+                      "max": 12,
+                      "unit": "{spoonful}",
+                      "unitLabel": {
+                        "en": "spoonfuls",
+                        "es": "cucharadas"
+                      }
+                    }
+                  },
+                  "bread_and_cereals": {
+                    "amount": {
+                      "unit": "{slice}",
+                      "unitLabel": {
+                        "en": "slices",
+                        "es": "rebanadas"
+                      }
+                    }
+                  },
+                  "rice_and_pasta": {
+                    "amount": {
+                      "max": 6,
+                      "unit": "[cup_us]",
+                      "unitLabel": {
+                        "en": "cups",
+                        "es": "tazas"
+                      }
+                    }
+                  },
+                  "vegetables": {
+                    "amount": {
+                      "max": 6,
+                      "unit": "[cup_us]",
+                      "unitLabel": {
+                        "en": "cups",
+                        "es": "tazas"
+                      }
+                    }
+                  }
+                },
+                "referencePeriod": {
+                  "en": "In a usual week",
+                  "es": "En una semana normal"
+                },
+                "repeat": {
+                  "over": "plate"
+                },
+                "rules": [
+                  {
+                    "id": "never-but-yesterday",
+                    "kind": "soft",
+                    "message": {
+                      "en": "Said never, but had it yesterday. Ask again.",
+                      "es": "Dijo que nunca, pero lo tomó ayer. Pregunte de nuevo."
+                    },
+                    "reasons": [
+                      {
+                        "code": "unusual-day",
+                        "label": {
+                          "en": "Unusual day",
+                          "es": "Día fuera de lo normal"
+                        }
+                      },
+                      {
+                        "code": "not-sure",
+                        "label": {
+                          "en": "Not sure",
+                          "es": "No está seguro"
+                        }
+                      }
+                    ],
+                    "when": "@freq == \"never\" and @yesterday == true"
+                  },
+                  {
+                    "id": "large-amount",
+                    "kind": "soft",
+                    "message": {
+                      "en": "That is a large amount for one serving. Please confirm it.",
+                      "es": "Es una cantidad grande para una sola porción. Confírmela, por favor."
+                    },
+                    "reasons": [
+                      {
+                        "code": "confirmed-with-the-pupil",
+                        "label": {
+                          "en": "Confirmed with the pupil",
+                          "es": "Confirmado con el alumno"
+                        }
+                      },
+                      {
+                        "code": "estimated",
+                        "label": {
+                          "en": "Estimated",
+                          "es": "Estimado"
+                        }
+                      }
+                    ],
+                    "when": "@amount > 10"
+                  }
+                ]
+              }
+            ],
+            "id": "counted",
+            "kind": "group",
+            "label": {
+              "en": "Main foods",
+              "es": "Alimentos principales"
+            }
+          },
+          {
+            "elements": [
+              {
+                "elements": [
+                  {
+                    "control": {
+                      "codes": "freq-day",
+                      "presentation": "segments",
+                      "type": "scale"
+                    },
+                    "data": {
+                      "codeList": "freq-day",
+                      "type": "code"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "How often?",
+                      "es": "¿Con qué frecuencia?"
+                    },
+                    "path": "freq"
+                  },
+                  {
+                    "control": {
+                      "max": 1000,
+                      "min": 10,
+                      "start": 100,
+                      "step": 10,
+                      "type": "stepper",
+                      "unit": "g"
+                    },
+                    "data": {
+                      "type": "decimal",
+                      "unit": "g"
+                    },
+                    "disabledDisplay": "protected",
+                    "kind": "question",
+                    "label": {
+                      "en": "Amount eaten or drunk each time",
+                      "es": "Cantidad que come o bebe cada vez"
+                    },
+                    "path": "amount",
+                    "when": "@freq != \"never\""
+                  },
+                  {
+                    "control": {
+                      "presentation": "switch",
+                      "type": "yes-no"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    },
+                    "kind": "question",
+                    "label": {
+                      "en": "Had it yesterday?",
+                      "es": "¿Lo tomó ayer?"
+                    },
+                    "path": "yesterday"
+                  }
+                ],
+                "id": "extras",
+                "kind": "group",
+                "label": {
+                  "en": "By weight or volume",
+                  "es": "Por peso o volumen"
+                },
+                "overrides": {
+                  "milk_and_yoghurt": {
+                    "amount": {
+                      "max": 1500,
+                      "min": 50,
+                      "step": 50,
+                      "unit": "mL",
+                      "unitLabel": {
+                        "en": "ml",
+                        "es": "ml"
+                      }
+                    }
+                  },
+                  "sweet_drinks": {
+                    "amount": {
+                      "max": 1500,
+                      "min": 50,
+                      "step": 50,
+                      "unit": "mL",
+                      "unitLabel": {
+                        "en": "ml",
+                        "es": "ml"
+                      }
+                    }
+                  },
+                  "water": {
+                    "amount": {
+                      "max": 1500,
+                      "min": 50,
+                      "step": 50,
+                      "unit": "mL",
+                      "unitLabel": {
+                        "en": "ml",
+                        "es": "ml"
+                      }
+                    }
+                  }
+                },
+                "referencePeriod": {
+                  "en": "In a usual day",
+                  "es": "En un día normal"
+                },
+                "repeat": {
+                  "over": "extras"
+                },
+                "rules": [
+                  {
+                    "id": "never-but-yesterday",
+                    "kind": "soft",
+                    "message": {
+                      "en": "Said never, but had it yesterday. Ask again.",
+                      "es": "Dijo que nunca, pero lo tomó ayer. Pregunte de nuevo."
+                    },
+                    "reasons": [
+                      {
+                        "code": "unusual-day",
+                        "label": {
+                          "en": "Unusual day",
+                          "es": "Día fuera de lo normal"
+                        }
+                      },
+                      {
+                        "code": "not-sure",
+                        "label": {
+                          "en": "Not sure",
+                          "es": "No está seguro"
+                        }
+                      }
+                    ],
+                    "when": "@freq == \"never\" and @yesterday == true"
+                  },
+                  {
+                    "id": "large-amount",
+                    "kind": "soft",
+                    "message": {
+                      "en": "That is a large amount for one serving. Please confirm it.",
+                      "es": "Es una cantidad grande para una sola porción. Confírmela, por favor."
+                    },
+                    "reasons": [
+                      {
+                        "code": "confirmed-with-the-pupil",
+                        "label": {
+                          "en": "Confirmed with the pupil",
+                          "es": "Confirmado con el alumno"
+                        }
+                      },
+                      {
+                        "code": "estimated",
+                        "label": {
+                          "en": "Estimated",
+                          "es": "Estimado"
+                        }
+                      }
+                    ],
+                    "when": "@amount > 800"
+                  }
+                ]
+              }
+            ],
+            "id": "weighed",
+            "kind": "group",
+            "label": {
+              "en": "Foods and drinks by weight or volume",
+              "es": "Alimentos y bebidas por peso o volumen"
+            }
+          }
+        ],
+        "id": "diet",
+        "kind": "group",
+        "label": {
+          "en": "Foods and drinks",
+          "es": "Alimentos y bebidas"
+        }
+      },
+      {
+        "id": "thanks",
+        "kind": "display",
+        "role": "end",
+        "text": {
+          "en": "Thank you.",
+          "es": "Gracias."
+        }
+      }
+    ],
+    "fieldChecks": [
+      {
+        "id": "weight-drift",
+        "message": {
+          "en": "Weights are rising steadily. Check the scale.",
+          "es": "Los pesos suben de forma constante. Revise la balanza."
+        },
+        "path": "about.weight",
+        "threshold": 2.0,
+        "type": "drift",
+        "window": 10
+      },
+      {
+        "id": "too-quick",
+        "message": {
+          "en": "This interview was very short. Check the record.",
+          "es": "Esta entrevista fue muy corta. Revise el registro."
+        },
+        "minSeconds": 120,
+        "type": "timing"
+      }
+    ],
+    "languages": [
+      "en",
+      "es"
+    ],
+    "nonresponse": [
+      "dont-know"
+    ],
+    "publisher": "Example Authority",
+    "purpose": {
+      "en": "To plan the meals a school offers.",
+      "es": "Planificar las comidas que ofrece una escuela."
+    },
+    "rules": [
+      {
+        "id": "unusual-age",
+        "kind": "soft",
+        "message": {
+          "en": "This age is unusual for a school pupil. Check the roster.",
+          "es": "Esta edad es poco común para un alumno. Revise la lista."
+        },
+        "reasons": [
+          {
+            "code": "roster-is-correct",
+            "label": {
+              "en": "Roster is correct",
+              "es": "La lista es correcta"
+            }
+          },
+          {
+            "code": "roster-is-wrong",
+            "label": {
+              "en": "Roster is wrong",
+              "es": "La lista tiene un error"
+            }
+          }
+        ],
+        "when": "$about.age < 5 or $about.age > 19"
+      }
+    ],
+    "schema": "^1.0",
+    "title": {
+      "en": "School meals baseline survey",
+      "es": "Encuesta inicial sobre comidas escolares"
+    },
+    "translations": {
+      "es": {
+        "method": "human",
+        "notes": "Written for this project and read by one native speaker.",
+        "reviewedBy": 1
+      }
+    }
+  }
+}

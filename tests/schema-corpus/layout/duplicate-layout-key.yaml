@@ -1,0 +1,7 @@
+# A key written twice in the name block.
+# expect: DuplicateKey /layout/window
+layout: {name: corpus, instrument: i.yaml, window: compact, window: expanded}
+steps:
+- title: One
+  contents:
+  - {element: q}

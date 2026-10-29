@@ -1,0 +1,7 @@
+# A key written twice in a step.
+# expect: DuplicateKey /steps/0/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  title: Two
+  contents: []

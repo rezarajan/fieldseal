@@ -1,0 +1,7 @@
+# The survey has no name.
+# expect: MissingField /survey/name
+survey: {version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: Is it so?

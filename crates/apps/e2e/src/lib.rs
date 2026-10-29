@@ -39,8 +39,9 @@ use fieldseal_intake::domain::{IssuedConsent, IssuedRoster, TenancyView};
 use fieldseal_intake::gate::IntakeService;
 use fieldseal_intake::upload::UploadService;
 use fieldseal_kernel::cbor;
+use fieldseal_kernel::digest::lower_hex;
 use fieldseal_kernel::crypto::P256PublicKey;
-use fieldseal_kernel::id::{CohortId, Digest, Fingerprint, Generation, SubjectId, TenancyId};
+use fieldseal_kernel::id::{CohortId, Digest, Fingerprint, Generation, Salt, SubjectId, TenancyId};
 use fieldseal_kernel::seal::SealedBox;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_kernel::Value;
@@ -70,6 +71,101 @@ pub fn examples() -> std::path::PathBuf {
 pub fn example(path: &str) -> Value {
     let full = examples().join(path);
     fieldseal_adapters_authoring::decode_path(&full).unwrap_or_else(|e| panic!("{}: {e}", full.display()))
+}
+
+/// The salt a survey is published with in the migration gate and the demo: a fixed function of
+/// its name, so the salted fingerprint of an example is the same on every run.
+pub fn pinned_salt(name: &str) -> Salt {
+    DemoWorld::salt_for(name)
+}
+
+/// Where one example survey's sources live, relative to [`examples`].
+pub struct SurveySources {
+    /// The instrument source.
+    pub instrument: &'static str,
+    /// Each layout as (window class, source).
+    pub layouts: &'static [(&'static str, &'static str)],
+    /// The translation catalogues the sources are expanded with.
+    pub catalogues: &'static [&'static str],
+}
+
+/// The sources of the example survey `name`, at the paths they have today.
+pub fn survey_sources(name: &str) -> SurveySources {
+    match name {
+        "household-water-access" => SurveySources {
+            instrument: "instruments/household-water-access.yaml",
+            layouts: &[("compact", "layouts/household-water-access.compact.yaml")],
+            catalogues: &["instruments/i18n/household-water-access/es.po", "layouts/i18n/household-water-access.compact/es.po"],
+        },
+        "school-meals-baseline" => SurveySources {
+            instrument: "instruments/school-meals-baseline.yaml",
+            layouts: &[("compact", "layouts/school-meals-baseline.compact.yaml"), ("expanded", "layouts/school-meals-baseline.expanded.yaml")],
+            catalogues: &[
+                "instruments/i18n/school-meals-baseline/es.po",
+                "layouts/i18n/school-meals-baseline.compact/es.po",
+                "layouts/i18n/school-meals-baseline.expanded/es.po",
+            ],
+        },
+        other => panic!("no example survey called {other}"),
+    }
+}
+
+/// An expanded document as pretty-printed canonical JSON: keys sorted, two-space indent, a
+/// final newline, bytes as lowercase hex text, decimals with every written digit.
+pub fn expanded_json(value: &Value) -> String {
+    fn text(out: &mut String, t: &str) {
+        out.push('"');
+        for c in t.chars() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+    }
+    fn write(out: &mut String, v: &Value, depth: usize) {
+        let pad = |out: &mut String, d: usize| out.push_str(&"  ".repeat(d));
+        match v {
+            Value::Int(i) => out.push_str(&i.to_string()),
+            Value::Decimal(d) => out.push_str(&d.to_string()),
+            Value::Bytes(b) => text(out, &lower_hex(b)),
+            Value::Text(t) => text(out, t),
+            Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
+            Value::Array(a) if a.is_empty() => out.push_str("[]"),
+            Value::Array(a) => {
+                out.push_str("[\n");
+                for (i, e) in a.iter().enumerate() {
+                    pad(out, depth + 1);
+                    write(out, e, depth + 1);
+                    out.push_str(if i + 1 < a.len() { ",\n" } else { "\n" });
+                }
+                pad(out, depth);
+                out.push(']');
+            }
+            Value::Map(m) if m.is_empty() => out.push_str("{}"),
+            Value::Map(m) => {
+                out.push_str("{\n");
+                for (i, (k, e)) in m.iter().enumerate() {
+                    pad(out, depth + 1);
+                    text(out, k);
+                    out.push_str(": ");
+                    write(out, e, depth + 1);
+                    out.push_str(if i + 1 < m.len() { ",\n" } else { "\n" });
+                }
+                pad(out, depth);
+                out.push('}');
+            }
+        }
+    }
+    let mut out = String::new();
+    write(&mut out, value, 0);
+    out.push('\n');
+    out
 }
 
 /// The software profile every device reports: schema 1.0, no localisation.
@@ -155,7 +251,7 @@ impl Site {
         let model = validate_instrument(&doc).expect("valid").instrument;
         let meta = |d: &Value, k: &str| d.as_map().and_then(|m| m.get("metadata")).and_then(Value::as_map).and_then(|m| m.get(k)).and_then(Value::as_text).expect("metadata").to_owned();
         let instrument = world
-            .publish(ArtefactKind::Instrument, &meta(&doc, "name"), &meta(&doc, "version"), cbor::encode(&doc).expect("encodes"), Some(world.next_salt()))
+            .publish(ArtefactKind::Instrument, &meta(&doc, "name"), &meta(&doc, "version"), cbor::encode(&doc).expect("encodes"), Some(DemoWorld::salt_for(&meta(&doc, "name"))))
             .expect("the instrument publishes with both publishers' signatures");
         // A layout names its instrument by fingerprint once canonicalised (INS-200).
         let mut layout_doc = example("layouts/household-water-access.compact.yaml");

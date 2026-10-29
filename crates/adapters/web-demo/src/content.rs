@@ -98,7 +98,7 @@ impl Content {
         let valid = validate_instrument(&doc).map_err(|f| format!("the instrument is invalid ({} finding(s))", f.iter().count()))?;
         let name = meta(&doc, "name").ok_or("no metadata.name")?;
         let version = meta(&doc, "version").ok_or("no metadata.version")?;
-        let publication = world.publish(ArtefactKind::Instrument, &name, &version, cbor::encode(&doc).map_err(|e| e.to_string())?, Some(world.next_salt()))?;
+        let publication = world.publish(ArtefactKind::Instrument, &name, &version, cbor::encode(&doc).map_err(|e| e.to_string())?, Some(DemoWorld::salt_for(&name)))?;
         let fingerprint = Fingerprint::from(*publication.address().as_bytes());
         self.instruments.push(PublishedInstrument { name, stem: stem(path), publication, model: valid.instrument, fingerprint });
         Ok(())

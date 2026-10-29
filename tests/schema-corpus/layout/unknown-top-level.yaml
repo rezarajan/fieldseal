@@ -1,0 +1,8 @@
+# An unknown key at the top level.
+# expect: UnknownField /extra
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+extra: 1
+steps:
+- title: One
+  contents:
+  - {element: q}

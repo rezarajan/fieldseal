@@ -1,0 +1,5 @@
+# A section entry with a role but no text.
+# expect: MissingField /sections/0/note/group
+survey: {name: corpus, version: 0.1.0}
+sections:
+- note: {role: intro}

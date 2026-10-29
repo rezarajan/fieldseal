@@ -1,0 +1,14 @@
+# A group's categories have no questions to ask.
+# expect: MissingField /sections/0/g/categories/ask
+survey: {name: corpus, version: 0.1.0}
+sections:
+- g:
+    group: Foods
+    categories:
+      checks: []
+      blocks:
+      - period: Last week
+        categories:
+        - fruit:
+            label: Fruit
+            foods: [Apple, Pear]

@@ -1,0 +1,9 @@
+# A consent statement has no text.
+# expect: MissingField /consent/statement/text
+survey: {name: corpus, version: 0.1.0}
+consent:
+  statement: {version: 1}
+sections:
+- q:
+    type: binary
+    label: Is it so?

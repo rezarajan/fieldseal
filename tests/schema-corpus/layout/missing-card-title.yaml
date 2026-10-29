@@ -1,0 +1,7 @@
+# A card has no title.
+# expect: MissingField /steps/0/contents/0/card/title
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - card: {contents: []}

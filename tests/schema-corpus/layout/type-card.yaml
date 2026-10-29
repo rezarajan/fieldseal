@@ -1,0 +1,7 @@
+# Text where a card is required.
+# expect: TypeMismatch /steps/0/contents/0/card
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - card: Hello

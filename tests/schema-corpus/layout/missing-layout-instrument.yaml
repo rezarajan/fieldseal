@@ -1,0 +1,7 @@
+# The layout names no survey.
+# expect: MissingField /layout/instrument
+layout: {name: corpus, window: compact}
+steps:
+- title: One
+  contents:
+  - {element: q}

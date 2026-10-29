@@ -1,0 +1,7 @@
+# Text where a condition is required.
+# expect: TypeMismatch /sections/0/q/if
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    if: other

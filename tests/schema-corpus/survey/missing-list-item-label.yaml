@@ -1,0 +1,10 @@
+# A list item has no label.
+# expect: MissingField /lists/l/0/label
+survey: {name: corpus, version: 0.1.0}
+lists:
+  l:
+  - {code: a}
+sections:
+- q:
+    type: binary
+    label: Is it so?

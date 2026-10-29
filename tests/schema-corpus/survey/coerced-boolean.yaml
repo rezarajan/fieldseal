@@ -1,0 +1,7 @@
+# True written with a capital.
+# expect: CoercionRefused /sections/0/q/optional
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    optional: True

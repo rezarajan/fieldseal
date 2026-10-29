@@ -1,0 +1,19 @@
+{
+  "household-water-access": {
+    "instrument_address": "sha256:5e26b62095735df6df415a54aa83b7332d34f94e05a41a37a3af25c6700c750c",
+    "instrument_fingerprint": "a733d5b37f6644839afd1e2023487e98cde5afb10cca9c75922a606bc54cdf61",
+    "layouts": {
+      "compact": "sha256:1228237116d723eaf1928822fb79f9b53b1ce20d92f78ca33c31dd95a2b8c4f3"
+    },
+    "salt": "39664fc6bf7512dcf790a291d87ef5460b3e7754d7ba28eda7035285ea570aae"
+  },
+  "school-meals-baseline": {
+    "instrument_address": "sha256:a7afbb158346b8fb5160fcf53a6f3792e1dcf4fcc18415e07bdf3cd8561ca973",
+    "instrument_fingerprint": "33a682239785203ac02a564ccb0277b3c71bede8821ebb758d04fe0bf69c6fa4",
+    "layouts": {
+      "compact": "sha256:c72d41d271e994ef61343f8d4578baebfe30d14547e85252d1d2c90229e92323",
+      "expanded": "sha256:fd5665bf8e8892158ce4a2cb1c27ffb442f6abeaa207e612a4c9a7df15aaa374"
+    },
+    "salt": "35eb14d263027b14d8173d620d288f8d831168a36a37ce5dbe5128f4981a3109"
+  }
+}

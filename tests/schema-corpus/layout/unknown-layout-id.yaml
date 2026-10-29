@@ -1,0 +1,7 @@
+# An unknown key in the layout's name block.
+# expect: UnknownField /layout/extra
+layout: {name: corpus, instrument: i.yaml, window: compact, extra: 1}
+steps:
+- title: One
+  contents:
+  - {element: q}

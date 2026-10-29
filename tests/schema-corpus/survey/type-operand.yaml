@@ -1,0 +1,7 @@
+# A boolean where an operand is required.
+# expect: TypeMismatch /sections/0/q/if/is
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    if: {is: true}

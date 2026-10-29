@@ -1,0 +1,7 @@
+# An operator that does not exist in an operand.
+# expect: UnknownField /sections/0/q/if/is/pow
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    if: {is: {pow: [other, 2]}}

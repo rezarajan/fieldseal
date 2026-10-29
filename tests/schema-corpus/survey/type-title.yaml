@@ -1,0 +1,8 @@
+# A number where text is required.
+# expect: TypeMismatch /title
+survey: {name: corpus, version: 0.1.0}
+title: 5
+sections:
+- q:
+    type: binary
+    label: Is it so?

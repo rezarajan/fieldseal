@@ -1,0 +1,3 @@
+# The layout has no steps.
+# expect: MissingField /steps
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}

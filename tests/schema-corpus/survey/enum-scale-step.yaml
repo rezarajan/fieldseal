@@ -1,0 +1,9 @@
+# A scale step written as text other than never.
+# expect: EnumValue /scales/s/0
+survey: {name: corpus, version: 0.1.0}
+scales:
+  s: [always]
+sections:
+- q:
+    type: binary
+    label: Is it so?

@@ -1,0 +1,8 @@
+# A number where true or false is required.
+# expect: TypeMismatch /consent/required
+survey: {name: corpus, version: 0.1.0}
+consent: {required: 3}
+sections:
+- q:
+    type: binary
+    label: Is it so?

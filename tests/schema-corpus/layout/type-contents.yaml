@@ -1,0 +1,6 @@
+# A map where a list of contents is required.
+# expect: TypeMismatch /steps/0/contents
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents: {element: q}

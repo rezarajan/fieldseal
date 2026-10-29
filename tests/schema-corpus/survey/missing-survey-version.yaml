@@ -1,0 +1,7 @@
+# The survey has no version.
+# expect: MissingField /survey/version
+survey: {name: corpus}
+sections:
+- q:
+    type: binary
+    label: Is it so?

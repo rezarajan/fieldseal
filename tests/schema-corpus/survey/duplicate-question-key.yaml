@@ -1,0 +1,8 @@
+# A key written twice in a question.
+# expect: DuplicateKey /sections/0/q/label
+survey: {name: corpus, version: 0.1.0}
+sections:
+- q:
+    type: binary
+    label: One
+    label: Two

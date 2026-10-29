@@ -1,0 +1,7 @@
+# Text where the name block is required.
+# expect: TypeMismatch /survey
+survey: corpus
+sections:
+- q:
+    type: binary
+    label: Is it so?

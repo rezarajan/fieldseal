@@ -1,0 +1,7 @@
+# Text where the name block is required.
+# expect: TypeMismatch /layout
+layout: corpus
+steps:
+- title: One
+  contents:
+  - {element: q}

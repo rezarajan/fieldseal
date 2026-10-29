@@ -1,0 +1,9 @@
+# Text where a translation's entry is required.
+# expect: TypeMismatch /translations/es
+survey: {name: corpus, version: 0.1.0}
+translations:
+  es: human
+sections:
+- q:
+    type: binary
+    label: Is it so?

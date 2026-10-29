@@ -12,8 +12,11 @@ use base64::engine::general_purpose::STANDARD;
 use fieldseal_kernel::value::Value;
 use saphyr_parser::{Event, Marker, Parser, ScalarStyle, Span, Tag};
 
-use crate::error::{AuthoringError, ErrorKind};
+use fieldseal_kernel::schema::{SchemaErrorKind, child_pointer};
+
+use crate::error::{AuthoringError, ErrorKind, Position};
 use crate::scalar::{MAX_DEPTH, ScalarError, check_nfc, resolve_plain};
+use crate::spans::Spans;
 
 /// The tag handle YAML assigns to `!!`.
 const CORE_TAG_PREFIX: &str = "tag:yaml.org,2002:";
@@ -26,14 +29,23 @@ enum Frame {
 struct Builder {
     stack: Vec<Frame>,
     root: Option<Value>,
+    spans: Spans,
+}
+
+fn position(mark: Marker) -> Position {
+    Position { line: mark.line(), column: mark.col() + 1 }
 }
 
 fn at(kind: ErrorKind, mark: Marker, message: impl Into<String>) -> AuthoringError {
     AuthoringError::new(kind, mark.line(), mark.col() + 1, message)
 }
 
-fn scalar_err(mark: Marker) -> impl Fn(ScalarError) -> AuthoringError {
-    move |(kind, message)| at(kind, mark, message)
+/// An error at `mark`; a refused value carries the JSON Pointer of the node it is in.
+fn scalar_err<'a>(mark: Marker, pointer: &'a str) -> impl Fn(ScalarError) -> AuthoringError + 'a {
+    move |(kind, message)| match AuthoringError::schema_kind(kind) {
+        Some(finding) => AuthoringError::finding(kind, finding, pointer, mark.line(), mark.col() + 1, message),
+        None => at(kind, mark, message),
+    }
 }
 
 fn is_binary_tag(tag: &Tag) -> bool {
@@ -69,6 +81,15 @@ impl Builder {
         matches!(self.stack.last(), Some(Frame::Map { key: None, .. }))
     }
 
+    /// The JSON Pointer of the node being read: the path through the open collections.
+    fn pointer(&self) -> String {
+        self.stack.iter().fold(String::new(), |p, frame| match frame {
+            Frame::Seq(items) => child_pointer(&p, &items.len().to_string()),
+            Frame::Map { key: Some(k), .. } => child_pointer(&p, k),
+            Frame::Map { key: None, .. } => p,
+        })
+    }
+
     fn check_depth(&self, mark: Marker) -> Result<(), AuthoringError> {
         if self.stack.len() >= MAX_DEPTH {
             Err(at(ErrorKind::TooDeep, mark, format!("nesting is deeper than {MAX_DEPTH} levels")))
@@ -82,6 +103,7 @@ impl Builder {
             return Err(at(ErrorKind::NonStringKey, mark, "map keys must be strings, not collections"));
         }
         self.check_depth(mark)?;
+        self.spans.note_value(self.pointer(), position(mark));
         self.stack.push(frame);
         Ok(())
     }
@@ -107,13 +129,15 @@ impl Builder {
         mark: Marker,
     ) -> Result<(), AuthoringError> {
         let plain = matches!(style, ScalarStyle::Plain);
+        let here = self.pointer();
+        let named = if self.expecting_key() { child_pointer(&here, text) } else { here.clone() };
         let value = if tag.is_some() {
             let compact: String = text.chars().filter(|c| !c.is_ascii_whitespace()).collect();
             Value::Bytes(STANDARD.decode(compact.as_bytes()).map_err(|e| {
                 at(ErrorKind::Binary, mark, format!("!!binary content is not valid base64: {e}"))
             })?)
         } else if plain {
-            resolve_plain(text).map_err(scalar_err(mark))?
+            resolve_plain(text).map_err(scalar_err(mark, &named))?
         } else {
             Value::Text(text.to_owned())
         };
@@ -128,18 +152,27 @@ impl Builder {
             if plain && key == "<<" {
                 return Err(at(ErrorKind::MergeKey, mark, "merge keys (<<) are not allowed: they hide content from reviewers"));
             }
-            check_nfc(&key).map_err(scalar_err(mark))?;
+            check_nfc(&key).map_err(scalar_err(mark, &named))?;
             if let Some(Frame::Map { entries, key: pending }) = self.stack.last_mut() {
                 if entries.contains_key(&key) {
-                    return Err(at(ErrorKind::DuplicateKey, mark, format!("duplicate key {key:?}")));
+                    return Err(AuthoringError::finding(
+                        ErrorKind::DuplicateKey,
+                        SchemaErrorKind::DuplicateKey,
+                        &child_pointer(&here, &key),
+                        mark.line(),
+                        mark.col() + 1,
+                        format!("duplicate key {key:?}"),
+                    ));
                 }
+                self.spans.note_key(child_pointer(&here, &key), position(mark));
                 *pending = Some(key);
             }
             return Ok(());
         }
         if let Value::Text(t) = &value {
-            check_nfc(t).map_err(scalar_err(mark))?;
+            check_nfc(t).map_err(scalar_err(mark, &named))?;
         }
+        self.spans.note_value(here, position(mark));
         self.place(value);
         Ok(())
     }
@@ -156,8 +189,13 @@ impl Builder {
 
 /// Decodes one YAML document.
 pub(crate) fn decode(text: &str) -> Result<Value, AuthoringError> {
+    decode_with_spans(text).map(|(value, _)| value)
+}
+
+/// Decodes one YAML document and notes where each key and value is, by JSON Pointer.
+pub(crate) fn decode_with_spans(text: &str) -> Result<(Value, Spans), AuthoringError> {
     let mut parser = Parser::new_from_str(text);
-    let mut b = Builder { stack: Vec::new(), root: None };
+    let mut b = Builder { stack: Vec::new(), root: None, spans: Spans::default() };
     let mut documents = 0usize;
     for item in &mut parser {
         let (event, span) = item.map_err(|e| {
@@ -198,5 +236,6 @@ pub(crate) fn decode(text: &str) -> Result<Value, AuthoringError> {
             Event::SequenceEnd | Event::MappingEnd => b.end_collection(),
         }
     }
-    b.root.ok_or_else(|| AuthoringError::new(ErrorKind::EmptyDocument, 1, 1, "the file holds no document"))
+    let spans = b.spans;
+    b.root.map(|root| (root, spans)).ok_or_else(|| AuthoringError::new(ErrorKind::EmptyDocument, 1, 1, "the file holds no document"))
 }

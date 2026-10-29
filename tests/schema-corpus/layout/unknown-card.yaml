@@ -1,0 +1,7 @@
+# An unknown key in a card.
+# expect: UnknownField /steps/0/contents/0/card/extra
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - card: {title: Card, contents: [], extra: 1}
