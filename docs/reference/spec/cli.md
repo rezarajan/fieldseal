@@ -73,8 +73,6 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 | `instrument preview <file>` | Render the instrument headlessly with the control catalogue and evaluate rules against sample answers | file, `--answers` → rendered tree, rule verdicts | — | INS (controls, rules) |
 | `instrument hash <file>` | Canonicalise and print the content address | file → `sha256:…` | — | WIRE §canonical, INS |
 | `instrument compile <file>` | Expand the element tree, repeats and relative rules, and print the compiled instrument | file → compiled tree | — | INS §5.12–5.14 |
-| `instrument i18n extract <file>` | Write each declared language's texts to XLIFF 2.1 files for translators | file, `--lang` → `.xlf` files | — | INS-082–INS-084 |
-| `instrument i18n merge <file> <xlf>…` | Merge reviewed translations back into the authoring form, checking completeness and message variables | files → updated authoring form, findings | — | INS-082–INS-084 |
 | `localisation validate <file>` | Check a runtime UI catalogue against a runtime's reference catalogue | file, `--reference` → findings | — | PLAT-050, PLAT-053 |
 | `layout validate <file>` | Check a layout against its instrument: placement, no content overrides, allowed presentations | file, `--instrument` → findings | — | INS §5.21 |
 | `layout lint <file>` | Choice-load lints, with thresholds from `--policy` or the defaults | file, `--instrument` → findings | — | INS-210–INS-213 |

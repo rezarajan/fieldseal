@@ -22,7 +22,7 @@ Paths are relative to the repository root. "Orig" is the first example instrumen
 | 16 | Soft-rule reasons repeated | Orig:429-435, x13 | Identical blocks | Defaults | Instrument `reasons` | M |
 | 17 | Identifier styles mixed | `bought-foods`, `animal_foods` | Two styles, path regex differs | One lexical rule | Lint | L |
 | 18 | Concept triples repeated | `household-water-access.yaml:41-62` | Copy-paste | Scheme aliases | `conceptSystems` | L |
-| 19 | XLIFF unit ids are JSON Pointers | `i18n_cmd.rs` (pointer per unit) | Reordering orphans translations | Stable keys (gettext msgctxt) | Symbolic msgids | H |
+| 19 | Translation unit ids are JSON Pointers | the removed exchange converter (pointer per unit) | Reordering orphans translations | Stable keys (gettext msgctxt) | Symbolic msgids | H (resolved: the converter was removed; `.po` is the only translation format) |
 | 20 | Header envelope per file | every example, 6-8 lines | Boilerplate | Manifest | `fieldseal.yaml` | L |
 | 21 | Hand-pasted digests | `deployments/sample.yaml:22` | Human copies sha256 | Lockfiles | `deployment.lock` | M |
 | 22 | Stringly config | `sample.yaml:32` `users: "alice=collector:hwk,..."` | Mini-DSL in a string | Typed lists | Typed schema | L |

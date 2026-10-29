@@ -29,7 +29,7 @@ Established practice:
 - **Unicode CLDR:** locale data such as plural rules, number and date formats, and collation.
 - **Unicode MessageFormat 2:** messages with placeholders and plural or select variants.
 - **BCP 47 / RFC 4647:** language tags and lookup fallback.
-- **XLIFF 2.1:** exchanging text with translators.
+- **XLIFF 2.1:** exchanging text with translators. (Removed from the toolchain: `.po` is now the single translation format.)
 - **TRAPD:** the cross-cultural survey method of Translation, Review, Adjudication, Pretest and Documentation, used by the European Social Survey. It treats translation as part of instrument design, with its own review.
 - **Pseudo-localisation:** catches truncation, concatenation and hard-coded strings before any real translation exists.
 
@@ -54,7 +54,7 @@ Established practice:
   - every declared language MUST be complete;
   - each MUST declare how it was translated and reviewed;
   - publishing review covers every language, and TRAPD is recommended.
-- **Exchange with translators.** Authors MAY keep translations in XLIFF 2.1 files. `fieldseal instrument i18n extract` and `merge` convert between those files and the instrument, before canonicalisation.
+- **Exchange with translators.** Authors MAY keep translations in XLIFF 2.1 files. `fieldseal instrument i18n extract` and `merge` convert between those files and the instrument, before canonicalisation. (Note: XLIFF exchange and these two verbs were removed; `.po` is the single translation format.)
 - **Runtime UI translations are artefacts (Should).** A deployment MAY publish a `Localisation` artefact: a message catalogue for one runtime language. It is delivered in bundles, so a new UI language needs no app release.
   - Validation MUST check its placeholders and variants against the runtime's reference catalogue.
   - Messages that state a security outcome, such as a rejected bundle, MUST keep all their placeholders, and the runtime MUST show the message ID beside them, so support can recognise the message in any language.

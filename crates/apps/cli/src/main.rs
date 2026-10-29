@@ -5,7 +5,7 @@
 //! through the composition root, and dispatches. Results go to stdout (`--json` for one
 //! machine-readable document), structured events to stderr.
 //!
-//! Built so far: `instrument validate|lint|compile|hash|preview|i18n`, `layout
+//! Built so far: `instrument validate|lint|compile|hash|preview`, `layout
 //! validate|lint|compile`, `localisation validate`, `policy`, `trust`, `keys generate`,
 //! `artefact`, `log prove|key`, `registration`, `bundle`, `export`, `deployment`, `docs`, `device simulate`, `intake`, `new survey`, `survey check|list`, `roster check|diff|list`, `schema export|check` and `adapters`. The rest
 //! of the tree is built by the buildout issues.
@@ -118,13 +118,6 @@ fn main() -> ExitCode {
         ["registration", verb] => match registration_cmd::run(verb, &rest) {
             Some(code) => code,
             None => usage_error(&msg("unknown-command", &[("command", &format!("registration {verb}"))]), json),
-        },
-        ["instrument", "i18n"] => match rest.split_first() {
-            Some((verb, tail)) => match i18n_cmd::run_i18n(verb, tail) {
-                Some(code) => code,
-                None => usage_error(&msg("unknown-command", &[("command", &format!("instrument i18n {verb}"))]), json),
-            },
-            None => usage_error(&msg("usage", &[]), json),
         },
         ["localisation", verb] => match i18n_cmd::run_localisation(verb, &rest) {
             Some(code) => code,
