@@ -1,6 +1,6 @@
 # ADR 0039: Authoring language and developer experience
 
-**Status:** Proposed (INCOMPLETE draft; see "Unfinished") · **Priority:** Should · **Date:** 2026-10-27
+**Status:** Superseded by [ADR 0041](./0041-survey-source-tree-and-authoring-toolchain.md) (was: Proposed, INCOMPLETE draft; see "Unfinished") · **Priority:** Should · **Date:** 2026-10-27
 
 **In one line:** Instruments are written in a terse, strictly schema-checked YAML dialect that a deterministic compiler expands (generators, templates, `forEach`, locals, variables, modules, inherited defaults, inferred `data`, automatic numbering, external message catalogues) into the unchanged canonical, signed instrument.
 

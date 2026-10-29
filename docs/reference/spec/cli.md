@@ -80,12 +80,20 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 | `layout lint <file>` | Choice-load lints, with thresholds from `--policy` or the defaults | file, `--instrument` → findings | — | INS-210–INS-213 |
 | `layout compile <file>` | Compile instrument and layout into the render plan for a locale and window class; with no layout, the default | `--instrument`, `--lang`, `--window` → render plan | — | INS-206–INS-208 |
 
+#### `new` and `survey`
+
+| Command | Purpose | Inputs → outputs | Ports | Implements |
+|---|---|---|---|---|
+| `new survey <name> [--lang <tag>,...] [--root <dir>]` | Write a working survey folder (instrument, layout, catalogue stubs, README, editor schemas) and a roster stub outside it; refuses to overwrite | name → files | — | CLI-044 |
+| `survey check <dir> [--roster <file>] [--strict]` | Resolve the folder, decode and validate the instrument and layouts, lint, report translation gaps and, with `--roster`, compare the roster with the fields the instrument reads | folder → findings with file, line and column | — | CLI-045 |
+| `survey list [--root <dir>]` | List each survey's name, version, languages and layout windows | folder → rows | — | CLI-046 |
+
 #### `schema`, `extension` and `unit` 
 
 | Command | Purpose | Inputs → outputs | Ports | Implements |
 |---|---|---|---|---|
-| `schema export [--kind <k>] [--version <v>]` | Print the closed JSON Schema of an artefact kind, with its content address | kind → JSON Schema | — | WIRE-209 |
-| `schema check <file>` | Validate any Fieldseal document against its closed schema | file → findings | — | WIRE-208, WIRE-211 |
+| `schema export [--kind <k>] [--out <file>] [--version <v>]` | Print the closed JSON Schema of an artefact kind, with its content address; the authoring kinds `survey` (`instrument.yaml`) and `layout` (`layouts/*.yaml`) are built; `--out` writes the schema alone | kind → JSON Schema | — | WIRE-209, CLI-041 |
+| `schema check <file>` | Validate any Fieldseal document against its closed schema; a `survey` or `layout` source file is checked with the position of each finding | file → findings | — | WIRE-208, WIRE-211 |
 | `extension validate <file>` | Check an extension against the meta-schema and the additive-only rules | YAML/JSON → findings | — | INS-239–INS-251 |
 | `extension hash <file>` | Canonicalise and print the content address | file → `sha256:…` | — | WIRE-011 |
 | `extension diff <old> <new>` | Report removed or changed entries between two versions | files → findings | — | INS-250, PUB-124 |
@@ -245,6 +253,9 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 - **CLI-041** `schema export` MUST print exactly the schema the validators use, and its output MUST be deterministic and addressed by content (WIRE-209).
 - **CLI-042** `instrument preview` MUST enforce every constraint of INS-252 in the HTML it produces and MUST pass the scenario corpus of INS-255.
 - **CLI-043** `conformance run` MUST provide the suites `strict-schema` (WIRE-213) and `ins-ui-constraints` (INS-255), and `conformance list` MUST name them.
+- **CLI-044** `new survey` MUST write a survey that passes `survey check` with no error before it is edited, MUST give every list item an explicit `code:` so that changing a label does not change the answer code, MUST write `msgid`s with empty `msgstr`s in a catalogue for each requested language, MUST put the roster stub outside the survey folder, and MUST refuse to overwrite an existing survey folder or roster. The editor schemas it writes MUST be the bytes `schema export --out` writes.
+- **CLI-045** `survey check` MUST report, in one pass and one findings list, the folder's resolver errors, the decoding and schema errors with the file, line and column, the findings of `instrument validate` and `instrument lint`, the findings of `layout validate` and `layout lint` for every layout, and the translation report (INS-260). It MUST exit `1` on any error (CLI-005). `--strict` MUST turn every warning of the resolver, the translation report and validation into an error; lint findings keep their severity, because their limits are set by policy (INS-210). With `--roster`, a field the instrument reads that a subject lacks MUST be an error that names the field and the subject's ordinal and not its ID, and a roster field the instrument never reads MUST be a note (DIS-013).
+- **CLI-046** `survey list` MUST name every survey folder under the root with its version, its languages and its layout windows.
 
 ## 6. Resources and formats
 
@@ -290,6 +301,7 @@ The CLI reads and writes resources defined in other specs. Its `--json` output d
 | Repair touches only parity-recovered bytes | CLI-016 | Golden corrupted exports |
 | Coverage report lists every requirement ID | CLI-017 | `conformance run --json` |
 | Transport by URL scheme; unbuilt transports refused | CLI-021, CLI-023, CLI-028, CLI-029 | Unit tests of the client connect functions; `export upload --to grpc://…` exits `3` |
+| Authoring commands: a scaffold passes `survey check`; findings carry file, line and column; the schema export is deterministic | CLI-041, CLI-044–046 | `cargo test -p fieldseal-cli --test survey_cli` |
 | Register over HTTP, upload, receipts verify | CLI-025, CLI-026, CLI-027, DEL-071 | `just demo` (compose stack), and the end-to-end flow of `docs/how-to/run-the-local-stack.md` |
 | Deterministic documentation | CLI-018 | Two builds compared byte for byte |
 | Flags and environment are closed and exact | CLI-030, CLI-031 | Unit tests of the argument parser, `support` parsers, `conformance` and `device` flags, and `Config::from_lookup` |

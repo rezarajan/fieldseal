@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-140 tests prove 96 requirements.
+155 tests prove 101 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -51,14 +51,15 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_258_a_roster_in_a_subdirectory_is_not_listed` ([survey_resolver.rs:91](../../crates/adapters/authoring/tests/survey_resolver.rs#L91)) | INS-258 | INS-258 (instrument) |
 | `ins_260_missing_entry_is_reported_with_the_source_line` ([translation_report.rs:23](../../crates/adapters/authoring/tests/translation_report.rs#L23)) | INS-260 | INS-260 (instrument) |
 | `ins_260_empty_msgstr_counts_as_missing` ([translation_report.rs:35](../../crates/adapters/authoring/tests/translation_report.rs#L35)) | INS-260 | INS-260 (instrument) |
-| `ins_260_orphaned_entry_after_a_deleted_question` ([translation_report.rs:48](../../crates/adapters/authoring/tests/translation_report.rs#L48)) | INS-260 | INS-260 (instrument) |
-| `ins_260_stale_entry_reports_old_msgid_and_new_text` ([translation_report.rs:56](../../crates/adapters/authoring/tests/translation_report.rs#L56)) | INS-260 | INS-260 (instrument) |
-| `ins_260_stale_entry_is_not_applied` ([translation_report.rs:65](../../crates/adapters/authoring/tests/translation_report.rs#L65)) | INS-260 | INS-260 (instrument) |
-| `ins_260_a_declared_language_without_a_catalogue_warns` ([translation_report.rs:74](../../crates/adapters/authoring/tests/translation_report.rs#L74)) | INS-260 | INS-260 (instrument) |
-| `ins_259_one_catalogue_serves_instrument_and_layouts` ([translation_report.rs:81](../../crates/adapters/authoring/tests/translation_report.rs#L81)) | INS-259 | INS-259 (instrument) |
-| `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:90](../../crates/adapters/authoring/tests/translation_report.rs#L90)) | INS-261 | INS-261 (instrument) |
-| `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:121](../../crates/adapters/authoring/tests/translation_report.rs#L121)) | INS-260 | INS-260 (instrument) |
-| `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:131](../../crates/adapters/authoring/tests/translation_report.rs#L131)) | INS-260 | INS-260 (instrument) |
+| `ins_260_a_catalogue_with_every_msgstr_empty_adds_no_language` ([translation_report.rs:48](../../crates/adapters/authoring/tests/translation_report.rs#L48)) | INS-260 | INS-260 (instrument) |
+| `ins_260_orphaned_entry_after_a_deleted_question` ([translation_report.rs:61](../../crates/adapters/authoring/tests/translation_report.rs#L61)) | INS-260 | INS-260 (instrument) |
+| `ins_260_stale_entry_reports_old_msgid_and_new_text` ([translation_report.rs:69](../../crates/adapters/authoring/tests/translation_report.rs#L69)) | INS-260 | INS-260 (instrument) |
+| `ins_260_stale_entry_is_not_applied` ([translation_report.rs:78](../../crates/adapters/authoring/tests/translation_report.rs#L78)) | INS-260 | INS-260 (instrument) |
+| `ins_260_a_declared_language_without_a_catalogue_warns` ([translation_report.rs:87](../../crates/adapters/authoring/tests/translation_report.rs#L87)) | INS-260 | INS-260 (instrument) |
+| `ins_259_one_catalogue_serves_instrument_and_layouts` ([translation_report.rs:94](../../crates/adapters/authoring/tests/translation_report.rs#L94)) | INS-259 | INS-259 (instrument) |
+| `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:103](../../crates/adapters/authoring/tests/translation_report.rs#L103)) | INS-261 | INS-261 (instrument) |
+| `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:134](../../crates/adapters/authoring/tests/translation_report.rs#L134)) | INS-260 | INS-260 (instrument) |
+| `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:144](../../crates/adapters/authoring/tests/translation_report.rs#L144)) | INS-260 | INS-260 (instrument) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
@@ -77,6 +78,19 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `wire_213_the_embedded_corpus_lists_every_file` ([strict_schema_corpus.rs:29](../../crates/apps/cli/tests/strict_schema_corpus.rs#L29)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `cli_043_conformance_list_names_strict_schema` ([strict_schema_corpus.rs:49](../../crates/apps/cli/tests/strict_schema_corpus.rs#L49)) | CLI-043 | CLI-043 (cli) |
 | `cli_043_the_strict_schema_suite_rejects_every_corpus_document` ([strict_schema_corpus.rs:56](../../crates/apps/cli/tests/strict_schema_corpus.rs#L56)) | CLI-043 | CLI-043 (cli) |
+| `cli_044_a_scaffold_passes_survey_check_with_no_errors` ([survey_cli.rs:18](../../crates/apps/cli/tests/survey_cli.rs#L18)) | CLI-044 | CLI-044 (cli) |
+| `cli_044_a_scaffold_refuses_to_overwrite` ([survey_cli.rs:38](../../crates/apps/cli/tests/survey_cli.rs#L38)) | CLI-044 | CLI-044 (cli) |
+| `cli_044_scaffold_pins_answer_codes` ([survey_cli.rs:48](../../crates/apps/cli/tests/survey_cli.rs#L48)) | CLI-044 | CLI-044 (cli) |
+| `cli_044_the_scaffold_headers_point_at_the_exported_survey_and_layout_schemas` ([survey_cli.rs:58](../../crates/apps/cli/tests/survey_cli.rs#L58)) | CLI-044 | CLI-044 (cli) |
+| `cli_045_survey_check_reports_file_line_and_column` ([survey_cli.rs:75](../../crates/apps/cli/tests/survey_cli.rs#L75)) | CLI-045 | CLI-045 (cli) |
+| `cli_045_survey_check_roster_flags_a_missing_field_as_an_error` ([survey_cli.rs:98](../../crates/apps/cli/tests/survey_cli.rs#L98)) | CLI-045 | CLI-045 (cli) |
+| `cli_045_survey_check_roster_notes_an_unused_field` ([survey_cli.rs:110](../../crates/apps/cli/tests/survey_cli.rs#L110)) | CLI-045 | CLI-045 (cli) |
+| `cli_045_strict_turns_warnings_into_errors` ([survey_cli.rs:120](../../crates/apps/cli/tests/survey_cli.rs#L120)) | CLI-045 | CLI-045 (cli) |
+| `cli_045_json_output_lists_findings` ([survey_cli.rs:138](../../crates/apps/cli/tests/survey_cli.rs#L138)) | CLI-045 | CLI-045 (cli) |
+| `cli_046_survey_list_names_every_example` ([survey_cli.rs:152](../../crates/apps/cli/tests/survey_cli.rs#L152)) | CLI-046 | CLI-046 (cli) |
+| `cli_041_schema_export_is_deterministic_and_addressed` ([survey_cli.rs:165](../../crates/apps/cli/tests/survey_cli.rs#L165)) | CLI-041 | CLI-041 (cli) |
+| `cli_041_schema_check_validates_a_source_file_against_its_schema` ([survey_cli.rs:195](../../crates/apps/cli/tests/survey_cli.rs#L195)) | CLI-041 | CLI-041 (cli) |
+| `ins_260_a_stale_translation_is_listed_with_old_and_new_text` ([survey_cli.rs:206](../../crates/apps/cli/tests/survey_cli.rs#L206)) | INS-260 | INS-260 (instrument) |
 | `reg_006_dis_030_del_042_the_air_gapped_flow_moves_only_files_and_codes` ([air_gapped.rs:43](../../crates/apps/e2e/tests/air_gapped.rs#L43)) | DEL-042, DIS-030, REG-006 | DEL-042 (delivery); DIS-030 (distribution); REG-006 (registration) |
 | `del_002_int_050_the_connected_flow_lands_what_was_captured_and_the_device_clears` ([connected.rs:33](../../crates/apps/e2e/tests/connected.rs#L33)) | DEL-002, INT-050 | DEL-002 (delivery); INT-050 (intake) |
 | `reg_006_an_expired_registration_token_is_refused_by_the_factory_and_registers_nothing` ([faults_authority.rs:22](../../crates/apps/e2e/tests/faults_authority.rs#L22)) | REG-006 | REG-006 (registration) |
@@ -132,6 +146,7 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
+| `dis_013_roster_fields_read_through_message_variables_and_roster_items_are_found` ([facts.rs:186](../../crates/contexts/distribution/src/domain/facts.rs#L186)) | DIS-013 | DIS-013 (distribution) |
 | `wire_209_every_key_of_both_kinds_is_declared_once` ([schema.rs:1119](../../crates/kernel/src/schema.rs#L1119)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_209_the_json_schema_is_generated_from_the_same_table` ([schema.rs:1161](../../crates/kernel/src/schema.rs#L1161)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_211_pointer_segments_escape_tilde_and_slash` ([schema.rs:1185](../../crates/kernel/src/schema.rs#L1185)) | WIRE-211 | WIRE-211 (wire-formats) |

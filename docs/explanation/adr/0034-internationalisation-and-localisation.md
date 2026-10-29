@@ -4,6 +4,8 @@
 
 **In one line:** Every component handles any language, script and locale from the first release. This covers instrument text, the runtime's own UI, formatting, right-to-left scripts and translation review, and records note the language each answer was asked in. Deployments add languages without a new release.
 
+> **Note (ADR 0041).** For surveys written in the compact dialect, translations are gettext `.po` catalogues in the survey folder, one for each language, keyed by `msgctxt` ([ADR 0041](./0041-survey-source-tree-and-authoring-toolchain.md)). `fieldseal survey check` reports missing, orphaned and stale entries. The exchange format described under "Exchange with translators" below is unchanged until a later change retires it.
+
 *The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as described in RFC 2119 and RFC 8174 when, and only when, they appear in all capitals.*
 
 ## Context

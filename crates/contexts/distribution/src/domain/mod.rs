@@ -17,7 +17,7 @@ pub mod time_token;
 
 pub use content::{BundleContent, BundleManifest, BundleSeq};
 pub use error::{BundleRejection, CollectorReason, CompositionError, DistributionError, VerifyStep};
-pub use facts::{InstrumentFacts, LayoutFacts, RuntimeProfile, artefacts_of, check_composition, instrument_facts, layout_facts, localisation_reference};
+pub use facts::{InstrumentFacts, LayoutFacts, RuntimeProfile, artefacts_of, check_composition, collect_roster_fields, instrument_facts, layout_facts, localisation_reference};
 pub use file::{BundleFile, MAGIC, MAX_BUNDLE_FILE, file_name};
 pub use roster::{ConsentState, Roster, RosterEntry, RosterError};
 pub use time_token::{AnchorKind, TimeToken, check_publication_tree_head_age};

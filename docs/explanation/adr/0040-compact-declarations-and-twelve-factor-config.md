@@ -4,6 +4,8 @@
 
 **In one line:** Every declarative asset is plain YAML in a compact dialect of typed keys, with no settings parsed out of free text, and it compiles deterministically to the unchanged canonical artefacts. A survey is written the way an author thinks about it. A deployment manifest says only what it runs and serves, and every per-deploy value is one environment variable.
 
+> **Note (ADR 0041).** Sections 2 and 3 (surveys and layouts) are taken over by [ADR 0041](./0041-survey-source-tree-and-authoring-toolchain.md), which also decides the folder, the translation files and the schema. Sections 4 and 5 (deployments and the other assets) remain open here as a separate decision.
+
 *The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119 and RFC 8174 when they appear in capitals.*
 
 ## Context

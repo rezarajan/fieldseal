@@ -83,12 +83,15 @@ impl<'c> Texts<'c> {
         Self { entries: c, seen: RefCell::new(Vec::new()) }
     }
 
+    /// The languages the document is translated into: those whose catalogue translates something.
+    /// A catalogue with every `msgstr` empty (the stub `new survey --lang` writes) is a to-do list,
+    /// not a language yet, so it adds nothing to the document; the report lists what it lacks.
     fn languages(&self) -> Vec<&'c String> {
-        self.entries.keys().collect()
+        self.entries.iter().filter(|(_, c)| c.values().any(|e| !e.msgstr.is_empty())).map(|(l, _)| l).collect()
     }
 
     fn has_language(&self, lang: &str) -> bool {
-        self.entries.contains_key(lang)
+        self.languages().iter().any(|l| l.as_str() == lang)
     }
 
     /// The translation of `text` in language `lang` under `key`, if there is one to apply.

@@ -43,12 +43,14 @@ pub struct Outcome {
     pub extra: BTreeMap<String, Value>,
     /// A message for stderr (usage and resource errors), not part of stdout.
     pub error: Option<String>,
+    /// Whether a warning counts as an error (`--strict`).
+    pub strict: bool,
 }
 
 impl Outcome {
     /// A successful outcome so far.
     pub fn new(command: &'static str) -> Self {
-        Self { command, exit: exit::OK, findings: Vec::new(), lines: Vec::new(), body: None, extra: BTreeMap::new(), error: None }
+        Self { command, exit: exit::OK, findings: Vec::new(), lines: Vec::new(), body: None, extra: BTreeMap::new(), error: None, strict: false }
     }
 
     /// Records a failure. Validation failures (1) don't hide usage (2), configuration (3),
@@ -69,6 +71,9 @@ impl Outcome {
 
     /// Adds an instrument or layout finding from `file`; an error fails the outcome.
     pub fn finding(&mut self, file: &str, f: &Finding) {
+        if self.strict && f.severity == Severity::Warning {
+            return self.finding(file, &Finding { severity: Severity::Error, ..f.clone() });
+        }
         if f.severity == Severity::Error {
             self.fail(exit::FAILED);
         }
@@ -78,12 +83,35 @@ impl Outcome {
 
     /// Adds a finding given by parts (decoding errors, policy findings).
     pub fn raw_finding(&mut self, id: &str, severity: &str, file: &str, path: &str, message: &str) {
+        let severity = if self.strict && severity == "warning" { "error" } else { severity };
         if severity == "error" {
             self.fail(exit::FAILED);
         }
         let at = if path.is_empty() { String::new() } else { format!(" at {path}") };
         self.lines.push(format!("{file}: {severity} {id}{at}: {message}"));
         self.findings.push(finding_value(id, severity, None, message, file, path));
+    }
+
+    /// Adds a finding given by parts with the position it was found at, `(line, column)` counting
+    /// from 1 and `(0, 0)` for none, and an RFC 6901 pointer (empty for none).
+    pub fn located_finding(&mut self, id: &str, severity: &str, file: &str, at: (usize, usize), pointer: &str, message: &str) {
+        let severity = if self.strict && severity == "warning" { "error" } else { severity };
+        if severity == "error" {
+            self.fail(exit::FAILED);
+        }
+        let (line, column) = at;
+        let place = if line == 0 { file.to_owned() } else { format!("{file}:{line}:{column}") };
+        let pointer_note = if pointer.is_empty() { String::new() } else { format!(" ({pointer})") };
+        self.lines.push(format!("{place}: {severity} {id}: {message}{pointer_note}"));
+        let mut f = finding_value(id, severity, None, message, file, pointer);
+        if let Value::Map(m) = &mut f
+            && let Some(Value::Map(w)) = m.get_mut("where")
+            && line > 0
+        {
+            w.insert("line".to_owned(), Value::Int(line as i128));
+            w.insert("column".to_owned(), Value::Int(column as i128));
+        }
+        self.findings.push(f);
     }
 
     /// Sets a `--json` field.

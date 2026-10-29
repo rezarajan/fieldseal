@@ -13,6 +13,8 @@ surveys/<name>/i18n/<lang>.po      the translations of the instrument and its la
 surveys/<name>/README.md           optional
 ```
 
+To start a new one, follow the [tutorial](../docs/tutorials/write-and-publish-your-first-survey.md); [the survey folder](../docs/reference/survey-folder.md) lists which file holds each setting.
+
 A step or card of a layout has an `id:`, which is the key of its title in the catalogues (`layout/<window>/<id>`); an instrument text is `instrument/<path>`. A file in the folder that is none of these is reported as a warning.
 
 | Folder | What it is | Why it is here |

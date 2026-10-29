@@ -136,8 +136,8 @@ fn load(ctx: &Ctx, path: &str, out: &mut Outcome) -> Result<Option<Value>> {
 }
 
 /// A validated instrument with its canonical bytes.
-struct Loaded {
-    instrument: Instrument,
+pub(crate) struct Loaded {
+    pub(crate) instrument: Instrument,
     canonical: Vec<u8>,
 }
 
@@ -149,7 +149,7 @@ impl Loaded {
 
 /// Loads and validates an instrument, reporting its findings (warnings included when
 /// `warnings`).
-fn load_instrument(ctx: &Ctx, path: &str, out: &mut Outcome, warnings: bool) -> Result<Option<Loaded>> {
+pub(crate) fn load_instrument(ctx: &Ctx, path: &str, out: &mut Outcome, warnings: bool) -> Result<Option<Loaded>> {
     let Some(doc) = load(ctx, path, out)? else { return Ok(None) };
     let digest = |b: &[u8]| ctx.tools.sha256(b);
     match validate_instrument_with(&doc, ValidationOptions { media_digest: Some(&digest) }) {
@@ -197,7 +197,7 @@ pub(crate) fn identity(canonical: &[u8], salt: Option<&Salt>) -> Fingerprint {
 /// Loads and validates a layout against `ins`, resolving its `spec.instrument` source path
 /// relative to the layout file and comparing identities (INS-200). Returns the layout and its
 /// content address.
-fn load_layout(ctx: &Ctx, path: &str, ins: &Loaded, salt: Option<&Salt>, out: &mut Outcome) -> Result<Option<(Layout, ContentAddress)>> {
+pub(crate) fn load_layout(ctx: &Ctx, path: &str, ins: &Loaded, salt: Option<&Salt>, out: &mut Outcome) -> Result<Option<(Layout, ContentAddress)>> {
     let Some(doc) = load(ctx, path, out)? else { return Ok(None) };
     let dir = Path::new(path).parent().map(Path::to_path_buf).unwrap_or_default();
     let resolve = |r: &InstrumentReference| -> Option<Fingerprint> {

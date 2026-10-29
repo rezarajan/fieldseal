@@ -45,6 +45,19 @@ fn ins_260_empty_msgstr_counts_as_missing() {
 }
 
 #[test]
+fn ins_260_a_catalogue_with_every_msgstr_empty_adds_no_language() {
+    let dir = fixtures().join("valid");
+    let text: String = std::fs::read_to_string(dir.join("i18n/es.po")).expect("po").lines().map(|l| if l.starts_with("msgstr ") { "msgstr \"\"".to_owned() } else { l.to_owned() }).collect::<Vec<_>>().join("\n");
+    let scratch = scratch("all-empty", &dir, &text);
+    let f = SurveyTree::open(scratch.parent().expect("parent")).expect("open").survey("valid").expect("folder").load().expect("loads");
+    std::fs::remove_dir_all(scratch.parent().expect("parent")).expect("clean up");
+    let languages = f.instrument.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|s| s.get("languages")).and_then(Value::as_array).expect("languages");
+    assert_eq!(languages, [Value::Text("en".to_owned())], "a stub is a to-do list, not a language");
+    assert!(!of_kind(&f.translation_report, FindingKind::Missing).is_empty());
+    assert!(of_kind(&f.translation_report, FindingKind::NoCatalogue).is_empty());
+}
+
+#[test]
 fn ins_260_orphaned_entry_after_a_deleted_question() {
     let f = report("stale-and-orphaned");
     let orphans = of_kind(&f, FindingKind::Orphaned);

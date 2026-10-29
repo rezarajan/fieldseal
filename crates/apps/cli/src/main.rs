@@ -7,7 +7,7 @@
 //!
 //! Built so far: `instrument validate|lint|compile|hash|preview|i18n`, `layout
 //! validate|lint|compile`, `localisation validate`, `policy`, `trust`, `keys generate`,
-//! `artefact`, `log prove|key`, `registration`, `bundle`, `export`, `deployment`, `docs`, `device simulate`, `intake` and `adapters`. The rest
+//! `artefact`, `log prove|key`, `registration`, `bundle`, `export`, `deployment`, `docs`, `device simulate`, `intake`, `new survey`, `survey check|list`, `schema export|check` and `adapters`. The rest
 //! of the tree is built by the buildout issues.
 
 mod args;
@@ -34,13 +34,17 @@ mod intake_cmd;
 mod i18n_cmd;
 mod json;
 mod messages;
+mod new_cmd;
 mod keys_cmd;
 mod outcome;
 mod policy_cmd;
 mod registration_cmd;
 mod registration_remote;
 mod registry_cmd;
+mod roster_check;
+mod schema_cmd;
 mod stores;
+mod survey_cmd;
 mod support;
 mod transport;
 mod upload_cmd;
@@ -123,6 +127,18 @@ fn main() -> ExitCode {
         ["localisation", verb] => match i18n_cmd::run_localisation(verb, &rest) {
             Some(code) => code,
             None => usage_error(&msg("unknown-command", &[("command", &format!("localisation {verb}"))]), json),
+        },
+        ["new", noun] => match new_cmd::run(noun, &rest) {
+            Some(code) => code,
+            None => usage_error(&msg("unknown-command", &[("command", &format!("new {noun}"))]), json),
+        },
+        ["survey", verb] => match survey_cmd::run(verb, &rest) {
+            Some(code) => code,
+            None => usage_error(&msg("unknown-command", &[("command", &format!("survey {verb}"))]), json),
+        },
+        ["schema", verb] => match schema_cmd::run(verb, &rest) {
+            Some(code) => code,
+            None => usage_error(&msg("unknown-command", &[("command", &format!("schema {verb}"))]), json),
         },
         ["policy", verb] => match policy_cmd::run(verb, &rest) {
             Some(code) => code,

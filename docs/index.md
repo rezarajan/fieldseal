@@ -15,6 +15,7 @@ Fieldseal collects structured data about people in the field, on shared and offl
 ## Reference: look up the facts
 
 - [Specifications](reference/spec/README.md): normative specs per bounded context, with requirement IDs
+- [The survey folder](reference/survey-folder.md): which file holds each setting, translation keys and what `survey check` reports
 - [Toolchain and repository](reference/toolchain.md): platforms, repository layout, tool versions, CI images
 
 ## How-to guides: get a task done
@@ -36,7 +37,8 @@ Fieldseal collects structured data about people in the field, on shared and offl
 
 ## Tutorials
 
-None yet. They are written during buildout, against the `fieldseal` CLI and the first runtime.
+- [Hands-on: the whole system, one step at a time](tutorials/hands-on.md)
+- [Write and publish your first survey](tutorials/write-and-publish-your-first-survey.md)
 
 ## Deployment documentation
 

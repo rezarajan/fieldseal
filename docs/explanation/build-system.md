@@ -162,7 +162,15 @@ Recorded on 2026-10-28 on an AMD Ryzen 9 7950X (16 cores, 32 threads), 62 GB of 
 
 **CI warm-cache durations (not measured).** The `ci` workflow starts only for `v*` tags and manual starts, and the repository's CI minutes were used up when this section was written, so it was not started. Run ids and job durations from two runs on one commit (the second after the first finishes, because `ci.yml` cancels in-progress runs for one ref) go here.
 
-Targets for `just up` and for CI are added here when Open Question 1 is answered.
+**First survey (Phase 5).** The time from `fieldseal new survey` to a passing `fieldseal survey check`, on the machine above, with the release binary:
+
+| Measure | Value |
+|---|---|
+| Machine time: `new survey t --lang es`, then `survey check surveys/t --roster rosters/t-cohort.yaml` | under 0.01 s (no errors; 14 translation warnings) |
+| Test newcomer, following [the tutorial](../tutorials/write-and-publish-your-first-survey.md) up to the first passing check | not measured: the test newcomer and the target are the open Open Question 1 |
+| From a passing check to the published address | measured with the publish step (Phase 5b) |
+
+Targets for `just up`, for CI and for a first survey are added here when Open Question 1 is answered.
 
 ## Emulating and testing the app
 

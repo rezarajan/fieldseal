@@ -81,7 +81,7 @@ pub fn instrument_facts(artefact: &Artefact) -> Result<InstrumentFacts, Composit
 /// `roster.<field>` in rule expressions, and `$roster.<field>` in messages (INS-013, INS-042,
 /// INS-084). Reading all text keeps the set a safe over-approximation of what the instrument
 /// uses, and never misses a place the format allows a reference.
-fn collect_roster_fields(value: &Value, out: &mut BTreeSet<String>) {
+pub fn collect_roster_fields(value: &Value, out: &mut BTreeSet<String>) {
     match value {
         Value::Text(t) => scan_text(t, out),
         Value::Array(a) => a.iter().for_each(|v| collect_roster_fields(v, out)),
@@ -172,4 +172,25 @@ pub fn check_composition(
         }
     }
     Ok(referenced)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn text(t: &str) -> Value {
+        Value::Text(t.to_owned())
+    }
+
+    #[test]
+    fn dis_013_roster_fields_read_through_message_variables_and_roster_items_are_found() {
+        let doc = Value::Map(BTreeMap::from([
+            ("welcome".to_owned(), text("Questions about the household of {$roster.head_name}.")),
+            ("source".to_owned(), Value::Map(BTreeMap::from([("from".to_owned(), text("roster.village_code"))]))),
+            ("rule".to_owned(), Value::Array(vec![text("roster.members > 3"), text("not-roster.ignored"), text("a.roster.ignored_too")])),
+        ]));
+        let mut found = BTreeSet::new();
+        collect_roster_fields(&doc, &mut found);
+        assert_eq!(found, BTreeSet::from(["head_name".to_owned(), "members".to_owned(), "village_code".to_owned()]));
+    }
 }
