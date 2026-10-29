@@ -30,8 +30,10 @@ use fieldseal_instrument::domain::Instrument;
 use fieldseal_instrument::domain::metadata::ConsentRequirement;
 use fieldseal_kernel::Value;
 use fieldseal_kernel::base64url::base64url_decode;
+use fieldseal_kernel::crypto::Signature;
 use fieldseal_kernel::digest::{lower_hex, sha256};
 use fieldseal_kernel::id::{Digest, ItemPath, Seq, SubjectId, TenancyId};
+use fieldseal_kernel::pop::PopToken;
 use fieldseal_kernel::seal::SealedBox;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_policy::domain::{Controls, PublishingPolicy, RuntimeEvaluator};
@@ -41,7 +43,7 @@ use fieldseal_registration::domain::{
     FingerprintWords, KeyEvidence, NonceSource, RegistrationToken, ReportedProfile,
 };
 use fieldseal_trust::domain::{DeviceKeyKind, TrustBundle, TrustStore};
-use fieldseal_trust::ports::{SecureKeyStore, SourceRng};
+use fieldseal_trust::ports::{RandomSource, SecureKeyStore, SourceRng};
 
 use crate::json::{from_json, quote, to_json};
 use crate::platform::{ArgonHash, Change, Namespace, NoShare, WebCamera, WebDevicePolicy, WebDisplay, WebDownloads, WebElapsed, WebKeyStore, WebRandom, WebStorage, WebWall};
@@ -50,7 +52,10 @@ use crate::workbench::{RenderOptions, Workbench};
 /// One blocking POST: `(url, proof-of-possession header, body)` to `(status, body)`.
 pub type PostFn = Rc<dyn Fn(&str, Option<&str>, &[u8]) -> Result<(u16, Vec<u8>), String>>;
 
-/// What the page does for the device: the clock, the monotonic clock and one HTTP POST.
+/// One blocking GET: `(url, proof-of-possession header)` to `(status, headers, body)`.
+pub type GetFn = Rc<dyn Fn(&str, Option<&str>) -> Result<(u16, Vec<(String, String)>, Vec<u8>), String>>;
+
+/// What the page does for the device: the clock, the monotonic clock and one HTTP POST and GET.
 pub struct Host {
     /// Milliseconds since the Unix epoch.
     pub now_ms: Rc<dyn Fn() -> f64>,
@@ -59,6 +64,9 @@ pub struct Host {
     /// One blocking POST: `(url, proof-of-possession header, body)` to `(status, body)`. In
     /// the browser this is a synchronous request made from a worker.
     pub post: PostFn,
+    /// One blocking GET: `(url, proof-of-possession header)` to `(status, headers, body)`,
+    /// made the same way. The factory's bundle route is the only caller.
+    pub get: GetFn,
 }
 
 /// What the authority provisions the device with (DEP-024): trust and the build's identity.
@@ -202,6 +210,43 @@ fn list_json(items: &[String]) -> String {
     format!("[{}]", items.iter().map(|s| quote(s)).collect::<Vec<_>>().join(","))
 }
 
+/// What the factory answered to a bundle request (`GET /v1/bundle`, DIS-040).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum BundleFetch {
+    /// `200`: the bundle verified in DIS-030 order and was imported.
+    Imported {
+        /// The `Fieldseal-Bundle-Sequence` header, for the next `held`.
+        sequence: u64,
+        /// The report of [`WebDevice::import_bundle`], as JSON.
+        report: String,
+    },
+    /// `304`: the bundle the device holds is the latest.
+    Current,
+    /// `404 no-bundle`: the factory has not built a bundle for this device yet.
+    Preparing,
+    /// `401`, `403` or another `404`: the factory said no.
+    Refused {
+        /// The HTTP status.
+        status: u16,
+        /// The `error` code, for example `withheld` or `not-registered`.
+        code: String,
+        /// The `reasons` of a `withheld` answer.
+        reasons: Vec<String>,
+    },
+}
+
+impl BundleFetch {
+    /// The answer as JSON for the page: `status` is `imported`, `current`, `preparing` or `refused`.
+    pub fn to_json(&self) -> String {
+        match self {
+            Self::Imported { sequence, report } => format!("{{\"status\":\"imported\",\"sequence\":{sequence},\"report\":{report}}}"),
+            Self::Current => "{\"status\":\"current\"}".to_owned(),
+            Self::Preparing => "{\"status\":\"preparing\"}".to_owned(),
+            Self::Refused { status, code, reasons } => format!("{{\"status\":\"refused\",\"http\":{status},\"code\":{},\"reasons\":{}}}", quote(code), list_json(reasons)),
+        }
+    }
+}
+
 /// A device on the `web` profile.
 ///
 /// The adapters live for the page's lifetime (`Box::leak`): a tab holds one device, and a
@@ -219,6 +264,7 @@ pub struct WebDevice {
     records: &'static MemoryRegistrationRecords,
     policy: &'static RuntimeEvaluator,
     post: PostFn,
+    get: GetFn,
     now_ms: Rc<dyn Fn() -> f64>,
     coverage: Option<ReceiptCoverage>,
 }
@@ -269,6 +315,7 @@ impl WebDevice {
             records: leak(MemoryRegistrationRecords::new()),
             policy,
             post: host.post,
+            get: host.get,
             now_ms: host.now_ms,
             coverage: None,
         })
@@ -427,6 +474,54 @@ impl WebDevice {
         self.rt.import_bundle(file).map_err(err)?;
         steps.push(step("import", true, format!("the instrument, {} layout(s) and {} roster(s) validated and held; tenancy {}", opened.layouts.len(), opened.rosters.len(), self.rt.state().map_or("?", state_name))));
         Ok(format!("{{\"ok\":true,\"steps\":[{}],\"publications\":[{}],\"state\":{}}}", steps.join(","), publications.join(","), self.state_json()))
+    }
+
+    /// Asks the factory for the device's latest bundle (`GET /v1/bundle`, DIS-040) with a
+    /// proof-of-possession token made by the tenancy's signing key, and imports what comes
+    /// back through [`Self::import_bundle`], so it is verified in DIS-030 order before anything
+    /// is held. The token names `factory_url` (the factory's own address, which the factory
+    /// checks), not the address the page reaches it at: the host's `get` maps one to the
+    /// other. `held` is the sequence number of the bundle the device holds; it is sent as a
+    /// query and is not signed (WIRE-171).
+    pub fn fetch_bundle(&mut self, factory_url: &str, held: Option<u64>) -> Result<BundleFetch, String> {
+        let tenancy = self.rt.tenancy().ok_or("create the tenancy before asking for a bundle")?;
+        let sign_pub = self.rt.key_history().into_iter().last().ok_or("create the tenancy before asking for a bundle")?;
+        let handle = self.keys.signing_handle(&sign_pub).ok_or("the signing key is not in the key store")?;
+        let endpoint = format!("{}/v1/bundle", factory_url.trim_end_matches('/'));
+        let mut pop = PopToken {
+            tenancy,
+            method: "GET".into(),
+            url: endpoint.clone(),
+            iat: AuthorityTime(fieldseal_collection::ports::WallClock::now_ms(self.wall).unwrap_or(0)),
+            jti: self.random.nonce().as_bytes()[..16].try_into().expect("16 bytes"),
+            ath: None,
+            signature: Signature(vec![0; 64]),
+        };
+        pop.signature = self.keys.sign(&handle, &pop.message()).map_err(err)?;
+        let url = match held {
+            Some(h) => format!("{endpoint}?held={h}"),
+            None => endpoint,
+        };
+        let (status, headers, body) = (self.get)(&url, Some(&pop.to_header())).map_err(|e| format!("the factory could not be reached: {e}"))?;
+        let header = |name: &str| headers.iter().find(|(k, _)| k.eq_ignore_ascii_case(name)).map(|(_, v)| v.as_str());
+        match status {
+            200 => {
+                let sequence = header("Fieldseal-Bundle-Sequence").and_then(|v| v.parse().ok()).ok_or("the factory sent a bundle without its sequence number")?;
+                let report = self.import_bundle(&body)?;
+                Ok(BundleFetch::Imported { sequence, report })
+            }
+            304 => Ok(BundleFetch::Current),
+            401 | 403 | 404 => {
+                let answer = from_json(&String::from_utf8_lossy(&body)).ok();
+                let code = answer.as_ref().and_then(|v| v.as_map()?.get("error")?.as_text().map(str::to_owned)).unwrap_or_default();
+                let reasons = answer
+                    .as_ref()
+                    .and_then(|v| v.as_map()?.get("reasons")?.as_array().map(|a| a.iter().filter_map(|r| r.as_text().map(str::to_owned)).collect()))
+                    .unwrap_or_default();
+                if status == 404 && code == "no-bundle" { Ok(BundleFetch::Preparing) } else { Ok(BundleFetch::Refused { status, code, reasons }) }
+            }
+            other => Err(format!("the factory answered {other}")),
+        }
     }
 
     fn held_workbench(&self) -> Result<Workbench, String> {

@@ -18,6 +18,7 @@ Adversarial tests for Fieldseal (issue #59): hostile bytes, replay, key misuse, 
 - Canary values must never appear in outputs that must not carry them.
 - All randomness is seeded, so failures reproduce.
 
+- `tests/bundle_delivery.rs` (SR-2: a stolen token yields bytes only the device can open, a token for another URL is refused, a withheld tenancy is refused with reasons but still authenticates, no key in the bundle, the replay ledger is shared, no account gets another's cohort roster).
 - `tests/operator_api.rs` (the operator routes: Bearer required, role, phishing resistance, no cookie accepted, no Bearer on the portal) and `tests/keycloak_realm.rs` (the realm file: API audience in access tokens only, `fieldseal-cli` public with PKCE, fixed `product-owner` id).
 
 ## Side Effects

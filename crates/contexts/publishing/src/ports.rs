@@ -115,6 +115,14 @@ pub enum LogRequest {
         /// The later size.
         new_size: u64,
     },
+    /// Read the entries at indices `from` (inclusive) to `to` (exclusive), where the log
+    /// serves them (the self-hosted log does; public logs keep their own API).
+    Entries {
+        /// The first index.
+        from: u64,
+        /// One past the last index.
+        to: u64,
+    },
 }
 
 /// Exactly what a transparency-log adapter transmits for one request: the request and a

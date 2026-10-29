@@ -23,6 +23,9 @@ pub fn ports(component: Component) -> &'static [(&'static str, &'static [&'stati
             // The operator API reads the artefact registry and writes the roster store (REG-046, REG-047).
             ("ArtefactRegistry", &["file-dev"]),
             ("RosterSource", &["file-dev"]),
+            // The factory stores the bundles it builds and reads the runtime profile reported at registration (DIS-082, DIS-012).
+            ("BundleStore", &["file-dev"]),
+            ("RuntimeProfiles", &["file-dev"]),
         ],
         Component::Intake => &[
             ("RecordKeyUnsealer", &["pkcs11-hsm", "file-dev", "memory"]),
@@ -163,6 +166,17 @@ pub fn check_environment(m: &Manifest, environment: &str) -> Vec<ManifestFinding
         Err(f) => return f,
     };
     let mut out = vec![];
+    // Outside development the factory verifies its release policy against a pinned content
+    // address; one that verified itself would let a publisher key lower its own threshold.
+    if matches!(environment, "staging" | "production") {
+        for (component, spec) in &resolved.components {
+            if component.name() == "factory" && !spec.adapters.get("PolicyEngine").is_some_and(|b| b.config.contains_key("policyDigest")) {
+                out.push(ManifestFinding::PolicyFloorViolation(format!(
+                    "spec.components.factory.adapters.PolicyEngine.config.policyDigest: required in {environment}: the content address of the deployment-policy the factory trusts"
+                )));
+            }
+        }
+    }
     if environment == "production" {
         for (component, spec) in &resolved.components {
             for (port, b) in &spec.adapters {

@@ -97,6 +97,10 @@ services:
       # image makes /rosters owner-only, as the store requires).
       - clistate:/clistate:ro
       - rosters:/rosters
+      # The bundles it builds for each registered device, and the rosters it issued, which
+      # intake reads (below, read-only) for its consent checks.
+      - bundles:/bundles
+      - issued:/issued
 
   intake:
     # The intake app (fieldseal-intake): device uploads on :8480 and the results reader portal on
@@ -122,6 +126,8 @@ services:
       - factory-state:/factory-state:ro
       - landing:/landing
       - published:/published:ro
+      # The rosters the factory issued, written only by the factory.
+      - issued:/issued:ro
       - submissions:/submissions
 
   translog:
@@ -181,9 +187,8 @@ services:
 
   web:
     # The web app and its browser device, as a service of the stack (FIELDSEAL_WEB_STACK=true):
-    # provisioned from the stack's trust bundle, choosing among the surveys published through
-    # its log, registering with its factory and uploading to its intake. Bundles are built by
-    # the stack's authority from the factory's records. Shares Keycloak's network namespace so
+    # provisioned from the stack's trust bundle, registering with its factory, getting its
+    # bundle from the factory and uploading to its intake. Shares Keycloak's network namespace so
     # that http://localhost:8080 is the factory for the browser and for the app alike.
     image: fieldseal-web:local
     <<: *hardened
@@ -192,6 +197,8 @@ services:
       init:
         condition: service_completed_successfully
     tmpfs: ["/tmp:mode=1777,size=256m"]
+    # The publishers the device accepts: the intake component's lists (tools/stack-up.sh).
+    env_file: [.generated/web.env]
     environment:
       FIELDSEAL_ENVIRONMENT: development
       FIELDSEAL_WEB_STACK: "true"
@@ -207,9 +214,7 @@ services:
       FIELDSEAL_WEB_PUBLIC_URL: http://127.0.0.1:8090
     volumes:
       - authority:/authority:ro
-      - published:/published
-      - factory-state:/factory-state:ro
-      - clistate:/clistate
+      - published:/published:ro
       - rosters:/rosters:ro
 
 volumes:
@@ -220,6 +225,8 @@ volumes:
   device:
   clistate:
   rosters:
+  bundles:
+  issued:
   published:
   submissions:
   keycloak-data:

@@ -233,8 +233,8 @@
                 for d in ${pkgs.lib.concatStringsSep " " mounts}; do
                   mkdir -p ".$d"
                   chown -R 10001:10001 ".$d"
-                  # The roster store refuses a directory that group or others can reach.
-                  case "$d" in /rosters) chmod 0700 ".$d" ;; esac
+                  # The roster store and the issued-roster record both refuse a directory that group or others can reach (the issued rosters carry the same data). Factory and intake run as uid 10001, so intake can still read the owner-only files.
+                  case "$d" in /rosters|/issued) chmod 0700 ".$d" ;; esac
                 done
               '';
               config = {
@@ -249,18 +249,16 @@
           webImage = pkgs.dockerTools.buildLayeredImage {
             name = "fieldseal-web";
             tag = "local";
-            # The CLI and the examples (rosters) too: in the stack (FIELDSEAL_WEB_STACK=true) the
-            # app builds bundles with the stack's authority through `fieldseal bundle build --stack`.
+            # In the stack (FIELDSEAL_WEB_STACK=true) the device gets its bundle from the factory;
+            # the app builds none, so the image holds no CLI.
             contents = [
               webServerBin
-              fieldsealCli
-              stackOpt
               pkgs.cacert
             ];
             fakeRootCommands = ''
-              mkdir -p tmp authority published factory-state clistate rosters
+              mkdir -p tmp authority published rosters
               chmod 1777 tmp
-              chown 10001:10001 published clistate
+              chown 10001:10001 published
               # The roster store's directory, as in the factory image: owner-only, read here.
               chmod 0700 rosters
               chown 10001:10001 rosters
@@ -273,7 +271,6 @@
                 "FIELDSEAL_WEB_WASM_DIR=${wasmBundle}"
                 "FIELDSEAL_WEB_EXAMPLES_DIR=${webExamples}"
                 "FIELDSEAL_WEB_BIND=0.0.0.0:8090"
-                "FIELDSEAL_WEB_CLI=${fieldsealCli}/bin/fieldseal"
               ];
               User = "10001:10001";
             };
@@ -329,6 +326,8 @@
                 [
                   "/state/factory"
                   "/rosters"
+                  "/bundles"
+                  "/issued"
                 ];
             intake-image =
               serviceImage "fieldseal-intake" intakeBin [ 8480 8481 ]
@@ -336,6 +335,7 @@
                   "/landing"
                   "/submissions"
                   "/published"
+                  "/issued"
                 ];
             translog-image = serviceImage "fieldseal-translog" translogBin [ 8080 ] [ "/data/log" ];
             cli-image = stackToolImage "fieldseal-cli" [ ] [ ] [ "/opt/fieldseal/tools/stack-init.sh" ];

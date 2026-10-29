@@ -22,6 +22,7 @@
 //! | `GET /checkpoint` | the signed C2SP checkpoint note |
 //! | `GET /inclusion/<leaf_index>/<tree_size>` | an inclusion proof |
 //! | `GET /consistency/<old_size>/<new_size>` | a consistency proof |
+//! | `GET /entries/<from>/<to>` | per entry a `u32` length and the canonical entry bytes, at most 256 entries (WIRE-199) |
 //!
 //! A proof is `size-or-index: u64 | size: u64 | count: u16 | count x 32-byte hash`, all
 //! big-endian ([`encode_inclusion`], [`encode_consistency`]). Numbers in paths are plain
@@ -50,8 +51,8 @@ mod wire;
 
 pub use client::HttpTranslog;
 pub use http::{HandlerTransport, HttpLogTransport};
-pub use store::{FileLogStore, StoreError};
+pub use store::{FileLogStore, MAX_ENTRIES, StoreError};
 pub use wire::{
-    DEFAULT_MAX_BODY, HttpRequest, MAX_RESPONSE, Response, decode_append, decode_checkpoint, decode_consistency, decode_inclusion,
-    encode_consistency, encode_inclusion, handle, interpret, render,
+    DEFAULT_MAX_BODY, HttpRequest, MAX_RESPONSE, Response, decode_append, decode_checkpoint, decode_consistency, decode_entries,
+    decode_inclusion, encode_consistency, encode_inclusion, handle, interpret, render,
 };

@@ -173,7 +173,7 @@
 - **REG-051** Messages under 300 bytes (tokens, close certificates, posture nonces) MUST be transferable as a single QR code shown on a screen.
 - **REG-052** Registration requests MUST be transferable as a file. A runtime MAY also offer an animated QR sequence for them (WIRE §animated-qr).
 - **REG-053** A request submitted out of the app MUST be accepted only through an upload by the account the token was issued to.
-- **REG-054** An air-gapped registration's `TenancyCertificate` and bundles MUST be downloadable from the portal as files for import.
+- **REG-054** An air-gapped registration's `TenancyCertificate` and bundles MUST be downloadable from the portal as files for import (`GET /devices/{device}/bundle.fsb`, for the signed-in collector's own device only).
 
 ### 5.7 Key roll, loss and revocation
 
@@ -238,6 +238,7 @@
 | `SubmitRegistration` | `POST /v1/registrations` | none (the sealed request proves possession) |
 | `GetRegistrationStatus` | `GET /v1/registrations/{tenancy}` | none (state only) |
 | `GetCertificate` | `GET /v1/certificate` | PoP |
+| `GetBundle` | `GET /v1/bundle` (optional query `held=<sequence>`) | PoP |
 | `IssueApiToken` | `POST /v1/api-token` | PoP |
 | `PostureNonce` | `POST /v1/posture/nonce` | PoP |
 | `CheckPosture` | `POST /v1/posture` | PoP |

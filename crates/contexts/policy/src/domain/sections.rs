@@ -232,6 +232,8 @@ pub struct FactoryPolicy {
     pub custody: CustodyPolicy,
     /// Whether bundles go only to registered tenancies (always true).
     pub require_registered_tenancy: bool,
+    /// Which layouts a bundle carries.
+    pub release_layouts: LayoutAssignment,
 }
 
 /// `runtime.pin`
@@ -450,6 +452,7 @@ impl Controls {
                 hot_key_rotate_before: self.dur(&p("custody.hotKey.rotateBefore")),
             },
             require_registered_tenancy: self.bool_(&p("release.requireRegisteredTenancy")),
+            release_layouts: self.choice(&p("release.layouts"), LayoutAssignment::parse),
         }
     }
 

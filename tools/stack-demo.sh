@@ -21,7 +21,7 @@ W=/tmp/demo
 export HOME="${HOME:-/tmp/home}"
 export FIELDSEAL_ADAPTERS=files
 # The CLI's registry of published artefacts persists in the clistate volume, which makes
-# publishing idempotent (CLI-006) and lets `bundle build` find the publications.
+# publishing idempotent (CLI-006) and lets the factory's artefact registry (read-only) see the publications.
 export FIELDSEAL_STATE_DIR=/clistate
 export FIELDSEAL_TRANSLOG_URL="${FIELDSEAL_TRANSLOG_URL:-http://translog:8080}"
 export FIELDSEAL_LOG_ORIGIN="${FIELDSEAL_LOG_ORIGIN:-fieldseal.local/log}"
@@ -116,7 +116,7 @@ publish_all() {
   cat > "$d/deployment-policy.yaml" <<'YAML'
 apiVersion: fieldseal.dev/v1alpha1
 kind: Policy
-metadata: { name: local-stack-publishing, version: 1.0.0 }
+metadata: { name: deployment-policy, version: 1.0.0 }
 spec:
   schemaVersion: 1.0.0
   layer: { scope: deployment }
@@ -204,20 +204,31 @@ await_certificate() {
   note "tenancy certificate received (/device/tenancy.certificate)"
 }
 
-# 4. A bundle built with the stack's authority for this device.
+# 4. The device fetches the bundle the factory built for it.
 bundle() {
-  stage "4. A bundle sealed to the registered device, built with the stack's authority and verified as a device verifies it"
-  rm -rf "$W/bundle"
-  run bundle build --stack --device-dir /device --trust-bundle "$TB" --custody /authority/online \
-    --publication "/published/$SURVEY.published" --policy-publication /published/deployment-policy.published \
-    --roster "$EX/rosters/cohort-a.yaml" --roster "$EX/rosters/village-a.yaml" --tenancy-dir /factory-state --state /clistate \
-    --issued-dir /published/rosters --out-dir "$W/bundle" --allow-unattested
-  local fsbs=("$W"/bundle/*.fsb) fsb
-  fsb="${fsbs[0]}"
-  local vb; vb="$(capture bundle verify "$fsb" --stack --trust "$W/bundle/trust-bundle.cbor" --device-file "$W/bundle/device.txt" --now $(( $(date +%s) * 1000 + 60000 )))"
-  BUNDLE_FILE="$fsb"
-  rm -rf /device/bundle && mkdir -p /device/bundle && cp "$W"/bundle/* /device/bundle/
-  note "bundle $(basename "$fsb"): $(printf '%s' "$vb" | head -1 | sed 's/^[^:]*: //')"
+  stage "4. The device fetches its bundle from the factory (GET /v1/bundle, proof of possession)"
+  rm -rf /device/fetched && mkdir -p /device/fetched
+  # The factory builds a bundle when the device registers and when a publication appears, which it
+  # sees within the scan interval, so the first answer may be `no-bundle`: ask again for a minute.
+  local out status deadline=$(( $(date +%s) + 60 ))
+  while :; do
+    printf '+ fieldseal bundle fetch --device-dir /device --factory-url %s --trust-bundle %s --out /device/fetched/\n' "$FIELDSEAL_FACTORY_URL" "$TB" >&2
+    status=0
+    out="$(fieldseal bundle fetch --device-dir /device --factory-url "$FIELDSEAL_FACTORY_URL" --trust-bundle "$TB" --out /device/fetched/ 2>&1)" || status=$?
+    printf '%s\n' "$out" >&2
+    [ "$status" -eq 0 ] && break
+    if [ "$status" -eq 1 ] && printf '%s' "$out" | grep -q 'no-bundle' && [ "$(date +%s)" -lt "$deadline" ]; then
+      echo "no bundle built yet; asking again in 2 s" >&2
+      sleep 2
+      continue
+    fi
+    echo "the factory did not deliver a bundle (exit $status)" >&2
+    exit 1
+  done
+  local fsbs=(/device/fetched/*.fsb)
+  BUNDLE_FILE="${fsbs[0]}"
+  [ -s "$BUNDLE_FILE" ] || { echo "no bundle file in /device/fetched" >&2; exit 1; }
+  note "bundle $(basename "$BUNDLE_FILE") fetched from the factory ($(wc -c < "$BUNDLE_FILE") bytes); the device verifies it when it imports it"
 }
 
 # 5. The registered device captures its own records and exports them.
@@ -302,7 +313,7 @@ resume() {
 # the device and clistate volumes between steps, files for you in deploy/local/.out (/out).
 OUT=/out
 need_device() { [ -s /device/tenancy ] || { echo "no registered device yet: run \`just enrol\` (or \`just register <token>\`) first" >&2; exit 1; }; TENANCY="$(tr -d '[:space:]' < /device/tenancy)"; }
-need_bundle() { local fsbs=(/device/bundle/*.fsb); [ -s "${fsbs[0]}" ] || { echo "no bundle yet: run \`just bundle\` first" >&2; exit 1; }; BUNDLE_FILE="${fsbs[0]}"; }
+need_bundle() { local fsbs=(/device/fetched/*.fsb); [ -s "${fsbs[0]}" ] || { echo "no bundle yet: run \`just bundle\` first" >&2; exit 1; }; BUNDLE_FILE="${fsbs[0]}"; }
 
 step_authority() {
   stage "The authority: root, purpose keys and the trust bundle the stack's init created"

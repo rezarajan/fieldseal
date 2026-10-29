@@ -1,5 +1,5 @@
 # The deployment-layer policy of the sample local deployment: schema defaults plus one
-# registration control, so the generated policy table shows a control set by a layer.
+# registration control and one release control, so the generated policy table shows a control set by a layer.
 apiVersion: fieldseal.dev/v1alpha1
 kind: Policy
 metadata:
@@ -12,3 +12,5 @@ spec:
   factory:
     registration:
       maxDevicesPerAccount: 2
+    release:
+      layouts: bound

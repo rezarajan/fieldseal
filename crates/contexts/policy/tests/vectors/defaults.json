@@ -38,6 +38,7 @@
     "factory.registration.requirePhishingResistantAuth": "true",
     "factory.registration.serialCheck": "optional",
     "factory.registration.tokenTtl": "10m",
+    "factory.release.layouts": "bound",
     "factory.release.requireRegisteredTenancy": "true",
     "intake.consent.autoAcceptWithEvidence": "true",
     "intake.consent.excludePendingFromAnalysis": "true",

@@ -289,6 +289,7 @@ pub fn memory_bindings() -> Vec<Binding> {
         b!("registration", "Notifier", "MemoryNotifier"),
         b!("distribution", "RosterSource", "MemoryRosterSource"),
         b!("distribution", "AnchorSource", "MemoryAnchorSource"),
+        b!("distribution", "AnchorSource", "ClockAnchorSource"),
         b!("distribution", "RuntimeProfiles", "MemoryRuntimeProfiles"),
         b!("distribution", "AgreementKey", "SoftwareAgreementKey"),
         b!("collection", "BundleOpener", "FileBundleOpener"),

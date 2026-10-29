@@ -36,12 +36,20 @@ use fieldseal_publishing::domain::ArtefactKind;
 use fieldseal_trust::domain::{TrustBundle, TrustStore};
 
 use crate::args::Args;
+use crate::clients::{BundleReply, connect_factory, report};
+use crate::custody::OsRandom;
+use crate::device_dir::DeviceDir;
 use crate::json;
+use crate::messages::msg;
+use crate::outcome::{Outcome, exit};
+use crate::support::{Res, fail, now, setting, usage};
+use fieldseal_trust::ports::RandomSource;
 
 const USAGE: &str = "usage: fieldseal bundle build --instrument <file> (--roster <file> | --practice) --out-dir <dir> [--layout <file>]... [--device <label> | --device-dir <dir>] [--seed <n>] [--time <ms>] [--generation <n>] [--salt <64 hex>] [--allow-unattested] [--json]\n\
      \x20      fieldseal bundle verify <file> --trust <file> --device-file <file> [--now <ms>] [--json]\n\
      \x20      fieldseal bundle inspect <file> [--trust <file>] [--now <ms>] [--json]\n\
-     \x20      fieldseal bundle open <file> --key <handle> --trust <file> [--tenancy <hex>] [--now <ms>] [--reveal --out <file>] [--json]";
+     \x20      fieldseal bundle open <file> --key <handle> --trust <file> [--tenancy <hex>] [--now <ms>] [--reveal --out <file>] [--json]\n\
+     \x20      fieldseal bundle fetch --device-dir <dir> [--factory-url <url>] [--trust-bundle <file>] [--held <seq>] [--at <time>] --out <path> [--json]";
 
 fn text(s: &str) -> Value {
     Value::Text(s.to_owned())
@@ -87,8 +95,12 @@ pub fn run(args: &[String]) -> ExitCode {
         eprintln!("{USAGE}");
         return ExitCode::from(2);
     };
+    // `fetch` reports through an `Outcome` like the registration verbs, so it has its own exit codes.
+    if sub == "fetch" {
+        return ExitCode::from(crate::support::run_command("bundle fetch", &args[2..], &["--device-dir", "--factory-url", "--trust-bundle", "--held", "--out", "--at"], &[], fetch));
+    }
     let (valued, switches): (&[&str], &[&str]) = match sub.as_str() {
-        "build" => (&["--instrument", "--layout", "--roster", "--out-dir", "--seed", "--time", "--generation", "--salt", "--device", "--device-dir", "--tenancy", "--trust-bundle", "--custody", "--publication", "--tenancy-dir", "--state", "--issued-dir", "--policy-publication"], &["--practice", "--allow-unattested", "--stack"]),
+        "build" => (&["--instrument", "--layout", "--roster", "--out-dir", "--seed", "--time", "--generation", "--salt", "--device", "--device-dir"], &["--practice", "--allow-unattested"]),
         "verify" => (&["--trust", "--device-file", "--now"], &["--stack"]),
         "inspect" => (&["--trust", "--now"], &[]),
         "open" => (&["--key", "--trust", "--tenancy", "--now", "--out"], &["--reveal"]),
@@ -117,6 +129,91 @@ pub fn run(args: &[String]) -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+// ---- fetch ------------------------------------------------------------------------------------
+
+/// `bundle fetch` (CLI-049): asks the factory for the device's latest bundle with a
+/// proof-of-possession token made by the device's signing key, and stores it whole. With
+/// `--held` equal to the latest the factory answers that it is current and nothing is written.
+fn fetch(args: &Args, out: &mut Outcome) -> Res {
+    let dir = DeviceDir::new(args.value("--device-dir").ok_or_else(|| usage("missing-flag", &[("command", "bundle fetch"), ("flag", "--device-dir")]))?);
+    let target = args.value("--out").ok_or_else(|| usage("missing-flag", &[("command", "bundle fetch"), ("flag", "--out")]))?;
+    let held = args.value("--held").map(|v| crate::support::parse_uint(v).ok_or_else(|| usage("bad-number", &[("flag", "--held"), ("value", v)]))).transpose()?;
+    let at = now(args)?;
+    let Some(device) = dir.software_device() else {
+        fail(out, exit::NOT_FOUND, "device-not-registered", &[("dir", &dir.path().to_string_lossy())]);
+        return Ok(());
+    };
+    let Some(url) = setting(args, "--factory-url", "FIELDSEAL_FACTORY_URL") else {
+        fail(out, exit::CONFIG, "no-factory-url", &[]);
+        return Ok(());
+    };
+    let client = match connect_factory(&url) {
+        Ok(c) => c,
+        Err(e) => {
+            report(out, &url, &e);
+            return Ok(());
+        }
+    };
+    // The token names the request URL without its query: `held` is not signed (WIRE-171).
+    let mut jti = [0u8; 16];
+    OsRandom.fill(&mut jti);
+    let endpoint = format!("{}/v1/bundle", url.trim_end_matches('/'));
+    let header = device.pop_token(device.tenancy(), "GET", &endpoint, AuthorityTime(at.0), jti, None).to_header();
+    let (bytes, sequence, file_name) = match client.bundle(&header, held) {
+        Ok(BundleReply::Bundle { bytes, sequence, file_name }) => (bytes, sequence, file_name),
+        Ok(BundleReply::Current) => {
+            out.lines.push(msg("bundle-current", &[]));
+            out.set("status", Value::Text("current".into()));
+            if let Some(h) = held {
+                out.set("sequence", int(h));
+            }
+            return Ok(());
+        }
+        Err(e) => {
+            report(out, &url, &e);
+            return Ok(());
+        }
+    };
+    // With a trust bundle, check the factory's signature as far as a device can without opening
+    // the roster (DIS-021); a bundle that fails is not stored.
+    let verified = setting(args, "--trust-bundle", "FIELDSEAL_TRUST_BUNDLE").is_some();
+    if verified {
+        let Some(trust) = crate::trust_cmd::load_bundle(args, out) else { return Ok(()) };
+        let checked = BundleFile::decode(&bytes, MAX_BUNDLE_FILE)
+            .map_err(|e| e.to_string())
+            .and_then(|f| TrustStore::new(&trust).verify_signature(&f.signer, &f.chain, &tags::BUNDLE, &f.structure(), &f.sig, at).map(drop).map_err(|e| e.to_string()));
+        if let Err(e) = checked {
+            out.raw_finding("DIS-021", "error", "(bundle)", "", &e);
+            return Ok(());
+        }
+    }
+    out.set("signatureVerified", Value::Bool(verified));
+    let path = if target.ends_with('/') || Path::new(target).is_dir() {
+        let Some(name) = file_name else {
+            fail(out, exit::FAILED, "bundle-no-name", &[("url", &url)]);
+            return Ok(());
+        };
+        Path::new(target).join(name)
+    } else {
+        Path::new(target).to_path_buf()
+    };
+    let shown = path.to_string_lossy().into_owned();
+    let stored = path.parent().filter(|p| !p.as_os_str().is_empty()).map_or(Ok(()), std::fs::create_dir_all).and_then(|()| fieldseal_adapters_file::atomic::write_atomic(&path, &bytes));
+    if let Err(e) = stored {
+        fail(out, exit::CONFIG, "write-failed", &[("file", &shown), ("reason", &e.to_string())]);
+        return Ok(());
+    }
+    out.lines.push(msg("bundle-fetched", &[("sequence", &sequence.to_string()), ("bytes", &bytes.len().to_string()), ("url", &url), ("file", &shown)]));
+    if !verified {
+        out.lines.push(msg("bundle-unchecked", &[]));
+    }
+    out.set("status", Value::Text("stored".into()));
+    out.set("sequence", int(sequence));
+    out.set("file", Value::Text(shown));
+    out.set("bytes", int(bytes.len() as u64));
+    Ok(())
 }
 
 // ---- the roster file --------------------------------------------------------------------------
@@ -184,9 +281,6 @@ pub(crate) fn parse_roster(value: Value, generation: u32) -> Result<Roster, Stri
 // ---- build ------------------------------------------------------------------------------------
 
 fn build(args: &Args) -> Result<u8, String> {
-    if args.has("--stack") {
-        return crate::bundle_stack::build(args, |path| parse_roster(load_document(path)?, 1).map_err(|e| format!("{path}: {e}")));
-    }
     let instrument_path = args.value("--instrument").ok_or("bundle build needs --instrument <file>")?;
     let out_dir = args.value("--out-dir").ok_or("bundle build needs --out-dir <dir>")?;
     let practice = args.has("--practice");
@@ -348,7 +442,7 @@ fn verify(args: &Args) -> Result<u8, String> {
     publishing.allowed_builders = vec!["https://ci.example.org/builders/fieldseal-demo".into()];
     publishing.allowed_sources = vec!["https://git.example.org/authority/artefacts".into()];
     if args.has("--stack") {
-        publishing = crate::bundle_stack::publishing_policy();
+        publishing = crate::policy_support::publishing_policy();
     }
     let profile = RuntimeProfile { instrument_schema: DEMO_SCHEMA, localisation_reference: None };
     let state = ImportState { tenancy: device.tenancy, now, held: HeldState::default() };

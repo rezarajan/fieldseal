@@ -401,8 +401,8 @@ impl Notifier for MemoryNotifier {
 // unattested.
 
 /// A one-person authority with a root, the two `registration` keys (P-256 signing,
-/// X25519 sealing), a `record` key for one collection period, and a trust bundle listing
-/// them. All keys are generated in a [`MemoryKeyCustody`].
+/// X25519 sealing), a `record` key for one collection period, the `factory` key that signs
+/// bundles, the `receipt` key that signs time tokens, and a trust bundle listing them. All keys are generated in a [`MemoryKeyCustody`].
 pub struct DevAuthority<R: RandomSource> {
     /// The custody holding every key.
     pub custody: MemoryKeyCustody<R>,
@@ -414,6 +414,10 @@ pub struct DevAuthority<R: RandomSource> {
     pub sealing: KeyCertificate,
     /// The collection period's record-key certificate.
     pub record: KeyCertificate,
+    /// The `factory` key's certificate: it signs bundles.
+    pub factory: KeyCertificate,
+    /// The `receipt` key's certificate: it signs the time tokens bundles carry as anchors.
+    pub receipt: KeyCertificate,
     /// The trust bundle devices are provisioned with.
     pub bundle: TrustBundle,
 }
@@ -437,17 +441,21 @@ pub fn dev_authority<R: RandomSource>(random: R, now: AuthorityTime, app_ids: &[
     };
     let authority = Authority::new(&custody, "dev-ceremony");
     let root = authority.init_root(ceremony)?.root;
-    let terms = |serial| IssueTerms {
-        purpose: Purpose::Registration,
+    let terms = |purpose, serial| IssueTerms {
+        purpose,
         record: None,
         not_before: now,
         not_after: AuthorityTime(now.0 + year),
         serial,
     };
     let signing_key = custody.generate(KeyRole::Purpose(Purpose::Registration), KeyAlgorithm::P256)?;
-    let signing = authority.issue(&root, &authority.request(&signing_key.id, Some(Purpose::Registration))?, terms(1))?;
+    let signing = authority.issue(&root, &authority.request(&signing_key.id, Some(Purpose::Registration))?, terms(Purpose::Registration, 1))?;
     let sealing_key = custody.generate(KeyRole::Purpose(Purpose::Registration), KeyAlgorithm::X25519)?;
-    let sealing = authority.issue(&root, &authority.request(&sealing_key.id, Some(Purpose::Registration))?, terms(2))?;
+    let sealing = authority.issue(&root, &authority.request(&sealing_key.id, Some(Purpose::Registration))?, terms(Purpose::Registration, 2))?;
+    let factory_key = custody.generate(KeyRole::Purpose(Purpose::Factory), KeyAlgorithm::P256)?;
+    let factory = authority.issue(&root, &authority.request(&factory_key.id, Some(Purpose::Factory))?, terms(Purpose::Factory, 4))?;
+    let receipt_key = custody.generate(KeyRole::Purpose(Purpose::Receipt), KeyAlgorithm::P256)?;
+    let receipt = authority.issue(&root, &authority.request(&receipt_key.id, Some(Purpose::Receipt))?, terms(Purpose::Receipt, 5))?;
     let record_key = custody.generate(KeyRole::Purpose(Purpose::Record), KeyAlgorithm::X25519)?;
     let period = CollectionPeriod::new(
         CollectionPeriodId::new("development").expect("non-empty"),
@@ -466,7 +474,7 @@ pub fn dev_authority<R: RandomSource>(random: R, now: AuthorityTime, app_ids: &[
         version: BundleVersion::parse("1.0.0")?,
         issued: now,
         roots: vec![root.clone()],
-        certificates: vec![signing.clone(), sealing.clone(), record.clone()],
+        certificates: vec![signing.clone(), sealing.clone(), record.clone(), factory.clone(), receipt.clone()],
         publishers: BTreeMap::new(),
         attestation_roots: BTreeMap::new(),
         runtime_builds: app_ids
@@ -481,7 +489,7 @@ pub fn dev_authority<R: RandomSource>(random: R, now: AuthorityTime, app_ids: &[
         revocations: vec![],
     };
     let bundle = authority.build_bundle(contents, &[&root], None)?;
-    Ok(DevAuthority { custody, root, signing, sealing, record, bundle })
+    Ok(DevAuthority { custody, root, signing, sealing, record, factory, receipt, bundle })
 }
 
 /// Software attestation evidence in the format [`crate::trust::SoftwareAttestationVerifier`]

@@ -116,7 +116,7 @@ impl Config {
         let production = match need("FIELDSEAL_ENVIRONMENT")?.as_str() {
             "production" => true,
             "development" | "staging" | "test" => false,
-            other => return Err(format!("FIELDSEAL_ENVIRONMENT={other}: use development, staging or production")),
+            other => return Err(format!("FIELDSEAL_ENVIRONMENT={other}: use development, staging, test or production")),
         };
         let addr = |k: &str, default: &str| -> Result<String, String> {
             let v = opt(k)?.unwrap_or_else(|| default.to_owned());

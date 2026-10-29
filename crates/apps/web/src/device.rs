@@ -2,8 +2,8 @@
 //! worker) with PIN tenancy, registration, bundle verification, capture, review, export,
 //! upload, receipts and clear. The page shows one step at a time (Session, Capture, Review and
 //! seal, Export) and one screen of it, each with a single primary action. This module serves
-//! the page and the few things the device fetches: its provisioning, a bundle built by the
-//! demo authority, and a blank frame.
+//! the page and the few things the device fetches: its provisioning and a blank frame. The
+//! device gets its bundle from the factory, through the proxy.
 
 use crate::http::{Request, Response};
 use crate::state::AppState;
@@ -14,7 +14,6 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
     match (req.method.as_str(), req.path.as_str()) {
         ("GET", "/device") => Some(page(state)),
         ("GET", "/device/provisioning") => Some(provisioning(state)),
-        ("GET", "/device/bundle") => Some(bundle(state, req)),
         // A blank, header-free document the page writes the rendered instrument into, so the
         // instrument's own content security policy (hashes of its inline script and style)
         // applies to it alone.
@@ -27,7 +26,7 @@ fn provisioning(state: &AppState) -> Response {
     if let Some(d) = state.demo {
         return Response::json(200, d.0.provisioning_json());
     }
-    if state.stack.is_some() {
+    if state.stack {
         return match crate::stack::provisioning(state) {
             Ok(json) => Response::json(200, json),
             Err(e) => Response::json(500, format!("{{\"error\":{}}}", fieldseal_adapters_web::json::quote(&e))),
@@ -40,46 +39,17 @@ fn provisioning(state: &AppState) -> Response {
     }
 }
 
-/// `GET /device/bundle?tenancy=<hex>[&instrument=<name>]`: with the demo authority, the bundle
-/// the real builder seals to the registered tenancy's agreement key.
-fn bundle(state: &AppState, req: &Request) -> Response {
-    if let Some(cli) = &state.stack {
-        let (Some(tenancy), Some(survey)) = (req.param("tenancy"), req.param("instrument")) else { return Response::text(400, "tenancy and instrument are required") };
-        return match crate::stack::bundle(state, cli, tenancy, survey) {
-            Ok(bytes) => Response::new(200, "application/octet-stream", bytes).with("X-Bundle-Development-Allowance", "true"),
-            Err(e) if e.contains("does not know this tenancy") => Response::text(404, "no such tenancy: the factory does not know this device"),
-            Err(e) => Response::text(422, &e),
-        };
-    }
-    let Some(d) = state.demo else { return Response::text(404, "Bundles come from the demo authority here; with another authority, pick the bundle file instead.") };
-    let Some(tenancy) = req.param("tenancy") else { return Response::text(400, "tenancy is required") };
-    let built = match req.param("instrument") {
-        Some(name) => d.0.build_bundle_for(tenancy, &[name]),
-        None => d.0.build_bundle_for(tenancy, &[d.0.examples().first().map(String::as_str).unwrap_or("household-water-access")]),
-    };
-    match built {
-        Ok(r) => Response::new(200, "application/octet-stream", r.bytes)
-            .with("X-Bundle-Development-Allowance", if r.development_allowance { "true" } else { "false" })
-            .with("X-Bundle-Instruments", &r.instruments.to_string())
-            .with("X-Bundle-Layouts", &r.layouts.to_string())
-            .with("X-Bundle-Rosters", &r.rosters.to_string()),
-        Err(e) => Response::text(409, e),
-    }
-}
-
 fn page(state: &AppState) -> Response {
     let mode = match (state.demo.is_some(), state.provisioning_file.is_some()) {
-        _ if state.stack.is_some() => "stack",
+        _ if state.stack => "stack",
         (true, _) => "demo",
         (false, true) => "file",
         _ => "none",
     };
     let wasm = if state.wasm_available() { "" } else { "<p class=\"notice warn\">The WebAssembly bundle is not available (set FIELDSEAL_WEB_WASM_DIR); the device cannot run.</p>" };
-    let instruments = if state.stack.is_some() { crate::stack::surveys(state).join(",") } else { state.demo.map(|d| d.0.examples().join(",")).unwrap_or_default() };
     let body = DEVICE_BODY
         .replace("{{wasm}}", wasm)
         .replace("{{mode}}", mode)
-        .replace("{{instruments}}", &crate::ui::escape(&instruments))
         .replace("{{factory_label}}", &crate::ui::escape(state.factory_url.as_deref().unwrap_or("(no factory configured)")))
         .replace("{{factory}}", &crate::ui::escape(state.factory_url.as_deref().unwrap_or("")));
     let body = format!("<link rel=\"stylesheet\" href=\"/assets/device.css\">\n{body}");
@@ -90,7 +60,7 @@ fn page(state: &AppState) -> Response {
 /// container per screen (`data-screen`). The script shows exactly one screen of one step at a
 /// time, and every screen carries at most one primary action (`btn-primary`): Hick's law, and
 /// the tests in `tests/device_page.rs` check it from this text.
-const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}}" data-instruments="{{instruments}}" data-factory="{{factory}}">
+const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}}" data-factory="{{factory}}">
 {{wasm}}
 <div class="devbar">
 <ol id="pills" class="pills" aria-label="Steps">
@@ -147,10 +117,10 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 </form>
 
 <div data-screen="bundle" id="screen-bundle" class="screen center" hidden>
-<h1>Choose a survey</h1>
-<p class="lead">This device can carry any published survey. Pick one: its bundle (the survey and the people to visit) is fetched and verified here, step by step, before anything in it is used. You can come back and load another.</p>
-<fieldset id="instrument-pick" class="choice-list survey-pick" hidden><legend class="visually-hidden">Surveys</legend></fieldset>
-<button type="button" id="fetch-bundle" class="btn btn-primary" hidden disabled>Load the survey</button>
+<h1>Your bundle</h1>
+<p class="lead">The factory prepares a bundle for this device: the surveys it was assigned and the people to visit. The device asks for it, then verifies it here, step by step, before anything in it is used. Come back to check for a newer one.</p>
+<p id="bundle-status" class="lead" role="status"></p>
+<button type="button" id="fetch-bundle" class="btn btn-primary" hidden>Get my bundle</button>
 <label for="bundle-file" id="open-bundle" class="btn btn-secondary">or open a bundle file</label>
 <input id="bundle-file" type="file" class="visually-hidden">
 <p id="bundle-error" class="msg bad" role="alert"></p>
@@ -173,7 +143,7 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 <p id="capture-error" class="msg bad" role="alert"></p>
 <button type="button" id="start-next" class="btn btn-primary">Start</button>
 <button type="button" id="to-export" class="btn btn-secondary">Hand over the records</button>
-<button type="button" id="another-survey" class="btn btn-secondary">Load another survey</button>
+<button type="button" id="another-survey" class="btn btn-secondary">Check for a newer bundle</button>
 <button type="button" class="btn btn-danger reset-device">Reset this device</button>
 </aside>
 <div id="subjects" class="subjects"></div>

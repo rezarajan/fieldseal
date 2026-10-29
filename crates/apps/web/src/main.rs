@@ -17,9 +17,10 @@
 //! | `FIELDSEAL_WEB_PUBLIC_URL` | This app's own public URL (optional) |
 //! | `FIELDSEAL_WEB_DEMO_AUTHORITY` | `true` starts an embedded demo authority (practice factory with a dev sign-in, intake upload endpoint, transparency log) over in-memory ports with development keys, so the app works with no other service; non-production only (optional, default `false`) |
 //! | `FIELDSEAL_WEB_DEMO_FACTORY_BIND`, `FIELDSEAL_WEB_DEMO_UPLOAD_BIND` | Where the embedded factory and upload endpoint listen (defaults `127.0.0.1:8091`, `127.0.0.1:8092`); with the demo authority these also become `FIELDSEAL_FACTORY_URL` and `FIELDSEAL_UPLOAD_URL` |
-//! | `FIELDSEAL_WEB_STACK` | `true`: run as a service of the compose stack: provisioning from `/authority/trust-bundle.bundle`, the surveys published in `/published`, bundles built by the stack's authority with `FIELDSEAL_WEB_CLI` (default `fieldseal`) from the factory's records in `/factory-state` |
+//! | `FIELDSEAL_WEB_STACK` | `true`: run as a service of the compose stack: provisioning from `/authority/trust-bundle.bundle` and the surveys published in `/published`; the device gets its bundle from the factory |
 //! | `FIELDSEAL_WEB_AUTHORITY_DIR` | In stack mode, the authority's directory (default `/authority`); `just web` points it at `deploy/local/.state/dev-web/authority` |
-//! | `FIELDSEAL_WEB_PUBLISHED_DIR` | In stack mode, the directory of the `*.published` files (default `/published`) |
+//! | `FIELDSEAL_WEB_PUBLISHED_DIR` | In stack mode, the directory of the `*.published` files (default `/published`, mounted read only); a survey is listed when the log (`FIELDSEAL_LOG_URL`) holds the entry its file carries |
+//! | `FIELDSEAL_WEB_ALLOWED_BUILDERS`, `FIELDSEAL_WEB_ALLOWED_SOURCES` | In stack mode, the comma-separated builders and sources the device's publishing policy accepts, copied from `FIELDSEAL_INTAKE_ALLOWED_BUILDERS` and `_ALLOWED_SOURCES` of the intake environment |
 //! | `FIELDSEAL_WEB_REGISTRY_DIR` | In stack mode, the CLI's artefact registry (`<state>/registry`, `*.publication` files) that the Publishing page lists (default none) |
 //! | `FIELDSEAL_WEB_PROVISIONING_FILE` | A provisioning JSON for the Device page against a real authority: `trustBundle` (base64url), `allowedBuilders`, `allowedSources`, `provisionalRecordKey`, `buildAnchor`, `authority` (optional) |
 
@@ -35,7 +36,7 @@ use fieldseal_web::state::AppState;
 /// The number of worker threads taking requests.
 const WORKERS: usize = 4;
 
-const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_ROSTER_DIR     the factory's roster store, read only (optional; unset: rosters/ of the examples directory)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n";
+const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_ROSTER_DIR     the factory's roster store, read only (optional; unset: rosters/ of the examples directory)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n  FIELDSEAL_WEB_ALLOWED_BUILDERS, FIELDSEAL_WEB_ALLOWED_SOURCES  stack mode: comma-separated builders and sources the device's publishing policy accepts\n";
 
 /// The app's configuration, from the environment.
 #[derive(Debug, PartialEq, Eq)]
@@ -53,10 +54,12 @@ struct Config {
     demo_factory_bind: String,
     demo_upload_bind: String,
     provisioning_file: Option<PathBuf>,
-    stack: Option<String>,
+    stack: bool,
     authority_dir: Option<PathBuf>,
     published_dir: Option<PathBuf>,
     registry_dir: Option<PathBuf>,
+    allowed_builders: Vec<String>,
+    allowed_sources: Vec<String>,
 }
 
 /// Reads `survey=cohort,...`.
@@ -69,6 +72,11 @@ fn survey_cohorts(list: Option<&str>) -> Result<BTreeMap<String, String>, String
         }
     }
     Ok(map)
+}
+
+/// Reads `a,b,...`.
+fn list(text: Option<String>) -> Vec<String> {
+    text.unwrap_or_default().split(',').map(str::trim).filter(|v| !v.is_empty()).map(str::to_owned).collect()
 }
 
 impl Config {
@@ -104,10 +112,12 @@ impl Config {
             demo_factory_bind: opt("FIELDSEAL_WEB_DEMO_FACTORY_BIND").unwrap_or_else(|| "127.0.0.1:8091".to_owned()),
             demo_upload_bind: opt("FIELDSEAL_WEB_DEMO_UPLOAD_BIND").unwrap_or_else(|| "127.0.0.1:8092".to_owned()),
             provisioning_file: opt("FIELDSEAL_WEB_PROVISIONING_FILE").map(PathBuf::from),
-            stack: opt("FIELDSEAL_WEB_STACK").is_some_and(|v| v == "true").then(|| opt("FIELDSEAL_WEB_CLI").unwrap_or_else(|| "fieldseal".to_owned())),
+            stack: opt("FIELDSEAL_WEB_STACK").is_some_and(|v| v == "true"),
             authority_dir: opt("FIELDSEAL_WEB_AUTHORITY_DIR").map(PathBuf::from),
             published_dir: opt("FIELDSEAL_WEB_PUBLISHED_DIR").map(PathBuf::from),
             registry_dir: opt("FIELDSEAL_WEB_REGISTRY_DIR").map(PathBuf::from),
+            allowed_builders: list(opt("FIELDSEAL_WEB_ALLOWED_BUILDERS")),
+            allowed_sources: list(opt("FIELDSEAL_WEB_ALLOWED_SOURCES")),
         })
     }
 }
@@ -162,6 +172,8 @@ fn run(config: Config) -> Result<(), String> {
         authority_dir: config.authority_dir,
         published_dir: config.published_dir,
         registry_dir: config.registry_dir,
+        allowed_builders: config.allowed_builders,
+        allowed_sources: config.allowed_sources,
         ..AppState::default()
     });
     eprintln!("{{\"event\":\"listening\",\"addr\":\"{addr}\",\"wasm\":{}}}", state.wasm_available());

@@ -151,6 +151,7 @@ Other specs refer to sections of this one by topic name, written **WIRE §topic*
 - **WIRE-095** A roster MUST carry `cohort`, `version`, `generation` and subjects `{ordinal, subject, display, attributes, consent, prior_status?}`, where `display` is the text shown to the collector, `attributes` carries values the instrument declares as roster-supplied, and `consent` is `granted`, `refused` or `unknown`.
 
 - **WIRE-198** The `IssueRoster` request body is the roster issue form, canonical CBOR (WIRE-196): `{cohort, version, subjects}`, each subject `{ordinal?, subject, display, consent?, prior_status?, fields?}` with `subject` as text and `fields` in place of WIRE-095's `attributes`. It carries no `generation`: a generation belongs to one cohort on one tenancy (DIS-014) and is assigned when the cohort reaches a tenancy. A body that carries `generation` or any unknown key MUST be refused as `roster-invalid`. The factory stores the roster in the WIRE-095 form with a placeholder generation that bundle building replaces.
+- **WIRE-199** (provisional) The answer to `GET /entries/{from}/{to}` of the Fieldseal log MUST be, for each entry in order, a 4-byte big-endian length and the canonical `LogEntry` bytes (WIRE-191), at most 256 entries. Clients MUST refuse an entry that is not canonical and trailing bytes (PUB-110).
 
 ### 5.8 Export file
 
@@ -206,7 +207,7 @@ Other specs refer to sections of this one by topic name, written **WIRE §topic*
 ### 5.13 Proof-of-possession API tokens
 
 - **WIRE-170** After registration, every request a runtime makes to the factory or the upload endpoint MUST carry a proof-of-possession token: `{"v": 1, "tenancy": bstr(32), "method": tstr, "url": tstr, "iat": uint, "jti": bstr(16), "ath": bstr(32)?, "sig": Signature}`, where `iat` is in milliseconds (WIRE-008), signed (without `sig`) over tag `fieldseal.dev/api-pop/v1` by the tenancy's current signing key. `ath` is the SHA-256 of the access token when one is used.
-- **WIRE-171** The server MUST reject a token whose `method` or `url` doesn't match the request, whose `iat` is more than 300 seconds from its own clock, or whose `jti` it has seen within that window.
+- **WIRE-171** The server MUST reject a token whose `method` or `url` doesn't match the request, whose `iat` is more than 300 seconds from its own clock, or whose `jti` it has seen within that window. The `url` of the token is the request URL without its query string: a server MUST NOT require the query to be signed and a client MUST NOT sign it. A query only narrows the answer (for example `held` on `GET /v1/bundle`); a proxy that rewrites it has the same effect as a dropped response, because the device verifies every answer before it uses it.
 - **WIRE-172** The token MUST be sent in the `Fieldseal-PoP` HTTP header as base64url of its canonical CBOR. The semantics follow DPoP (RFC 9449), with Fieldseal's signature format instead of JWS.
 
 - **WIRE-196** Service contracts ([ADR 0035](../../explanation/adr/0035-service-contracts-and-transports.md)) MUST carry every payload defined in this spec as opaque `bytes` holding its canonical CBOR, unchanged from the HTTP body. A transport MUST NOT re-encode, re-order or normalise those bytes, and signatures, hashes and content addresses MUST be computed and verified over them as sent. Protobuf is only the envelope. gRPC is built in slice 2.

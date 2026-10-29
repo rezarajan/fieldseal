@@ -41,9 +41,9 @@ pub struct AppState {
     /// A provisioning document (see the Device page) for use against another authority.
     pub provisioning_file: Option<PathBuf>,
     /// Stack mode (`FIELDSEAL_WEB_STACK=true`): a service of the compose stack, using its
-    /// authority (`/authority`), its published artefacts (`/published`), the factory's records
-    /// (`/factory-state`) and the `fieldseal` CLI to build bundles (`FIELDSEAL_WEB_CLI`).
-    pub stack: Option<String>,
+    /// authority (`/authority`) and its published artefacts (`/published`). The device gets its
+    /// bundle from the factory.
+    pub stack: bool,
     /// Stack mode: the authority's directory (`FIELDSEAL_WEB_AUTHORITY_DIR`, default `/authority`).
     pub authority_dir: Option<PathBuf>,
     /// Stack mode: the directory of the `*.published` files (`FIELDSEAL_WEB_PUBLISHED_DIR`,
@@ -52,6 +52,11 @@ pub struct AppState {
     /// Stack mode: the CLI's artefact registry, the directory of `*.publication` files that the
     /// Publishing page lists (`FIELDSEAL_WEB_REGISTRY_DIR`, default none).
     pub registry_dir: Option<PathBuf>,
+    /// The builders the device's publishing policy accepts (`FIELDSEAL_WEB_ALLOWED_BUILDERS`,
+    /// comma separated), copied from the intake app's configuration.
+    pub allowed_builders: Vec<String>,
+    /// The sources the device's publishing policy accepts (`FIELDSEAL_WEB_ALLOWED_SOURCES`).
+    pub allowed_sources: Vec<String>,
 }
 
 /// The demo authority, as a cheap copyable handle.

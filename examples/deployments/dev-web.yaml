@@ -23,7 +23,7 @@ spec:
     builds: { container: "localhost/fieldseal", runtime: "http://localhost:9002" }
   policies:
     layers:
-      - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+      - { ref: policy/deployment-default, digest: "sha256:78daf4a0c4ca30aec1aa86e6f7b868a86ed73f74bfde7c3c1a8c644024fc9266" }
   instruments:
     - { ref: instrument/school-meals-baseline, channel: development }
     - { ref: instrument/household-water-access, channel: development }
@@ -52,13 +52,25 @@ spec:
             trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle
         # The render writes FIELDSEAL_ALLOW_UNATTESTED=true for this adapter (REG-017, non-production only).
         AttestationVerifier: { adapter: software, config: {} }
-        PolicyEngine: { adapter: built-in, config: {} }
+        # The release policy (`deployment-policy`) is verified against these before any value is read
+        # from it. Outside development the factory takes `policyDigest` instead: the content address
+        # of the policy it trusts.
+        PolicyEngine:
+          adapter: built-in
+          config:
+            allowedBuilders: "https://ci.example.org/builders/fieldseal-publish"
+            allowedSources: "https://git.example.org/authority/artefacts"
         # Cohorts reach a tenancy through `fieldseal roster assign`, which the journal records.
         TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory } }
         # The artefact registry `just publish` writes (read here) and the roster store that
         # `fieldseal roster issue` writes through the factory. Both are development adapters.
-        ArtefactRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/cli/registry } }
+        # `scanIntervalS` lets the factory notice a publication within two seconds.
+        ArtefactRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/cli/registry, scanIntervalS: 2 } }
         RosterSource: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/rosters } }
+        # The bundles the factory builds and the rosters it issued (read by intake), and the
+        # runtime profiles, which live in the tenancy registry's directory.
+        BundleStore: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/bundles, issuedRostersDir: deploy/local/.state/dev-web/issued } }
+        RuntimeProfiles: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory } }
       scaling: { replicas: 1 }
     # `just web` runs the intake app natively. Its results reader signs in at the development IdP
     # as the factory does, with the client `fieldseal-intake`.
@@ -80,7 +92,7 @@ spec:
           adapter: file-dev
           config: { dir: deploy/local/.state/dev-web/authority/online, trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle }
         SubmissionStore: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/submissions } }
-        RosterHistory: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/published/rosters } }
+        RosterHistory: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/issued } }
         InstrumentSource: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/published } }
         DataPlatform: { adapter: landing-files, config: { dir: deploy/local/.state/dev-web/landing } }
         PolicyEngine:

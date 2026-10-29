@@ -43,7 +43,7 @@ fn web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory() {
     // An unreachable log: the artefacts are listed above whatever the log answers.
     let state = AppState {
         examples_dir: examples(),
-        stack: Some("fieldseal".into()),
+        stack: true,
         log_url: Some("http://127.0.0.1:1".into()),
         registry_dir: Some(registry.clone()),
         ..AppState::default()

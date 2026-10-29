@@ -8,6 +8,7 @@
 //! | `POST /v1/registrations` | none (the request is sealed and proves possession) | `SubmitRequest`, `RollKey` |
 //! | `GET /v1/registrations/{tenancy}` | none; returns the state only | status polling |
 //! | `GET /v1/certificate` | `Fieldseal-PoP` | `GetCertificate` (CBOR) |
+//! | `GET /v1/bundle?held=<n>` | `Fieldseal-PoP` | `FetchBundle` (the stored `FSB1` bytes) |
 //! | `POST /v1/api-token` | `Fieldseal-PoP` | `IssueApiToken` |
 //! | `POST /v1/posture/nonce`, `POST /v1/posture` | `Fieldseal-PoP` | `CheckPosture` |
 //!
@@ -24,13 +25,19 @@
 //! cookie, and the portal pages read no Bearer token. No roster body is logged.
 //!
 //! PoP-protected endpoints take the WIRE-170 token in the `Fieldseal-PoP` header and, when
-//! an access token is used, `Authorization: FieldsealPoP <base64url>`.
+//! an access token is used, `Authorization: FieldsealPoP <base64url>`. The token's `url` is
+//! the request URL without its query (WIRE-171): a query such as `held` only narrows the
+//! answer and is not signed.
+//!
+//! **Bundles.** `GET /v1/bundle` and the portal's `GET /devices/{device}/bundle.fsb` serve
+//! the bundle the factory has already stored ([`BundleRoutes`]). They never build one
+//! (DIS-084) and check the tenancy's state at every request (DIS-003).
 //!
 //! **Portal** (server-rendered HTML, no scripts): sign-in through the `IdentityProvider`
 //! port, tokens as text and QR (REG-007), pending requests with fingerprint words and
 //! indices (REG-021, REG-023), devices with mark-lost and retire (REG-043), request-file
-//! upload and certificate download for the air-gapped route (REG-053, REG-054). Every
-//! string comes from [`messages`]. Sessions are server-side, behind an `HttpOnly`,
+//! upload and certificate and bundle download for the air-gapped route (REG-053, REG-054,
+//! DIS-041). Every string comes from [`messages`]. Sessions are server-side, behind an `HttpOnly`,
 //! `SameSite=Lax` cookie; every form carries a CSRF token.
 //!
 //! Requests are handled one at a time ([`FactoryHttp::run`]); [`FactoryHttp::handle`] is
@@ -40,9 +47,10 @@ pub mod client;
 pub mod html;
 pub mod messages;
 
-use std::io::Read as _;
 use std::sync::Arc;
 
+use fieldseal_distribution::application::{BundleFetchResponse, DownloadBundle, FetchBundle};
+use fieldseal_distribution::domain::{BundleSeq, DistributionError, SealedBundle, file_name};
 use fieldseal_kernel::digest::lower_hex;
 use fieldseal_kernel::Value;
 use fieldseal_kernel::cbor;
@@ -55,6 +63,7 @@ use fieldseal_registration::ports::IdentityProvider;
 use serde_json::{Value as Json, json};
 
 pub use fieldseal_adapters_portal::{Request, Response, multipart_field, parse_form};
+use fieldseal_adapters_portal::front::{self, BodyLimits, Reply};
 use fieldseal_adapters_portal::{PortalSessions, SessionId, SessionView};
 
 use crate::html::{escape, page, qr_svg, words};
@@ -62,6 +71,10 @@ use crate::messages::{format as fmt, t};
 
 /// The largest request body accepted.
 pub const MAX_BODY: usize = 1024 * 1024;
+/// The largest bundle the factory builds and its client reads (Distribution open question 2:
+/// a lower limit than the 64 MiB of the wire). It is the answer limit of `GET /v1/bundle`,
+/// not the 1 MiB of the other calls.
+pub const BUNDLE_LIMIT: usize = 8 * 1024 * 1024;
 /// The session cookie's name.
 pub const SESSION_COOKIE: &str = "fs_session";
 
@@ -103,8 +116,9 @@ pub trait BearerVerifier {
     fn subject_of_account(&self, account: &AccountId) -> Option<String>;
 }
 
-/// Told which tenancies' bundles must be rebuilt after a journaled change. A no-op until the
-/// factory builds bundles (Phase 13).
+/// Told which tenancies' bundles must be rebuilt after a journaled change: an assignment, a
+/// roster issue or a registration. It only tells; the rebuild happens on the reconciler's own
+/// thread, so a request never waits for a build.
 pub type ReconcileNotify = Arc<dyn Fn(TenancyId) + Send + Sync>;
 
 /// A [`ReconcileNotify`] that does nothing.
@@ -144,6 +158,16 @@ struct OperatorApi<'a> {
     bearer: &'a dyn BearerVerifier,
     notify: ReconcileNotify,
     events: OperatorEvents,
+}
+
+/// The stored bundles the runtime and portal routes serve. The factory builds both from
+/// Distribution's `BundleDelivery`, which implements both traits (that name is taken).
+#[derive(Clone, Copy)]
+pub struct BundleRoutes<'a> {
+    /// `FetchBundle`, for `GET /v1/bundle`.
+    pub fetch: &'a dyn FetchBundle,
+    /// `DownloadBundle`, for the portal's `GET /devices/{device}/bundle.fsb`.
+    pub download: &'a dyn DownloadBundle,
 }
 
 /// The largest operator request body read (assignments are three short texts; rosters use
@@ -257,6 +281,55 @@ fn api_error(e: &RegistrationError) -> Response {
     Response::json(status_of(e), body)
 }
 
+/// How many bundle responses are written to clients at once. Each is written on its own
+/// thread, so that a client that stops reading cannot stall the serving thread; past this
+/// many the factory answers `503 unavailable` instead of starting another.
+pub const MAX_BUNDLE_WRITERS: usize = 32;
+
+/// One of the [`MAX_BUNDLE_WRITERS`] places; giving it back is the drop, so a writer that
+/// fails or panics still frees it.
+struct WriterSlot(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+
+impl WriterSlot {
+    /// A place, or `None` when all of them are taken.
+    fn take(count: &std::sync::Arc<std::sync::atomic::AtomicUsize>) -> Option<Self> {
+        use std::sync::atomic::Ordering;
+        if count.fetch_add(1, Ordering::SeqCst) >= MAX_BUNDLE_WRITERS {
+            count.fetch_sub(1, Ordering::SeqCst);
+            return None;
+        }
+        Some(Self(count.clone()))
+    }
+}
+
+impl Drop for WriterSlot {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+/// The response with `Cache-Control: no-store`: a bundle answer is never cached, whatever it says.
+fn no_store(response: Response) -> Response {
+    response.with("Cache-Control", "no-store".into())
+}
+
+/// `200` with the stored `FSB1` bytes, the sequence number and the DIS-023 file name.
+fn bundle_response(bundle: &SealedBundle) -> Response {
+    Response::new(200, "application/octet-stream", bundle.bytes.clone())
+        .with("Fieldseal-Bundle-Sequence", bundle.seq.0.to_string())
+        .with("Content-Disposition", format!("attachment; filename=\"{}\"", file_name(bundle.issued.0, bundle.seq.0)))
+}
+
+/// The answer to a bundle call that Distribution refused. Only the reasons of a withheld
+/// tenancy are sent: they are codes, never subject data.
+fn bundle_error(e: &DistributionError) -> Response {
+    match e {
+        DistributionError::NotRegistered => Response::json(403, json!({ "error": "not-registered" })),
+        DistributionError::Withheld(reasons) => Response::json(403, json!({ "error": "withheld", "reasons": reasons })),
+        _ => Response::json(503, json!({ "error": "unavailable" })),
+    }
+}
+
 /// The subject an operator sent for an account, which the bearer verifier strips from the
 /// account id it built (`{issuer}|{subject}`). A subject may hold `|` (Auth0 uses
 /// `auth0|123`), so the id is never split on one. The journal keeps only the account id; the
@@ -284,6 +357,20 @@ fn tenancy_json(t: &TenancyRecord) -> Json {
     })
 }
 
+/// The wire form of `response`, with the headers every answer carries.
+fn into_answer(response: Response) -> front::Answer {
+    let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);
+    for (k, v) in response.headers.iter().chain(&[
+        ("X-Content-Type-Options".to_owned(), "nosniff".to_owned()),
+        ("Referrer-Policy".to_owned(), "no-referrer".to_owned()),
+    ]) {
+        if let Ok(h) = tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()) {
+            out.add_header(h);
+        }
+    }
+    out
+}
+
 /// The HTTP adapter over one [`Factory`] and one [`IdentityProvider`].
 pub struct FactoryHttp<'a> {
     factory: &'a Factory<'a>,
@@ -291,13 +378,15 @@ pub struct FactoryHttp<'a> {
     config: HttpConfig,
     sessions: PortalSessions,
     operator: Option<OperatorApi<'a>>,
+    bundles: Option<BundleRoutes<'a>>,
+    registered: Option<ReconcileNotify>,
 }
 
 impl<'a> FactoryHttp<'a> {
     /// The adapter.
     pub fn new(factory: &'a Factory<'a>, idp: &'a dyn IdentityProvider, config: HttpConfig) -> Self {
         let sessions = PortalSessions::new(SESSION_COOKIE, config.secure_cookies(), config.session_ttl_ms);
-        Self { factory, idp, config, sessions, operator: None }
+        Self { factory, idp, config, sessions, operator: None, bundles: None, registered: None }
     }
 
     /// Serves the operator API: Bearer tokens are verified by `bearer`, `notify` is told
@@ -309,37 +398,67 @@ impl<'a> FactoryHttp<'a> {
         self
     }
 
-    /// Serves requests from `server` until it is closed.
+    /// Serves the stored bundle at `GET /v1/bundle` and in the portal. Without this both
+    /// answer `503 unavailable`.
+    #[must_use]
+    pub fn with_bundle_routes(mut self, routes: BundleRoutes<'a>) -> Self {
+        self.bundles = Some(routes);
+        self
+    }
+
+    /// Tells `notify` which tenancy has just registered (or rolled its key), so its bundle is
+    /// built without waiting for the next scan.
+    #[must_use]
+    pub fn with_registration_notify(mut self, notify: ReconcileNotify) -> Self {
+        self.registered = Some(notify);
+        self
+    }
+
+    /// Serves requests from `server` for as long as the process lives. The serving thread only runs
+    /// [`handle`](Self::handle) over a request whose body is complete and in memory: bodies are
+    /// read, and answers written, on threads of their own under the shared front end's limits
+    /// (SR-2), so a client that stalls or never reads holds nothing here.
     pub fn run(&self, server: &tiny_http::Server) {
-        for mut req in server.incoming_requests() {
-            let headers: std::collections::BTreeMap<String, String> =
-                req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
-            // The operator routes authorise before any of the body is read, so that only a
-            // verified operator can make the factory read it.
-            let head = Request::new(req.method().as_str(), req.url(), headers.clone(), Vec::new());
-            let refused = if Self::is_operator_route(&head) { self.operator(&head).err() } else { None };
-            let response = if let Some(refused) = refused {
-                refused
-            } else {
-                let mut body = Vec::new();
-                let too_big = req.as_reader().take(MAX_BODY as u64 + 1).read_to_end(&mut body).is_err() || body.len() > MAX_BODY;
-                if too_big {
-                    Response::json(413, json!({ "error": "too-large" }))
-                } else {
-                    self.handle(&Request::new(req.method().as_str(), req.url(), headers, body))
-                }
-            };
-            let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);
-            for (k, v) in response.headers.iter().chain(&[
-                ("X-Content-Type-Options".to_owned(), "nosniff".to_owned()),
-                ("Referrer-Policy".to_owned(), "no-referrer".to_owned()),
-            ]) {
-                if let Ok(h) = tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()) {
-                    out.add_header(h);
+        self.run_until(server, &|| false, BodyLimits::default());
+    }
+
+    /// [`run`](Self::run) that returns once `stopped` says so, with the body limits given.
+    pub fn run_until(&self, server: &tiny_http::Server, stopped: &dyn Fn() -> bool, limits: BodyLimits) {
+        let writers = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        // The operator routes authorise before any of the body is read, so that only a
+        // verified operator can make the factory read it.
+        let screen = |req: &tiny_http::Request| {
+            let head = Self::head_of(req, Vec::new());
+            if Self::is_operator_route(&head) { self.operator(&head).err().map(into_answer) } else { None }
+        };
+        let answer = |req: &tiny_http::Request, body: Option<Vec<u8>>| {
+            let Some(body) = body else { return into_answer(Response::json(413, json!({ "error": "too-large" }))).into() };
+            let request = Self::head_of(req, body);
+            let mut response = self.handle(&request);
+            // Only a bundle that is about to be sent holds a writer place.
+            let mut slot = None;
+            if Self::is_bundle_route(&request) && response.status == 200 {
+                slot = WriterSlot::take(&writers);
+                if slot.is_none() {
+                    response = Response::json(503, json!({ "error": "unavailable" }));
                 }
             }
-            let _ = req.respond(out);
-        }
+            Reply { answer: into_answer(response), guard: slot.map(|s| Box::new(s) as Box<dyn Send>) }
+        };
+        front::serve_screened(server, MAX_BODY, limits, stopped, &screen, &answer);
+    }
+
+    /// The request as the handler sees it, with `body`.
+    fn head_of(req: &tiny_http::Request, body: Vec<u8>) -> Request {
+        let headers = req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
+        Request::new(req.method().as_str(), req.url(), headers, body)
+    }
+
+    /// Whether `req` asks for a bundle, whose body can be large: `GET /v1/bundle` and the
+    /// portal's download.
+    fn is_bundle_route(req: &Request) -> bool {
+        let segments: Vec<&str> = req.path.trim_matches('/').split('/').collect();
+        matches!((req.method.as_str(), segments.as_slice()), ("GET", ["v1", "bundle"] | ["devices", _, "bundle.fsb"]))
     }
 
     /// Whether `req` is one of the operator routes, which verify a Bearer token.
@@ -364,6 +483,7 @@ impl<'a> FactoryHttp<'a> {
                 Ok(c) => Response::new(200, "application/cbor", c.encode()),
                 Err(e) => api_error(&e),
             }),
+            ("GET", ["v1", "bundle"]) => self.api_bundle(req),
             ("POST", ["v1", "api-token"]) => self.with_pop(req, |r| match self.factory.issue_api_token(&r) {
                 Ok(a) => Response::json(200, json!({ "access_token": base64url_encode(&a.value), "expires": a.expires_at.0 })),
                 Err(e) => api_error(&e),
@@ -391,7 +511,10 @@ impl<'a> FactoryHttp<'a> {
             ("POST", ["tokens"]) => self.portal_post(req, |person, _| self.portal_token(req, person)),
             ("POST", ["pending", id, "confirm"]) => self.portal_post(req, |person, _| {
                 match parse_tenancy(id).ok_or(RegistrationError::NotFound).and_then(|t| self.factory.confirm(&person.account, &t)) {
-                    Ok(_) => Response::redirect("/"),
+                    Ok(record) => {
+                        self.registered(&record);
+                        Response::redirect("/")
+                    }
                     Err(e) => self.portal_error(&e, Some(&person.account.0)),
                 }
             }),
@@ -405,6 +528,7 @@ impl<'a> FactoryHttp<'a> {
             }),
             ("POST", ["uploads"]) => self.portal_post(req, |person, _| self.portal_upload(req, person)),
             ("GET", ["tenancies", id, "certificate.cbor"]) => self.portal_download(req, id),
+            ("GET", ["devices", id, "bundle.fsb"]) => self.portal_bundle(req, id),
             _ => self.not_found(req),
         }
     }
@@ -426,8 +550,20 @@ impl<'a> FactoryHttp<'a> {
             Err(e) => return api_error(&RegistrationError::Malformed(e)),
         };
         match self.factory.submit(&sealed, Submission::Online) {
-            Ok(s) => Response::json(202, tenancy_json(&s.tenancy)),
+            Ok(s) => {
+                self.registered(&s.tenancy);
+                Response::json(202, tenancy_json(&s.tenancy))
+            }
             Err(e) => api_error(&e),
+        }
+    }
+
+    /// Tells the reconciler about a tenancy that is now registered.
+    fn registered(&self, tenancy: &TenancyRecord) {
+        if tenancy.state == TenancyState::Registered
+            && let Some(notify) = &self.registered
+        {
+            notify(tenancy.id);
         }
     }
 
@@ -454,6 +590,25 @@ impl<'a> FactoryHttp<'a> {
             Ok(record) => f(record),
             Err(e) => api_error(&e),
         }
+    }
+
+    /// `GET /v1/bundle`: the stored bundle, `304` when `held` is the latest, `404` when none is
+    /// stored. The query is not part of the proof of possession (WIRE-171); a `held` that is
+    /// not a whole number is ignored, which gives the full bundle, as a rewritten one would.
+    fn api_bundle(&self, req: &Request) -> Response {
+        let held = req.query.get("held").and_then(|h| h.parse().ok()).map(BundleSeq);
+        no_store(self.with_pop(req, |record| {
+            let Some(routes) = &self.bundles else { return Response::json(503, json!({ "error": "unavailable" })) };
+            match routes.fetch.fetch(&record.id, held) {
+                Ok(BundleFetchResponse::Bundle(b)) => bundle_response(&b),
+                Ok(BundleFetchResponse::Current) => {
+                    // No sequence header: the device already knows what it holds.
+                    Response { status: 304, headers: vec![], body: vec![] }
+                }
+                Ok(BundleFetchResponse::NoBundle) => Response::json(404, json!({ "error": "no-bundle", "message": messages::text("api.no-bundle") })),
+                Err(e) => bundle_error(&e),
+            }
+        }))
     }
 
     // -----------------------------------------------------------------------------------
@@ -725,6 +880,7 @@ impl<'a> FactoryHttp<'a> {
                         lower_hex(tn.id.as_bytes()),
                         t("portal.devices.certificate")
                     ));
+                    actions.push_str(&format!("<p><a href=\"/devices/{}/bundle.fsb\" download>{}</a></p>", escape(&d.device.id.0), t("portal.devices.bundle")));
                 }
                 body.push_str(&format!(
                     "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{actions}</td></tr>",
@@ -829,5 +985,35 @@ impl<'a> FactoryHttp<'a> {
                 .with("Content-Disposition", "attachment; filename=\"tenancy-certificate.cbor\"".into()),
             Err(e) => self.portal_error(&e, None),
         }
+    }
+
+    /// `GET /devices/{device}/bundle.fsb`: the stored bundle for a signed-in collector's own
+    /// device (REG-043, DIS-041). It changes nothing, so it takes no CSRF token.
+    fn portal_bundle(&self, req: &Request, device: &str) -> Response {
+        let Some(SessionView { person, .. }) = self.session(req) else { return Response::redirect("/") };
+        let device = DeviceId(device.to_owned());
+        let own = self.factory.list_devices(&person.account).map(|all| all.iter().any(|d| d.device.id == device));
+        match own {
+            Ok(true) => {}
+            Ok(false) => return self.portal_error(&RegistrationError::WrongAccount, None),
+            Err(e) => return self.portal_error(&e, None),
+        }
+        let Some(routes) = &self.bundles else { return self.portal_page(503, "portal.bundle.unavailable") };
+        match routes.download.download(&device) {
+            Ok((name, bundle)) => no_store(
+                Response::new(200, "application/octet-stream", bundle.bytes)
+                    .with("Fieldseal-Bundle-Sequence", bundle.seq.0.to_string())
+                    .with("Content-Disposition", format!("attachment; filename=\"{name}\"")),
+            ),
+            // The one reason that means "nothing built yet" (DIS-041).
+            Err(DistributionError::Withheld(reasons)) if reasons == ["no-bundle-built"] => self.portal_page(404, "portal.bundle.none"),
+            Err(DistributionError::NotRegistered | DistributionError::Withheld(_)) => self.portal_page(403, "portal.bundle.withheld"),
+            Err(_) => self.portal_page(503, "portal.bundle.unavailable"),
+        }
+    }
+
+    /// A portal page that says one message and links back.
+    fn portal_page(&self, status: u16, message: &str) -> Response {
+        html(status, page("portal.error.heading", &format!("<p>{}</p><p><a href=\"/\">{}</a></p>", t(message), t("portal.token.back")), None))
     }
 }

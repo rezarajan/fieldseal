@@ -87,7 +87,7 @@ A test (`crates/apps/cli/tests/conformance.rs`) fails when a port in a `ports.rs
 | deployment | `DocumentationSink` | `documentation_sink_contract` | `MemoryDocumentationSink` |
 | deployment | `SecretStore` | `secret_store_contract` | `MemorySecretStore` |
 | distribution | `AgreementKey` | `agreement_key_contract` | `SoftwareAgreementKey` |
-| distribution | `AnchorSource` | `anchor_source_contract` | `MemoryAnchorSource` |
+| distribution | `AnchorSource` | `anchor_source_contract` | `MemoryAnchorSource`, `ClockAnchorSource` |
 | distribution | `BundleStore` | `bundle_store_contract` | `MemoryBundleStore`, `FileBundleStore` (cargo test) |
 | distribution | `RosterSource` | `roster_source_contract` | `MemoryRosterSource`, `FileRosterSource` (cargo test) |
 | distribution | `RuntimeProfiles` | `runtime_profiles_contract` | `MemoryRuntimeProfiles`, `FileRuntimeProfiles` (cargo test) |

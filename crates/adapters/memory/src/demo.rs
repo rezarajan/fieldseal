@@ -355,6 +355,26 @@ impl DemoWorld {
         .publish(kind, name, version, bytes, salt)
     }
 
+    /// Publishes under `policy`, signed by `signers` only: what a publisher does when it
+    /// writes the policy it is checked by (a test of the factory's trust in its release
+    /// policy).
+    #[allow(clippy::too_many_arguments)]
+    pub fn publish_under(&self, policy: &PublishingPolicy, signers: &[KeyId], kind: ArtefactKind, name: &str, version: &str, bytes: Vec<u8>, salt: Option<Salt>) -> Result<Publication, String> {
+        Publisher {
+            custody: &self.custody,
+            log: &self.log,
+            artefacts: &self.artefacts,
+            trust: &self.trust,
+            policy,
+            builder: self.builder,
+            publishers: signers,
+            receipt: self.receipt,
+            finished: AuthorityTime(self.t0.0 + 3_600_000),
+            dated: true,
+        }
+        .publish(kind, name, version, bytes, salt)
+    }
+
     /// The salt an instrument is published with: a fixed function of its name, so the salted
     /// fingerprint of a survey is the same in every world and on every run.
     #[must_use]
@@ -527,6 +547,11 @@ impl DemoWorld {
     /// (REG-017): `AllowNonProduction` lets policy release rosters to a software device with a
     /// flag. The device's own attestation facts are never changed.
     pub fn build_with(&self, policy: &dyn Decide, request: &BuildRequest, unattested: fieldseal_registration::domain::checks::UnattestedKeys) -> Result<BuiltBundle, DistributionError> {
+        self.build_sized(policy, request, unattested, usize::MAX)
+    }
+
+    /// Like [`DemoWorld::build_with`], with the bundle size limit lowered to `max_size`.
+    pub fn build_sized(&self, policy: &dyn Decide, request: &BuildRequest, unattested: fieldseal_registration::domain::checks::UnattestedKeys, max_size: usize) -> Result<BuiltBundle, DistributionError> {
         let anchors = MemoryAnchorSource::new(AuthorityTime(self.next_anchor.load(Ordering::SeqCst)), &self.custody, self.receipt);
         let verifier = VerifyPublication::new(TrustStore::new(&self.trust), &self.publishing);
         let ports = FactoryPorts {
@@ -542,7 +567,7 @@ impl DemoWorld {
         };
         let mut identity = self.identity();
         identity.unattested = unattested;
-        let built = BundleBuilder::new(ports, &verifier, identity).build(request)?;
+        let built = BundleBuilder::new(ports, &verifier, identity).with_max_size(max_size).build(request)?;
         self.next_anchor.store(built.manifest.issued.0 + AuthorityTime::SECOND, Ordering::SeqCst);
         Ok(built)
     }

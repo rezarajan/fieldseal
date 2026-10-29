@@ -10,6 +10,7 @@ publish.workspace = true
 fieldseal-kernel.workspace = true
 fieldseal-trust.workspace = true
 fieldseal-registration.workspace = true
+fieldseal-distribution.workspace = true
 fieldseal-adapters-portal.workspace = true
 # A small synchronous HTTP/1.1 server with no async runtime, like the blocking ureq client
 # the other adapters use. TLS is terminated in front of the factory.
@@ -24,7 +25,6 @@ ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 [dev-dependencies]
 fieldseal-adapters-memory.workspace = true
 fieldseal-adapters-file.workspace = true
-fieldseal-distribution.workspace = true
 fieldseal-policy.workspace = true
 tiny_http = "0.12"
 

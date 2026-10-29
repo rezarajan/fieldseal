@@ -1,4 +1,4 @@
-//! Serving one listener without ever waiting on a client (SR-5).
+//! Serving one listener without ever waiting on a client (SR-2, SR-5).
 //!
 //! `tiny_http` offers no socket timeouts, so a request body is read on a thread of its own,
 //! under a byte-rate floor, and only a complete body reaches the serving thread. The same goes
@@ -34,16 +34,35 @@ impl Default for BodyLimits {
     }
 }
 
-type Answer = tiny_http::Response<Cursor<Vec<u8>>>;
+/// A response ready to be written.
+pub type Answer = tiny_http::Response<Cursor<Vec<u8>>>;
 
-fn plain(status: u16) -> Answer {
+/// An answer, and anything that must stay alive until the writer thread has finished with it
+/// (a place in a cap on large writes, say). The guard is dropped when the write ends, however
+/// it ends.
+pub struct Reply {
+    /// What to send.
+    pub answer: Answer,
+    /// What to keep alive until the write ends.
+    pub guard: Option<Box<dyn Send>>,
+}
+
+impl From<Answer> for Reply {
+    fn from(answer: Answer) -> Self {
+        Self { answer, guard: None }
+    }
+}
+
+/// An empty answer with `status`.
+pub fn plain(status: u16) -> Answer {
     tiny_http::Response::from_data(Vec::new()).with_status_code(status)
 }
 
 /// Writes `answer` on a thread of its own, so a client that does not read it holds nothing.
-fn respond_later(req: tiny_http::Request, answer: Answer) {
+fn respond_later(req: tiny_http::Request, reply: Reply) {
     std::thread::spawn(move || {
-        let _ = req.respond(answer);
+        let _guard = reply.guard;
+        let _ = req.respond(reply.answer);
     });
 }
 
@@ -84,13 +103,29 @@ impl Drop for InFlight {
 /// Serves `server` on this thread until `stopped` says so. `answer` is the listener's handler:
 /// it gets a request whose body is read already (`None` for a body over `max_body`).
 pub fn serve(server: &tiny_http::Server, max_body: usize, limits: BodyLimits, stopped: &dyn Fn() -> bool, answer: &dyn Fn(&tiny_http::Request, Option<Vec<u8>>) -> Answer) {
+    serve_screened(server, max_body, limits, stopped, &|_| None, &|req, body| answer(req, body).into());
+}
+
+/// Like [`serve`], with two additions. `screen` sees each request before any of its body is
+/// read, and an answer from it is sent without the body being read at all (authorisation that
+/// must come first). The handler returns a [`Reply`], whose guard lives as long as the write.
+pub fn serve_screened(
+    server: &tiny_http::Server,
+    max_body: usize,
+    limits: BodyLimits,
+    stopped: &dyn Fn() -> bool,
+    screen: &dyn Fn(&tiny_http::Request) -> Option<Answer>,
+    answer: &dyn Fn(&tiny_http::Request, Option<Vec<u8>>) -> Reply,
+) {
     let (finished, done) = mpsc::channel::<(tiny_http::Request, Option<Vec<u8>>)>();
     let in_flight = Arc::new(AtomicUsize::new(0));
     while !stopped() {
         // Waiting for a request is also the pause between rounds.
         if let Ok(Some(mut req)) = server.recv_timeout(Duration::from_millis(5)) {
-            if in_flight.load(Ordering::SeqCst) >= MAX_IN_FLIGHT {
-                respond_later(req, plain(503));
+            if let Some(refused) = screen(&req) {
+                respond_later(req, refused.into());
+            } else if in_flight.load(Ordering::SeqCst) >= MAX_IN_FLIGHT {
+                respond_later(req, plain(503).into());
             } else {
                 in_flight.fetch_add(1, Ordering::SeqCst);
                 let (counted, finished) = (InFlight(in_flight.clone()), finished.clone());

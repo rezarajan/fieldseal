@@ -219,7 +219,8 @@ fn reg_046_the_token_is_checked_before_the_body_is_read() {
     let f = fixture();
     let server = std::sync::Arc::new(tiny_http::Server::http("127.0.0.1:0").expect("bind"));
     let addr = server.server_addr().to_ip().expect("address");
-    let stopper = server.clone();
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let stopper = stop.clone();
     // A client that promises a body and never sends it. A server that read the body first
     // would wait for it; this one answers 401 from the headers alone.
     let client = std::thread::spawn(move || {
@@ -236,10 +237,10 @@ fn reg_046_the_token_is_checked_before_the_body_is_read() {
             stream = std::net::TcpStream::connect(addr).expect("connect");
             stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).expect("timeout");
         }
-        stopper.unblock();
+        stopper.store(true, std::sync::atomic::Ordering::SeqCst);
         answers
     });
-    f.with_http(|http| http.run(&server));
+    f.with_http(|http| http.run_until(&server, &|| stop.load(std::sync::atomic::Ordering::SeqCst), Default::default()));
     let answers = client.join().expect("client");
     assert_eq!(answers, vec!["HTTP/1.1 401 Unauthorized"; 3]);
 }

@@ -44,6 +44,8 @@ const MAGIC: &[u8; 8] = b"FSTLOG01";
 const CHAIN_DOMAIN: &[u8] = b"fieldseal.dev/translog/chain/v1";
 /// The longest entry record accepted: a canonical `LogEntry` is under 250 bytes.
 const MAX_RECORD: usize = 1024;
+/// The most entries one [`FileLogStore::entries`] call returns.
+pub const MAX_ENTRIES: usize = 256;
 
 /// Why a log store couldn't be opened.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -221,6 +223,31 @@ impl FileLogStore {
             return Err(LogError::OutOfRange);
         }
         Ok(ConsistencyProof { old_size, new_size, path: consistency_path(old, &st.leaves[..new]) })
+    }
+
+    /// The canonical `LogEntry` bytes at indices `from` (inclusive) to `to` (exclusive),
+    /// clipped to the size of the log and to [`MAX_ENTRIES`], read from `log.dat`. A `from`
+    /// at or beyond the size, or a `to` below `from`, is [`LogError::OutOfRange`].
+    pub fn entries(&self, from: u64, to: u64) -> Result<Vec<Vec<u8>>, LogError> {
+        let st = self.state.lock().expect("lock");
+        let size = st.leaves.len() as u64;
+        if from >= size || to < from {
+            return Err(LogError::OutOfRange);
+        }
+        let end = to.min(size).min(from + MAX_ENTRIES as u64);
+        let bytes = std::fs::read(st.dir.join("log.dat")).map_err(|e| LogError::Unavailable(e.to_string()))?;
+        let cut = || LogError::Unavailable("the log file is shorter than the log".into());
+        // Records are `[length][entry][chain hash]`, which `replay` verified on open.
+        let mut at = MAGIC.len();
+        let mut out = Vec::new();
+        for index in 0..end {
+            let len = u32::from_be_bytes(bytes.get(at..at + 4).ok_or_else(cut)?.try_into().expect("4 bytes")) as usize;
+            if index >= from {
+                out.push(bytes.get(at + 4..at + 4 + len).ok_or_else(cut)?.to_vec());
+            }
+            at += 4 + len + 32;
+        }
+        Ok(out)
     }
 
     /// The tree size `checkpoint` commits to, if this log has produced that tree.

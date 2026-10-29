@@ -39,6 +39,8 @@ fn factory_ports(tenancy_config: Vec<(&str, Value)>) -> Vec<(&'static str, Value
         ("TenancyRegistry", binding("file-dev", tenancy_config)),
         ("ArtefactRegistry", binding("file-dev", vec![("dir", t("/clistate/registry"))])),
         ("RosterSource", binding("file-dev", vec![("dir", t("/rosters"))])),
+        ("BundleStore", binding("file-dev", vec![("dir", t("/bundles")), ("issuedRostersDir", t("/issued"))])),
+        ("RuntimeProfiles", binding("file-dev", vec![("dir", t("/state/factory"))])),
     ]
 }
 
@@ -115,7 +117,7 @@ fn dep_012_the_factory_component_renders_the_new_variables() {
 // covers: DEP-002
 #[test]
 fn dep_002_a_manifest_without_the_new_factory_ports_is_refused() {
-    for port in ["ArtefactRegistry", "RosterSource"] {
+    for port in ["ArtefactRegistry", "RosterSource", "BundleStore", "RuntimeProfiles"] {
         let mut ports = factory_ports(vec![("dir", t("/state/factory"))]);
         ports.retain(|(p, _)| *p != port);
         let f = findings(&manifest(ports, false));
@@ -129,7 +131,7 @@ fn dep_002_the_example_manifests_bind_the_new_factory_ports() {
     for file in ["local-stack.yaml", "dev-web.yaml", "sample.yaml"] {
         let path = format!("{}/../../../examples/deployments/{file}", env!("CARGO_MANIFEST_DIR"));
         let text = std::fs::read_to_string(&path).expect("example manifest");
-        for port in ["ArtefactRegistry", "RosterSource"] {
+        for port in ["ArtefactRegistry", "RosterSource", "BundleStore", "RuntimeProfiles"] {
             assert!(text.lines().any(|l| l.trim_start().starts_with(&format!("{port}: {{ adapter: file-dev"))), "{file} binds {port}");
         }
         assert!(!text.contains("cohorts:"), "{file} carries no cohorts string");
@@ -140,7 +142,42 @@ fn dep_002_the_example_manifests_bind_the_new_factory_ports() {
 #[test]
 fn dep_023_validate_refuses_the_factory_file_adapters_in_production() {
     let f = findings(&manifest(factory_ports(vec![("dir", t("/state/factory"))]), true));
-    for needle in ["ArtefactRegistry", "RosterSource"] {
+    for needle in ["ArtefactRegistry", "RosterSource", "BundleStore", "RuntimeProfiles"] {
         assert!(f.iter().any(|m| m.contains(needle) && m.contains("production")), "{needle} is refused: {f:?}");
     }
+}
+
+// covers: DEP-012, DEP-057
+#[test]
+fn dep_057_the_factory_renders_the_bundle_directories_and_the_optional_timing() {
+    let env = factory_env(&manifest(factory_ports(vec![("dir", t("/state/factory"))]), false));
+    assert_eq!(env.get("FIELDSEAL_BUNDLE_DIR").map(String::as_str), Some("/bundles"));
+    assert_eq!(env.get("FIELDSEAL_ISSUED_ROSTERS_DIR").map(String::as_str), Some("/issued"));
+    assert_eq!(env.get("FIELDSEAL_STATE_DIR").map(String::as_str), Some("/state/factory"));
+    for k in ["FIELDSEAL_FACTORY_BUILD_INTERVAL_S", "FIELDSEAL_FACTORY_MAX_ANCHOR_AGE_S"] {
+        assert!(!env.contains_key(k), "{k} is not rendered when its key is absent, so the factory default applies");
+    }
+
+    let mut ports = factory_ports(vec![("dir", t("/state/factory"))]);
+    for (port, key, value) in [("BundleStore", "maxAnchorAgeS", 3600), ("ArtefactRegistry", "scanIntervalS", 2)] {
+        let slot = ports.iter_mut().find(|(p, _)| *p == port).expect("port");
+        let mut config = vec![("dir", t(if port == "BundleStore" { "/bundles" } else { "/clistate/registry" }))];
+        if port == "BundleStore" {
+            config.push(("issuedRostersDir", t("/issued")));
+        }
+        config.push((key, Value::Int(value)));
+        slot.1 = binding("file-dev", config);
+    }
+    let env = factory_env(&manifest(ports, false));
+    assert_eq!(env.get("FIELDSEAL_FACTORY_MAX_ANCHOR_AGE_S").map(String::as_str), Some("3600"));
+    assert_eq!(env.get("FIELDSEAL_FACTORY_BUILD_INTERVAL_S").map(String::as_str), Some("2"));
+}
+
+// covers: DEP-057
+#[test]
+fn dep_057_outside_development_the_factory_needs_a_pinned_release_policy() {
+    let m = manifest(factory_ports(vec![("dir", t("/state/factory"))]), true);
+    assert!(findings(&m).iter().any(|f| f.contains("policyDigest")), "{:?}", findings(&m));
+    let m = manifest(factory_ports(vec![("dir", t("/state/factory"))]), false);
+    assert!(!findings(&m).iter().any(|f| f.contains("policyDigest")), "development needs none");
 }

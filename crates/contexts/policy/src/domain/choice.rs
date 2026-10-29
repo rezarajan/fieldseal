@@ -100,6 +100,16 @@ choice!(
 );
 
 choice!(
+    /// `release.layouts`, loosest first
+    LayoutAssignment {
+        /// Every published layout bound to an instrument accompanies it.
+        Bound = "bound",
+        /// No layout.
+        None = "none",
+    }
+);
+
+choice!(
     /// `posture.unknownRestriction`
     UnknownRestriction {
         /// Accept restrictions the policy does not know.

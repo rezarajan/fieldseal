@@ -324,7 +324,7 @@ fn results(o: &Opts) -> Result<ExitCode, String> {
     let key = ExportKey::load_file(std::path::Path::new(&key_file)).map_err(|e| e.to_string())?;
     let bundle_bytes = std::fs::read(&trust_file).map_err(|e| format!("{trust_file}: {e}"))?;
     let bundle = fieldseal_trust::domain::TrustBundle::decode(&bundle_bytes).map_err(|e| format!("{trust_file}: {e}"))?;
-    let published = Published::read(std::path::Path::new(&published), &bundle, &crate::bundle_stack::publishing_policy()).map_err(|e| e.to_string())?;
+    let published = Published::read(std::path::Path::new(&published), &bundle, &crate::policy_support::publishing_policy()).map_err(|e| e.to_string())?;
     let snapshot = FileDataPlatform::open_read_only(&landing).map_err(|e| e.to_string())?;
     let mapper = KeyedSubject::new(key);
     let table = export_table(&snapshot, &published, &mapper).map_err(|e| e.to_string())?;

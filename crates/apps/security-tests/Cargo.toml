@@ -19,6 +19,7 @@ fieldseal-delivery.workspace = true
 fieldseal-intake.workspace = true
 fieldseal-deployment.workspace = true
 fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-file.workspace = true
 fieldseal-adapters-authoring.workspace = true
 fieldseal-adapters-html.workspace = true
 fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }

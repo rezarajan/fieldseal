@@ -57,6 +57,8 @@ fn int_006_the_file_tenancy_registry_satisfies_the_contract() {
 fn int_040_the_file_roster_history_satisfies_the_contract() {
     let tenancy = TenancyId::from([1; 32]);
     let s = Scratch::new();
+    // `record_issued` makes its own owner-only directory.
+    let issued = s.path().join("issued");
     for (cohort, version) in [("village-a", 1), ("cohort-a", 2), ("cohort-a", 1)] {
         let roster = IssuedRoster {
             cohort: CohortId::new(cohort).expect("cohort"),
@@ -65,9 +67,9 @@ fn int_040_the_file_roster_history_satisfies_the_contract() {
             issued_at: AuthorityTime(1_000),
             consent: [(SubjectId::new("s-1").expect("subject"), IssuedConsent::Granted)].into_iter().collect(),
         };
-        record_issued(s.path(), &tenancy, &roster).expect("recorded");
+        record_issued(&issued, &tenancy, &roster).expect("recorded");
     }
-    fieldseal_intake::contract::roster_history_contract(|| FileRosterHistory::new(s.path()), tenancy);
+    fieldseal_intake::contract::roster_history_contract(|| FileRosterHistory::new(&issued), tenancy);
 }
 
 // covers: INT-070

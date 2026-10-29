@@ -28,7 +28,7 @@ A plain, server-rendered web app that makes every stage of the system visible fr
 - **WEB-150** The Registration page MUST link to the factory portal where the sign-in and token happen, and explain the flow and the four-word comparison (REG-020, REG-021).
 - **WEB-151** The demo authority MUST publish the example instruments with the threshold of publisher signatures and log entries that verify through the publishing context.
 - **WEB-152** The demo authority MUST serve the registration API and portal through the real factory adapter.
-- **WEB-153** The demo authority MUST build bundles with the real builder, sealed to the registered device's agreement key.
+- **WEB-153** The web app MUST build no bundle and serve none: the browser device MUST get its bundle from the factory (`GET /v1/bundle`, DIS-040), through the app's same-origin proxy, which MUST pass the device's `Fieldseal-PoP` header on and the factory's `Fieldseal-Bundle-Sequence` and `Content-Disposition` headers and a `304` back.
 - **WEB-154** The demo authority MUST accept uploads through the real upload adapter and gate, and what lands MUST be visible on the Intake page.
 - **WEB-155** The authority MUST provision the device with its trust bundle and publishing allow-lists as a document (DEP-024 style).
 - **WEB-156** The web device MUST never be reported as attested: no component writes or alters attestation claims (TRU-061, TRU-063). To let it receive rosters, the development deployment MUST use the non-production allowance for unattested keys (REG-017) in release policy, which releases with a flag; production refuses it. The Device page MUST say "unattested software device (development policy allows it)".

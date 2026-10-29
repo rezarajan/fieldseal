@@ -97,6 +97,7 @@ The runtime does not use `PolicyEngine`: it evaluates its typed `runtime` sectio
 - **POL-050** The factory MUST include the effective `runtime` section, as a `Publication` of each contributing layer, in every bundle ([Distribution](./distribution.md)).
 - **POL-051** A runtime MUST apply a bundle's runtime policy only after verifying it (PUB-071) and checking invariants (POL-010).
 - **POL-052** A runtime MUST NOT apply a runtime policy whose version is lower than one it already applies for the same layer and name.
+- **POL-068** (provisional) `release.layouts` MUST choose which layouts a bundle carries (DIS-016). `bound` means a bundle carries, for each instrument, every published layout bound to that instrument's fingerprint, the newest version per window class; `none` means no layout. The control merges by tightening, so a later layer can set `none` and cannot restore `bound`. An unknown value MUST be refused. It chooses among layouts that are already published and verified and loosens nothing.
 
 ### 5.7 Extensions ([ADR 0037](../../explanation/adr/0037-extensions-and-strict-schema-enforcement.md))
 
@@ -176,6 +177,7 @@ The runtime does not use `PolicyEngine`: it evaluates its typed `runtime` sectio
 | `posture.onFailure` | `flag` / `pause-release` | `pause-release` | tighten |
 | `posture.unknownRestriction` | `flag` / `accept` | `flag` | tighten |
 | `release.requireRegisteredTenancy` | bool (MUST be true) | true | tighten |
+| `release.layouts` | `bound` / `none` | `bound` | tighten (`none` is tighter than `bound`) |
 | `custody.minAssurance.<purpose>` | `development` / `custody-bound` / `attested`, for each authority purpose | `custody-bound` for every purpose | tighten (the higher assurance wins) |
 | `custody.minMode.<purpose>` | `hot` / `cold`, for each authority purpose | `root`, `publisher`: `cold`; every other purpose: `hot` | tighten (`cold` is stricter than `hot`) |
 | `custody.hotKey.maxValidity` | duration, at most the TRU §6.1 limit | `180d` | tighten |

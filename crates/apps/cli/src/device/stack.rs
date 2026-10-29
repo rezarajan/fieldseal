@@ -3,8 +3,8 @@
 //!
 //! It is the same runtime `device simulate` drives, on the same simulated platform, with three
 //! differences: the device's keys are the ones it registered with (`registration request
-//! --device-dir`), the bundle it imports is a real sealed bundle built by the stack's
-//! authority (`bundle build --stack`) and opened with the device's agreement key, and the
+//! --device-dir`), the bundle it imports is a real sealed bundle the device gets from the
+//! factory (`bundle fetch`) and opens with its agreement key, and the
 //! export is sealed to the stack's record key and carries the factory's certificate, so the
 //! stack's intake endpoint accepts it. The scenario file holds a `pin` and `steps`
 //! (`capture`, `status`, `consent`, `review`); the instrument and roster come from the bundle.
@@ -88,7 +88,7 @@ pub fn run(args: &[String], json: bool) -> ExitCode {
         let AuthorityPublicKey::X25519(record_pub) = trust.certificates_for(&cert.record_key).next().map(|c| c.public_key().clone()).ok_or("the trust bundle has no record key for the certificate's period")? else {
             return Err("the record key is not an X25519 key".into());
         };
-        let publishing = crate::bundle_stack::publishing_policy();
+        let publishing = crate::policy_support::publishing_policy();
         let scalar: [u8; 32] = agree.secret_bytes().try_into().map_err(|_| "agree.key is not a 32-byte key")?;
         let mut entropy = [0u8; 8];
         OsRandom.fill(&mut entropy);

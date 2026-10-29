@@ -12,6 +12,8 @@ fieldseal-registration.workspace = true
 # Session identifiers and CSRF tokens come from the operating system's CSPRNG.
 getrandom = "0.2"
 serde_json = "1"
+# The listener `front` serves.
+tiny_http = "0.12"
 thiserror.workspace = true
 
 [dev-dependencies]

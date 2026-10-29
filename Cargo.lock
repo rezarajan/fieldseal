@@ -852,6 +852,7 @@ dependencies = [
  "getrandom 0.2.17",
  "serde_json",
  "thiserror",
+ "tiny_http",
 ]
 
 [[package]]
@@ -1097,12 +1098,17 @@ dependencies = [
  "fieldseal-adapters-memory",
  "fieldseal-adapters-oidc",
  "fieldseal-deployment",
+ "fieldseal-distribution",
+ "fieldseal-instrument",
+ "fieldseal-intake",
  "fieldseal-kernel",
  "fieldseal-policy",
  "fieldseal-publishing",
  "fieldseal-registration",
  "fieldseal-trust",
  "getrandom 0.2.17",
+ "serde_json",
+ "thiserror",
  "tiny_http",
 ]
 
@@ -1231,6 +1237,7 @@ version = "0.1.0"
 dependencies = [
  "fieldseal-adapters-authoring",
  "fieldseal-adapters-factory-http",
+ "fieldseal-adapters-file",
  "fieldseal-adapters-html",
  "fieldseal-adapters-memory",
  "fieldseal-collection",
@@ -1314,6 +1321,7 @@ dependencies = [
  "fieldseal-adapters-file",
  "fieldseal-adapters-html",
  "fieldseal-adapters-memory",
+ "fieldseal-adapters-translog",
  "fieldseal-adapters-web",
  "fieldseal-adapters-web-demo",
  "fieldseal-distribution",

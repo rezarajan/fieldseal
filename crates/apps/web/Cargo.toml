@@ -25,6 +25,7 @@ fieldseal-adapters-web.workspace = true
 fieldseal-adapters-web-demo = { path = "../../adapters/web-demo" }
 fieldseal-adapters-memory.workspace = true
 fieldseal-publishing.workspace = true
+fieldseal-adapters-translog.workspace = true
 fieldseal-trust.workspace = true
 serde_json = "1"
 fieldseal-intake.workspace = true

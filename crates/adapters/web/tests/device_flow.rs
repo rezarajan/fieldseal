@@ -31,6 +31,7 @@ fn host() -> Host {
             let bytes = resp.body_mut().with_config().limit(8 << 20).read_to_vec().map_err(|e| e.to_string())?;
             Ok((status, bytes))
         }),
+        get: Rc::new(|_, _| Err("this test builds its bundle with the demo authority".into())),
     }
 }
 

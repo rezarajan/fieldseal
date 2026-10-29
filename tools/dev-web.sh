@@ -4,7 +4,8 @@
 # behind a development OIDC provider (fieldseal-dev-idp, in the place Keycloak takes in the stack),
 # publishes the bundled examples and the publishing policy through the log, issues the example
 # rosters and assigns their cohorts to the `presenter` login (fieldseal roster issue and assign,
-# signed in at the development IdP with no browser), and re-reads the survey files on every
+# signed in at the development IdP with no browser), has the factory build bundles for the
+# devices that register (served at GET /v1/bundle), and re-reads the survey files on every
 # request, so an edit shows at once. Ctrl-C stops everything.
 #
 #   tools/dev-web.sh            (normally: just web)
@@ -59,7 +60,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-mkdir -p "$STATE/authority" "$STATE/env" "$STATE/cli/registry" "$STATE/factory" "$STATE/log" "$STATE/logs" "$STATE/published" "$STATE/landing" "$STATE/submissions"
+mkdir -p "$STATE/authority" "$STATE/env" "$STATE/cli/registry" "$STATE/factory" "$STATE/log" "$STATE/logs" "$STATE/published" "$STATE/landing" "$STATE/submissions" "$STATE/bundles" "$STATE/issued"
+# The factory refuses an issued-roster directory that group or others can reach (the files carry roster data); intake runs as the same user.
+chmod 700 "$STATE/issued"
 # The roster store holds display names and consent: owner-only, as the store requires.
 mkdir -p "$STATE/rosters"; chmod 700 "$STATE/rosters"
 
@@ -180,13 +183,17 @@ start intake "$TARGET/fieldseal-intake" "$STATE/env/intake.env" "${INTAKE_SECRET
 wait_for intake http://127.0.0.1:8480/healthz 60
 
 # 8. The collector stand-in, on 127.0.0.1 while the services are on localhost, so cookies are not sent to it.
+# Its device accepts the publishers the intake component's policy engine does: the same two lists, from the rendered environment.
+env_value() { sed -n "s/^$2=//p" "$1" | head -n 1; }
 start web "$TARGET/fieldseal-web" "" \
-  FIELDSEAL_WEB_STACK=true FIELDSEAL_WEB_CLI="$FIELDSEAL_BIN" FIELDSEAL_WEB_BIND=127.0.0.1:8090 \
+  FIELDSEAL_WEB_STACK=true FIELDSEAL_WEB_BIND=127.0.0.1:8090 \
+  FIELDSEAL_WEB_ALLOWED_BUILDERS="$(env_value "$STATE/env/intake.env" FIELDSEAL_INTAKE_ALLOWED_BUILDERS)" \
+  FIELDSEAL_WEB_ALLOWED_SOURCES="$(env_value "$STATE/env/intake.env" FIELDSEAL_INTAKE_ALLOWED_SOURCES)" \
   FIELDSEAL_WEB_EXAMPLES_DIR="$ROOT/examples" \
   FIELDSEAL_WEB_AUTHORITY_DIR="$STATE/authority" FIELDSEAL_WEB_PUBLISHED_DIR="$STATE/published" FIELDSEAL_WEB_REGISTRY_DIR="$STATE/cli/registry" \
   FIELDSEAL_WEB_SURVEY_COHORTS="school-meals-baseline=cohort-a,household-water-access=village-a" \
   FIELDSEAL_WEB_ROSTER_DIR="$STATE/rosters" \
-  FIELDSEAL_FACTORY_URL=http://localhost:8080 FIELDSEAL_LOG_URL=http://localhost:9001 FIELDSEAL_WEB_PUBLIC_URL=http://127.0.0.1:8090
+  FIELDSEAL_FACTORY_URL=http://localhost:8080 FIELDSEAL_UPLOAD_URL=http://localhost:8480 FIELDSEAL_LOG_URL=http://localhost:9001 FIELDSEAL_WEB_PUBLIC_URL=http://127.0.0.1:8090
 wait_for web http://127.0.0.1:8090/healthz 60
 
 # sign_in_as <login> <cookie jar> <base url> <path>: signs in to a service through the development
@@ -199,6 +206,74 @@ sign_in_as() {
   [ -n "$to" ] || return 1
   curl -sS -L -c "$jar" -b "$jar" -o /dev/null --max-time 20 "$to&login_hint=$login" || return 1
   curl -s -c "$jar" -b "$jar" -o /dev/null -w '%{http_code}' --max-time 10 "$base$path"
+}
+
+# portal_devices <jar>: the factory portal's home page for the signed-in login.
+portal_home() { curl -fsS -b "$1" --max-time 10 http://localhost:8080/; }
+# portal_csrf <jar>: the CSRF token the portal's forms carry.
+portal_csrf() { portal_home "$1" | sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' | head -n 1; }
+
+# retire_devices <jar>: retires every live device of the signed-in login, so the cohort slot is
+# free (one active tenancy per cohort) and a second run of the check starts clean.
+retire_devices() {
+  local jar="$1" csrf id
+  csrf="$(portal_csrf "$jar")"
+  while read -r id; do
+    [ -n "$id" ] || continue
+    curl -fsS -b "$jar" -o /dev/null --max-time 10 -d "csrf=$csrf" "http://localhost:8080/devices/$id/retire" || die "check: could not retire device $id"
+  done < <(portal_home "$jar" | grep -o 'action="/devices/[^"/]*/retire"' | sed 's|action="/devices/\([^"/]*\)/retire"|\1|')
+}
+
+# The bundle check: a device registers with the CLI as `presenter` (portal token, request, words
+# confirmed in the portal, as a person does), the factory builds its bundle, and
+# `fieldseal bundle fetch` returns sequence 1. The factory's `bundle-built` event is the
+# independent witness. The browser device's own fetch (the WebAssembly device asks through the
+# stand-in's proxy with a token made in the page) needs a browser, so it is not driven here: the
+# check below covers what the stand-in contributes (its provisioning, the proxy's pass-through of
+# the token and the route that is gone), and the browser flow is `tools/stack-smoke.sh --browser`.
+check_bundle() {
+  local jar="$STATE/check-cookies" dev="$STATE/check-device" csrf page token req tenancy out i
+  rm -rf "$dev" "$jar"; mkdir -p "$dev"
+  [ "$(sign_in_as presenter "$jar" http://localhost:8080 /)" = 200 ] || die "check: the factory sign-in did not complete"
+  retire_devices "$jar"
+  csrf="$(portal_csrf "$jar")"
+  page="$(curl -fsS -b "$jar" --max-time 10 -d "csrf=$csrf&route=online" http://localhost:8080/tokens)"
+  token="$(sed -n 's|.*<p class="token">\([^<]*\)</p>.*|\1|p' <<<"$page" | head -n 1)"
+  [ -n "$token" ] || die "check: the portal issued no registration token"
+  req="$(cli registration request --token "$token" --trust-bundle "$STATE/authority/trust-bundle.bundle" --device-dir "$dev" --out "$dev/request" --json)" \
+    || die "check: registration request failed"
+  tenancy="$(jq -r .tenancy <<<"$req")"
+  cli registration submit "$dev/request" --factory-url http://localhost:8080 --json >/dev/null || die "check: registration submit failed"
+  curl -fsS -b "$jar" -o /dev/null --max-time 10 -d "csrf=$csrf" "http://localhost:8080/pending/$tenancy/confirm" || die "check: the portal did not confirm the device"
+  cli registration wait "$tenancy" --device-dir "$dev" --factory-url http://localhost:8080 --trust-bundle "$STATE/authority/trust-bundle.bundle" --timeout 30 --json >/dev/null \
+    || die "check: the device did not register"
+  out=""
+  for i in $(seq 1 30); do
+    if out="$(cli bundle fetch --device-dir "$dev" --factory-url http://localhost:8080 --trust-bundle "$STATE/authority/trust-bundle.bundle" --out "$dev/bundle/" --json 2>"$LOGS/check-fetch.err")"; then break; fi
+    grep -q 'no-bundle' "$LOGS/check-fetch.err" || die "check: bundle fetch failed: $out $(cat "$LOGS/check-fetch.err")"
+    out=""; sleep 1
+  done
+  [ -n "$out" ] || die "check: the factory built no bundle in 30 seconds (deploy/local/.state/dev-web/logs/factory.log)"
+  [ "$(jq -r .sequence <<<"$out")" = 1 ] || die "check: the first bundle is not sequence 1: $out"
+  grep -q '"event":"bundle-built"' "$LOGS/factory.log" || die "check: the factory log has no bundle-built event"
+  retire_devices "$jar"
+  rm -f "$jar"
+  say "check: a registered device fetched its bundle (sequence 1) and the factory logged bundle-built"
+}
+
+# The stand-in's part of the browser device's fetch: the provisioning names the factory itself
+# (the token is bound to its URL) and the publishers the device accepts, the proxy hands the factory's
+# answer back to a request that carries a token header (a made-up token is the factory's 400 or 401,
+# not the 502 of an unreachable factory), and the removed route is gone.
+check_device_fetch() {
+  local prov code
+  prov="$(curl -fsS --max-time 10 http://127.0.0.1:8090/device/provisioning)" || die "check: the stand-in gave no device provisioning"
+  [ "$(jq -r .factoryUrl <<<"$prov")" = http://localhost:8080 ] || die "check: the provisioning does not name the factory: $prov"
+  [ "$(jq -r '.allowedBuilders | length' <<<"$prov")" -ge 1 ] || die "check: the provisioning has no allowed builders"
+  code="$(curl -s -o /dev/null -w '%{http_code}' -H 'Fieldseal-PoP: not-a-token' --max-time 10 http://127.0.0.1:8090/proxy/factory/v1/bundle)"
+  case "$code" in 400 | 401) ;; *) die "check: the proxy did not hand back the factory's refusal of a bad token (got $code)" ;; esac
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:8090/device/bundle?tenancy=00")" = 404 ] || die "check: the removed bundle route still answers"
+  say "check: the stand-in provisions the device with the factory's URL, passes its token to the factory and has no bundle route of its own"
 }
 
 # The edit-and-reload check: a changed label shows with no restart, and a broken file keeps the
@@ -248,6 +323,8 @@ if [ "$CHECK" = 1 ]; then
   say "check: the Publishing page lists the published examples"
   curl -fsS --max-time 10 http://127.0.0.1:8090/instruments/school-meals-baseline/roster | grep -q '"cohort":"cohort-a"' || die "check: the roster page does not show the issued roster of cohort-a"
   say "check: the roster page reads the roster the factory stored"
+  check_bundle
+  check_device_fetch
   check_edit
   say "dev-web --check passed"
   exit 0

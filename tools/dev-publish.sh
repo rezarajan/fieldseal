@@ -112,6 +112,9 @@ publish_survey() {
   # The layouts bind to the fingerprint of the instrument just published, so they use its salt.
   salt="$(cat "$salt_file")"
   local layout window
+  # A layout file is published under the artefact name in its `layout.name`, which is `<survey>-<window>`
+  # (artefact names are lower-case and hyphenated, so the factory finds layouts by that name). The
+  # `<survey>.<window>.layout` used below only names the files this script keeps.
   for layout in "$folder"/layouts/*.yaml "$folder"/layouts/*.yml "$folder"/layouts/*.json; do
     [ -f "$layout" ] || continue
     window="$(basename "${layout%.*}")"

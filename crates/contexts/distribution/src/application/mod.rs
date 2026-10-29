@@ -13,6 +13,6 @@ pub mod release;
 pub mod verify;
 
 pub use build::{BuildBundle, BuildRequest, BuiltBundle, BundleBuilder, FactoryIdentity, FactoryPorts};
-pub use fetch::{BundleDelivery, DownloadBundle, FetchBundle};
+pub use fetch::{BundleDelivery, BundleFetchResponse, DownloadBundle, FetchBundle};
 pub use release::{Released, check_state, decide_release, release_facts};
 pub use verify::{BundleImporter, HeldRoster, HeldState, ImportBundle, ImportRecord, ImportState, VerifiedBundle, VerifyBundle};

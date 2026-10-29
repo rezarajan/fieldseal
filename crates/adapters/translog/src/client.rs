@@ -7,7 +7,7 @@ use fieldseal_publishing::domain::{ConsistencyProof, InclusionProof, LeafFormat,
 use fieldseal_publishing::ports::{LogError, LogRequest, LogTransport, LoggedEntry, Transmission, TransparencyLog};
 use fieldseal_trust::domain::LogPin;
 
-use crate::wire::{decode_append, decode_checkpoint, decode_consistency, decode_inclusion};
+use crate::wire::{decode_append, decode_checkpoint, decode_consistency, decode_entries, decode_inclusion};
 
 /// A [`TransparencyLog`] client for a log served by [`crate::handle`] (or the
 /// `fieldseal-translog` server), over any [`LogTransport`].
@@ -36,6 +36,14 @@ impl<T: LogTransport> HttpTranslog<T> {
 
     fn send(&self, request: LogRequest, fields: Vec<(String, Vec<u8>)>) -> Result<Vec<u8>, LogError> {
         self.transport.send(&Transmission { request, fields })
+    }
+
+    /// The entries at indices `from` (inclusive) to `to` (exclusive), at most 256 per call
+    /// (ask again from the next index). An inherent method, not part of the
+    /// [`TransparencyLog`] port: public logs keep their own API behind their own adapter
+    /// (PUB-110).
+    pub fn entries(&self, from: u64, to: u64) -> Result<Vec<LogEntry>, LogError> {
+        decode_entries(&self.send(LogRequest::Entries { from, to }, Vec::new())?)
     }
 
     fn checked(&self, checkpoint: SignedCheckpoint) -> Result<SignedCheckpoint, LogError> {

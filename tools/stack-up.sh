@@ -42,6 +42,10 @@ secrets_and_render() {
   mkdir -p "$GEN"; find "$GEN" -maxdepth 1 -name '*.env' -delete || die "could not clear $GEN"
   "$FS" deployment render "$MANIFEST" --environment development --out "$GEN" >/dev/null || die "could not render $MANIFEST"
   say "rendered the environment of $(basename "$MANIFEST") to deploy/local/.generated"
+  # The web service's device accepts the publishers the intake component's policy engine does:
+  # the same two lists, copied under the web app's names, so the values stay in the manifest.
+  sed -n 's/^FIELDSEAL_INTAKE_ALLOWED_\(BUILDERS\|SOURCES\)=/FIELDSEAL_WEB_ALLOWED_\1=/p' "$GEN/intake.env" > "$GEN/web.env" \
+    || die "could not write $GEN/web.env"
 }
 stage secrets+render secrets_and_render
 

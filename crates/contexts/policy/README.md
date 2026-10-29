@@ -39,3 +39,5 @@ None in this crate's own code: it performs no I/O, reads no clock and draws no r
 ## Verification
 
 `cargo test -p fieldseal-policy` (repo-wide runner: `just test`). Adapters verify themselves by calling the functions in `contract`.
+
+`factory.release.layouts` (`bound` or `none`, default `bound`, tighter is `none`; POL-068; typed as `LayoutAssignment` in `FactoryPolicy::release_layouts`) chooses which layouts a bundle carries: every published layout bound to the instrument, the newest per window class, or none. The factory's reconciler reads it; it loosens nothing.

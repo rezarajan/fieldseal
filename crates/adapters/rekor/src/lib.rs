@@ -162,6 +162,7 @@ pub fn render(base_url: &str, t: &Transmission) -> Result<HttpRequest, LogError>
         LogRequest::Consistency { old_size, new_size } => {
             get(format!("/api/v1/log/proof?firstSize={old_size}&lastSize={new_size}"))
         }
+        LogRequest::Entries { .. } => Err(LogError::Unavailable("Rekor lists entries through its own API".into())),
     }
 }
 

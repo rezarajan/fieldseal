@@ -8,7 +8,7 @@ This walkthrough drives every part of Fieldseal yourself, on your own machine:
 5. Download the instrument, open it, and answer it.
 6. Issue the rosters and assign their cohorts.
 7. Register a device.
-8. Build its bundle, capture, upload, and see what intake landed.
+8. Fetch its bundle, capture, upload, and see what intake landed.
 
 Each step is one `just` command that prints what it did and what to look at next. Each step leaves its state in the stack, so you can stop between steps and come back.
 
@@ -165,18 +165,18 @@ The headless step does everything below for you, printing each part as it goes:
 
    It collects the certificate and shows the tenancy as `registered`.
 
-## 8. A bundle for that device
+## 8. The device fetches its bundle
 
 ```sh
 just bundle   # step
 ```
 
-This builds the bundle the device will open, with the stack's own authority. The bundle carries:
+The factory builds a bundle for each registered device and serves the latest one at `GET /v1/bundle`. This step runs `fieldseal bundle fetch`, which proves with the device's own key that it is that device and stores the bundle in the `device` volume. The factory notices new publications within a few seconds, so the step asks again for up to a minute if the bundle is not built yet. The bundle carries:
 - the instrument the log holds;
 - the deployment policy;
 - a roster.
 
-It is sealed to the registered device's agreement key. The step then verifies it as the device does (WIRE-093): signature, threshold of publishers, log inclusion, roster generation, then decryption. The device is unattested, so the roster is released under the development factory's explicit allowance (REG-017) with a flag. It is never released as if the device were attested.
+It is sealed to the registered device's agreement key, so no other device can open it. The device verifies it when it imports it in the next step (WIRE-093): signature, threshold of publishers, log inclusion, roster generation, then decryption. The device is unattested, so the roster is released under the development factory's explicit allowance (REG-017). It is never released as if the device were attested.
 
 ## 9. Capture
 

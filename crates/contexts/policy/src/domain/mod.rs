@@ -33,7 +33,7 @@ pub use document::{Decoded, InstrumentRef, Layer, Metadata, PolicyDocument, deco
 pub use finding::{Finding, Severity, has_errors};
 pub use invariant::{Invariant, check_floors};
 pub use merge::{
-    ChangeDirection, ControlChange, EffectivePolicy, PublishedPolicy, diff_documents, merge_layers,
+    ChangeDirection, ControlChange, EffectivePolicy, PublishedPolicy, describe, diff_documents, merge_layers,
 };
 pub use runtime::{AppliedVersions, LockTrigger, RuntimeEvaluator};
 pub use schema::CUSTODY_PURPOSES;

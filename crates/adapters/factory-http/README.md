@@ -17,7 +17,8 @@ Crate root:
 - `HttpConfig { public_url, session_ttl_ms }`.
 - `Request`, `Response`, `parse_form`, `multipart_field`: re-exported from `fieldseal-adapters-portal`.
 - `iso8601(AuthorityTime)`, `error_code(&RegistrationError)`.
-- Consts `MAX_BODY` (1 MiB) and `SESSION_COOKIE` (`fs_session`).
+- Consts `MAX_BODY` (1 MiB), `BUNDLE_LIMIT` (8 MiB, the answer limit of the bundle call) and `SESSION_COOKIE` (`fs_session`).
+- `BundleRoutes { fetch, download }`: Distribution's `FetchBundle` and `DownloadBundle`, both implemented by `BundleDelivery`, passed to `with_bundle_routes`; `with_registration_notify(ReconcileNotify)` tells the reconciler of a tenancy that has just registered.
 
 Routes served by `handle`:
 
@@ -26,14 +27,15 @@ Routes served by `handle`:
 | `POST /v1/registrations` | none (request is sealed and proves possession) | `SubmitRequest`, `RollKey` |
 | `GET /v1/registrations/{tenancy}` | none; state only | status polling |
 | `GET /v1/certificate` | `Fieldseal-PoP` | `GetCertificate` (CBOR) |
+| `GET /v1/bundle?held=<n>` | `Fieldseal-PoP` | `FetchBundle`: the stored `FSB1` bytes |
 | `POST /v1/api-token` | `Fieldseal-PoP` | `IssueApiToken` |
 | `POST /v1/posture/nonce`, `POST /v1/posture` | `Fieldseal-PoP` | `CheckPosture` |
 
-The portal covers sign-in via the `IdentityProvider` port, tokens as text and QR (REG-007), pending requests with fingerprint words and indices (REG-021, REG-023), devices with mark-lost and retire (REG-043), request-file upload and certificate download for the air-gapped route (REG-053, REG-054).
+The portal covers sign-in via the `IdentityProvider` port, tokens as text and QR (REG-007), pending requests with fingerprint words and indices (REG-021, REG-023), devices with mark-lost and retire (REG-043), request-file upload and certificate and bundle download for the air-gapped route (REG-053, REG-054, DIS-041; `GET /devices/{device}/bundle.fsb`).
 
 Modules:
 
-- `client`: `FactoryHttpClient::new(base_url)`, `base()`, `submit(request_file)`, `status(tenancy_hex)`, `certificate(pop_header)`; `Answer { status, body }`; `ClientError { BadUrl, Unreachable }`; `MAX_ANSWER` (1 MiB). Returns bytes and status; the caller interprets them.
+- `client`: `FactoryHttpClient::new(base_url)`, `base()`, `submit(request_file)`, `status(tenancy_hex)`, `certificate(pop_header)`, `bundle(pop_header, held) -> BundleAnswer` (up to `BUNDLE_LIMIT`, 8 MiB); `Answer { status, body }`; `ClientError { BadUrl, Unreachable }`; `MAX_ANSWER` (1 MiB). Returns bytes and status; the caller interprets them.
 - `html`: `escape`, `page(title_id, body, csrf)`, `words(&FingerprintWords)`, `qr_svg(text, label)` (inline SVG).
 - `messages`: `CATALOGUE` (stable message ID to English text), `text`, `format(id, args)` (named `{placeholders}`, values HTML-escaped), `t`.
 
@@ -51,9 +53,13 @@ Ports consumed: `fieldseal_registration::ports::IdentityProvider` (and its `Pend
 - `run` adds `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` to every response.
 - The client accepts only `http://` or `https://` base URLs and caps answers at `MAX_ANSWER`.
 
+## Bundle routes
+
+`GET /v1/bundle` answers `200` with the stored bundle bytes (`Fieldseal-Bundle-Sequence`, `Content-Disposition` with the DIS-023 name), `304` when `held` is the latest, `404 no-bundle`, `401 pop-required|proof-invalid|replay`, `403 not-registered|revoked|withheld` (with `reasons`) and `503 unavailable`; every answer carries `Cache-Control: no-store`. Invariants: the route serves only what is stored and never builds (DIS-084); eligibility is checked at every fetch (`check_state`), not only when the bundle was built; the token is bound to the URL without its query, so `held` is not signed and a rewritten one can only change a bundle into a `304` or the reverse (WIRE-171); an unparseable `held` is ignored; the `jti` ledger is the one the other PoP routes use. The portal download needs a session, serves only the signed-in account's own device and changes nothing, so it takes no CSRF token; it turns the one reason `no-bundle-built` into `404`.
+
 ## Operator API
 
-`POST /v1/rosters`, `POST /v1/assignments` and `GET /v1/assignments` take `Authorization: Bearer <access token>` and read no cookie; the portal pages read no Bearer token. A route asks the injected `BearerVerifier` for the person (`401 bearer-required` without a token, `401 token-invalid` when the verifier refuses), then `Factory::authorise_operator` (`403 not-authorised`, `403 authentication-too-weak`), and only then reads the body: the server checks the header before it reads any of the body of these routes, and the use case checks again. `POST /v1/assignments` takes the bare subject in `account` (not empty, at most 255 bytes, no control character, else `400 malformed`) and maps it with `BearerVerifier::account_for_subject`, the rule the sign-in uses for the account id; `GET /v1/assignments` shows the subject, derived from the account id by `BearerVerifier::subject_of_account`, which strips the verifier's own prefix (a subject may hold `|`; an id without the prefix is shown whole), since the journal keeps only the account id. Other refusals: `404 unknown-survey|unknown-cohort`, `409 version-taken|not-newer`, `422 roster-invalid`; an identical request answers `200` with `unchanged`. The `ReconcileNotify` callback is told each tenancy a change touched (a no-op until Phase 13) and the `OperatorEvents` callback receives `assignment-made` and `roster-issued`. A roster body is never logged. Without `with_operator_api` the routes answer `503`.
+`POST /v1/rosters`, `POST /v1/assignments` and `GET /v1/assignments` take `Authorization: Bearer <access token>` and read no cookie; the portal pages read no Bearer token. A route asks the injected `BearerVerifier` for the person (`401 bearer-required` without a token, `401 token-invalid` when the verifier refuses), then `Factory::authorise_operator` (`403 not-authorised`, `403 authentication-too-weak`), and only then reads the body: the server checks the header before it reads any of the body of these routes, and the use case checks again. `POST /v1/assignments` takes the bare subject in `account` (not empty, at most 255 bytes, no control character, else `400 malformed`) and maps it with `BearerVerifier::account_for_subject`, the rule the sign-in uses for the account id; `GET /v1/assignments` shows the subject, derived from the account id by `BearerVerifier::subject_of_account`, which strips the verifier's own prefix (a subject may hold `|`; an id without the prefix is shown whole), since the journal keeps only the account id. Other refusals: `404 unknown-survey|unknown-cohort`, `409 version-taken|not-newer`, `422 roster-invalid`; an identical request answers `200` with `unchanged`. The `ReconcileNotify` callback is told each tenancy a change touched (connected to the factory's reconciler) and the `OperatorEvents` callback receives `assignment-made` and `roster-issued`. A roster body is never logged. Without `with_operator_api` the routes answer `503`.
 
 ## Side Effects
 

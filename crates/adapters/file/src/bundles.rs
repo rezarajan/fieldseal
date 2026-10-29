@@ -14,7 +14,14 @@ use fieldseal_kernel::digest::lower_hex;
 use fieldseal_kernel::id::{ContentAddress, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
 
-use crate::atomic::write_atomic;
+use crate::atomic::{write_atomic, write_atomic_mode};
+
+/// The marker file of a withheld tenancy, beside its bundles. One reason per line.
+const WITHHELD: &str = "withheld";
+/// The most a marker may hold; a larger one is garbled.
+const WITHHELD_MAX: u64 = 64 * 1024;
+/// Read as the reason when the marker can't be read: withheld, failing closed.
+const WITHHELD_UNREADABLE: &str = "withheld-unreadable";
 
 /// Bundles kept in a directory, one subdirectory per tenancy.
 pub struct FileBundleStore {
@@ -127,5 +134,99 @@ impl BundleStore for FileBundleStore {
             Some((seq, path)) => read_bundle(tenancy, seq, &path).map(Some),
             None => Ok(None),
         }
+    }
+
+    fn withheld(&self, tenancy: &TenancyId) -> Result<Option<Vec<String>>, BundleStoreError> {
+        use std::io::Read as _;
+        let path = self.tenancy_dir(tenancy).join(WITHHELD);
+        let unreadable = || Ok(Some(vec![WITHHELD_UNREADABLE.to_owned()]));
+        // Neither a symlink nor anything but a regular file is a marker we wrote.
+        match std::fs::symlink_metadata(&path) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(_) => return unreadable(),
+            Ok(m) if !m.is_file() || m.len() > WITHHELD_MAX => return unreadable(),
+            Ok(_) => {}
+        }
+        let mut text = String::new();
+        let read = std::fs::File::open(&path).and_then(|f| f.take(WITHHELD_MAX + 1).read_to_string(&mut text));
+        let reasons: Vec<String> = text.lines().filter(|l| !l.is_empty()).map(str::to_owned).collect();
+        if read.is_err() || text.len() as u64 > WITHHELD_MAX || reasons.is_empty() {
+            return unreadable();
+        }
+        Ok(Some(reasons))
+    }
+
+    fn set_withheld(&self, tenancy: &TenancyId, reasons: Option<&[String]>) -> Result<(), BundleStoreError> {
+        let dir = self.tenancy_dir(tenancy);
+        let path = dir.join(WITHHELD);
+        match reasons {
+            Some(reasons) => {
+                // A reason is one line; an empty list would read back as garbled.
+                let clean: Vec<String> = reasons.iter().map(|r| r.replace(['\n', '\r'], " ")).filter(|r| !r.is_empty()).collect();
+                let clean = if clean.is_empty() { vec![WITHHELD.to_owned()] } else { clean };
+                std::fs::create_dir_all(&dir).map_err(backend)?;
+                write_atomic_mode(&path, (clean.join("\n") + "\n").as_bytes(), 0o600).map_err(backend)
+            }
+            None => match std::fs::remove_file(&path) {
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(backend(e)),
+                _ => Ok(()),
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store() -> (FileBundleStore, PathBuf) {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let dir = std::env::temp_dir().join(format!("fieldseal-bundles-{}-{}", std::process::id(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+        let _ = std::fs::remove_dir_all(&dir);
+        (FileBundleStore::new(&dir), dir)
+    }
+
+    fn unreadable() -> Result<Option<Vec<String>>, BundleStoreError> {
+        Ok(Some(vec!["withheld-unreadable".to_owned()]))
+    }
+
+    #[test]
+    fn dis_003_a_garbled_or_oversized_or_non_file_withheld_marker_reads_as_withheld() {
+        let (store, dir) = store();
+        let t = TenancyId::from([3; 32]);
+        let marker = store.tenancy_dir(&t).join("withheld");
+        std::fs::create_dir_all(store.tenancy_dir(&t)).expect("dir");
+        std::fs::write(&marker, b"").expect("empty");
+        assert_eq!(store.withheld(&t), unreadable(), "empty");
+        std::fs::write(&marker, [0xff, 0xfe, 0x00]).expect("garbled");
+        assert_eq!(store.withheld(&t), unreadable(), "not UTF-8");
+        std::fs::write(&marker, vec![b'a'; 70_000]).expect("big");
+        assert_eq!(store.withheld(&t), unreadable(), "too large");
+        std::fs::remove_file(&marker).expect("rm");
+        std::fs::create_dir(&marker).expect("dir marker");
+        assert_eq!(store.withheld(&t), unreadable(), "a directory");
+        std::fs::remove_dir(&marker).expect("rm");
+        assert_eq!(store.withheld(&t), Ok(None));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dis_003_the_withheld_marker_is_owner_only_and_a_symlink_is_not_followed() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let (store, dir) = store();
+        let t = TenancyId::from([4; 32]);
+        store.set_withheld(&t, Some(&["policy-hold".to_owned()])).expect("set");
+        let marker = store.tenancy_dir(&t).join("withheld");
+        assert_eq!(std::fs::metadata(&marker).expect("meta").permissions().mode() & 0o777, 0o600);
+        std::fs::remove_file(&marker).expect("rm");
+        let target = dir.join("elsewhere");
+        std::fs::write(&target, b"policy-hold\n").expect("target");
+        std::os::unix::fs::symlink(&target, &marker).expect("link");
+        assert_eq!(store.withheld(&t), unreadable());
+        store.set_withheld(&t, None).expect("clear removes the link, not the target");
+        assert!(target.exists());
+        assert_eq!(store.withheld(&t), Ok(None));
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

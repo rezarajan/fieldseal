@@ -160,8 +160,9 @@ impl Response {
 }
 
 /// Forwards `req` to `upstream_base`, with the part of the path after `prefix` and the query.
-/// Only `Content-Type`, `Fieldseal-PoP` and `Authorization` are forwarded; the status, body
-/// and content type come back. An unreachable upstream is a 502 with a plain JSON error.
+/// Only `Content-Type`, `Fieldseal-PoP` and `Authorization` are forwarded; the status (a `304`
+/// included), body and content type come back, with `Fieldseal-Bundle-Sequence` and
+/// `Content-Disposition` when the upstream sends them (the factory's bundle route). An unreachable upstream is a 502 with a plain JSON error.
 pub fn proxy(upstream_base: &str, req: &Request, prefix: &str) -> Response {
     let suffix = req.path.strip_prefix(prefix).unwrap_or("");
     let mut url = format!("{}{}", upstream_base.trim_end_matches('/'), suffix);
@@ -182,8 +183,12 @@ pub fn proxy(upstream_base: &str, req: &Request, prefix: &str) -> Response {
         Ok(mut resp) => {
             let status = resp.status().as_u16();
             let content_type = resp.headers().get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("application/octet-stream").to_owned();
+            let passed: Vec<(&str, String)> = ["fieldseal-bundle-sequence", "content-disposition"]
+                .into_iter()
+                .filter_map(|name| Some((name, resp.headers().get(name)?.to_str().ok()?.to_owned())))
+                .collect();
             match resp.body_mut().read_to_vec() {
-                Ok(body) => Response::new(status, &content_type, body),
+                Ok(body) => passed.iter().fold(Response::new(status, &content_type, body), |r, (k, v)| r.with(k, v)),
                 Err(_) => unreachable(),
             }
         }

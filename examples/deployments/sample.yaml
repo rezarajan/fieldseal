@@ -19,7 +19,7 @@ spec:
     builds: { container: "localhost:5000/fieldseal", runtime: "http://127.0.0.1:9002" }
   policies:
     layers:
-      - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+      - { ref: policy/deployment-default, digest: "sha256:78daf4a0c4ca30aec1aa86e6f7b868a86ed73f74bfde7c3c1a8c644024fc9266" }
   instruments:
     - { ref: instrument/school-meals-baseline, channel: development }
     - { ref: instrument/household-water-access, channel: development }
@@ -34,11 +34,21 @@ spec:
           adapter: memory
           config: { trustBundleOut: ./trust-bundle.bin }
         AttestationVerifier: { adapter: software, config: {} }
-        PolicyEngine: { adapter: built-in, config: {} }
+        # The release policy (`deployment-policy`) is verified against these before any value is read
+        # from it. Outside development the factory takes `policyDigest` instead: the content address
+        # of the policy it trusts.
+        PolicyEngine:
+          adapter: built-in
+          config:
+            allowedBuilders: "https://ci.example.org/builders/fieldseal-publish"
+            allowedSources: "https://git.example.org/authority/artefacts"
         TenancyRegistry: { adapter: memory, config: {} }
         # The operator API reads the artefact registry and writes the roster store (development adapters, DEP-023).
         ArtefactRegistry: { adapter: file-dev, config: { dir: ./registry } }
         RosterSource: { adapter: file-dev, config: { dir: ./rosters } }
+        # The factory builds bundles into `dir` and records the issued rosters for intake (development adapters, DEP-023).
+        BundleStore: { adapter: file-dev, config: { dir: ./bundles, issuedRostersDir: ./issued } }
+        RuntimeProfiles: { adapter: file-dev, config: { dir: ./state/factory } }
       scaling: { replicas: 1 }
     intake:
       adapters:
@@ -49,7 +59,7 @@ spec:
         TenancyRegistry: { adapter: memory, config: {} }
         # The results reader signs people in; the stores are development adapters (DEP-023).
         IdentityProvider: { adapter: oidc, config: { issuer: "http://localhost:8180/realms/fieldseal", clientId: fieldseal-intake } }
-        RosterHistory: { adapter: file-dev, config: { dir: ./published/rosters } }
+        RosterHistory: { adapter: file-dev, config: { dir: ./issued } }
         InstrumentSource: { adapter: file-dev, config: { dir: ./published } }
       scaling: { replicas: 1 }
     publishing:

@@ -10,7 +10,7 @@
 
 pub mod config;
 pub mod dev_adapters;
-pub mod front;
+pub use fieldseal_adapters_portal::front;
 pub mod replay;
 pub mod wiring;
 

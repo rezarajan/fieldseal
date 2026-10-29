@@ -18,6 +18,8 @@
 //! | `FIELDSEAL_OIDC_ACCEPT_TYP_JWT` | `true` to accept an access token whose header type is a plain `JWT` (Keycloak's), with the payload type `Bearer` (default `false`) |
 //! | `FIELDSEAL_FACTORY_REGISTRY_DIR` | The artefact registry directory `artefact publish` writes, read by the survey lookup of `AssignCohort` (required; a development adapter) |
 //! | `FIELDSEAL_ROSTER_DIR` | The roster store: `IssueRoster` writes it and `AssignCohort` checks cohorts against it (required; a development adapter; owner-only permissions) |
+//! | `FIELDSEAL_FACTORY_POLICY_DIGEST` | The content address (`sha256:` and 64 hex digits) of the `deployment-policy` the factory trusts. Required in staging and production, where any other policy is refused; in development it pins the policy when set |
+//! | `FIELDSEAL_FACTORY_ALLOWED_BUILDERS`, `FIELDSEAL_FACTORY_ALLOWED_SOURCES` | Development only, without a pinned digest: comma-separated builders and sources the release policy is verified under (with the schema defaults) before any value is read from it. Default none |
 //! | `FIELDSEAL_DEV_USERS` | For `dev` identity: `login=role+role:amr+amr,…` |
 //! | `FIELDSEAL_CUSTODY` | `memory-dev`: keys and a development authority generated in memory, lost on restart (non-production only). `file-dev`: the authority's keys in a key directory and its trust bundle in a file (non-production only) |
 //! | `FIELDSEAL_CUSTODY_DIR` | For `file-dev`: the key directory (the `registration` P-256 and X25519 keys, the `record` key) |
@@ -35,27 +37,31 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use fieldseal_adapters_factory_http::{BearerError, BearerVerifier, FactoryHttp, HttpConfig, OperatorEvent, OperatorEvents, no_reconcile};
+use fieldseal_adapters_factory_http::{BearerError, BearerVerifier, BundleRoutes, FactoryHttp, HttpConfig, OperatorEvent, OperatorEvents};
+use fieldseal_adapters_file::bundles::FileBundleStore;
 use fieldseal_adapters_file::custody::DirCustody;
 use fieldseal_adapters_file::directories::{PublishedSurveys, StoredCohorts};
+use fieldseal_adapters_file::profiles::FileRuntimeProfiles;
 use fieldseal_adapters_file::registry::FileRegistry;
 use fieldseal_adapters_file::roster_issuer::FileRosterIssuer;
-use fieldseal_adapters_file::roster_store::RosterStore;
+use fieldseal_adapters_file::roster_store::{FileRosterSource, RosterStore};
 use fieldseal_adapters_file::store::FileRegistryStore;
 use fieldseal_adapters_memory::policy::{BuiltInPolicyEngine, MemoryDecisionLog};
-use fieldseal_adapters_memory::registration::{MemoryIdentityProvider, MemoryReceivedProgress, MemoryRegistryStore, dev_authority};
+use fieldseal_adapters_memory::registration::{MemoryIdentityProvider, MemoryReceivedProgress, dev_authority};
 use fieldseal_adapters_memory::trust::SoftwareAttestationVerifier;
+use fieldseal_adapters_oidc::OidcIdentityProvider;
 use fieldseal_deployment::events::development_adapters_event;
-use fieldseal_adapters_oidc::{OidcConfig, OidcIdentityProvider};
+use fieldseal_distribution::application::{BundleDelivery, FactoryIdentity};
+use fieldseal_factory::config::{Config, Custody, Identity};
+use fieldseal_factory::reconciler::{ReconcileEvent, Reconciler, ReconcilerConfig, ReconcilerPorts};
+use fieldseal_kernel::crypto::Purpose;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_policy::domain::{Controls, EffectivePolicy};
-use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts, OperatorPorts};
 use fieldseal_registration::domain::checks::UnattestedKeys;
-use fieldseal_registration::domain::wire::factory_url_ok;
+use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts, OperatorPorts};
 use fieldseal_registration::domain::{MethodAssurance, TenancyTerms, Window};
 use fieldseal_registration::ports::{IdentityError, IdentityProvider, PendingSignIn, RegistryStore, SignInStart};
-use fieldseal_kernel::crypto::Purpose;
-use fieldseal_trust::domain::{AuthorityPublicKey, TrustBundle};
+use fieldseal_trust::domain::{AuthorityPublicKey, KeyCertificate, TrustBundle};
 use fieldseal_trust::ports::{AuthorityClock, KeyCustody, RandomSource};
 
 /// The operating system's clock as authority time.
@@ -131,178 +137,6 @@ impl BearerVerifier for NoBearer {
     }
 }
 
-/// How people sign in.
-#[derive(Debug, PartialEq, Eq)]
-enum Identity {
-    Oidc(Box<OidcConfig>),
-    /// Development users: login, roles, amr.
-    Dev(Vec<DevUser>),
-}
-
-/// Where the authority's keys come from.
-#[derive(Debug, PartialEq, Eq)]
-enum Custody {
-    /// Generated in memory at start-up.
-    MemoryDev,
-    /// A key directory and a trust bundle file.
-    FileDev {
-        /// The key directory.
-        dir: String,
-    },
-}
-
-/// The factory's configuration, from the environment.
-#[derive(Debug, PartialEq, Eq)]
-struct Config {
-    production: bool,
-    bind: String,
-    public_url: String,
-    identity: Identity,
-    custody: Custody,
-    trust_bundle: Option<String>,
-    state_dir: Option<String>,
-    registry_dir: String,
-    roster_dir: String,
-    unattested: UnattestedKeys,
-}
-
-/// A development user: login, role names, `amr` values.
-type DevUser = (String, Vec<String>, Vec<String>);
-
-/// A comma-separated list in which every entry is non-empty, trimmed and unique.
-fn entries(text: &str, sep: char, what: &str) -> Result<Vec<String>, String> {
-    let mut out: Vec<String> = Vec::new();
-    for e in text.split(sep) {
-        if e.is_empty() || e != e.trim() {
-            return Err(format!("{what}: an entry is empty or has surrounding whitespace in `{text}`"));
-        }
-        if out.iter().any(|x| x == e) {
-            return Err(format!("{what}: `{e}` is listed twice"));
-        }
-        out.push(e.to_owned());
-    }
-    Ok(out)
-}
-
-fn parse_dev_users(spec: &str) -> Result<Vec<DevUser>, String> {
-    let mut seen: Vec<&str> = Vec::new();
-    entries(spec, ',', "FIELDSEAL_DEV_USERS")?
-        .iter()
-        .map(|entry| {
-            let (login, rest) = entry.split_once('=').ok_or_else(|| format!("FIELDSEAL_DEV_USERS: `{entry}` is not login=roles:amr"))?;
-            if login.is_empty() || seen.contains(&login) {
-                return Err(format!("FIELDSEAL_DEV_USERS: `{entry}` has an empty or repeated login"));
-            }
-            seen.push(Box::leak(login.to_owned().into_boxed_str()));
-            let (roles, amr) = rest.split_once(':').unwrap_or((rest, ""));
-            let split = |s: &str| if s.is_empty() { Ok(Vec::new()) } else { entries(s, '+', "FIELDSEAL_DEV_USERS") };
-            Ok((login.to_owned(), split(roles)?, split(amr)?))
-        })
-        .collect()
-}
-
-/// A value that may be given directly (`NAME`) or by secret-store reference (`NAME_REF`),
-/// the reference resolving to `FIELDSEAL_SECRET_<REFERENCE>` in the environment the platform
-/// injects at run time (DEP-012).
-fn secret(get: &impl Fn(&str) -> Option<String>, name: &str) -> Result<Option<String>, String> {
-    if let Some(v) = get(name).filter(|v| !v.is_empty()) {
-        return Ok(Some(v));
-    }
-    let Some(reference) = get(&format!("{name}_REF")).filter(|v| !v.is_empty()) else { return Ok(None) };
-    let var = format!("FIELDSEAL_SECRET_{}", reference.to_ascii_uppercase().replace(|c: char| !c.is_ascii_alphanumeric(), "_"));
-    get(&var).filter(|v| !v.is_empty()).map(Some).ok_or_else(|| format!("{name}_REF={reference}: {var} is not set"))
-}
-
-impl Config {
-    fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Self, String> {
-        // Strict (twelve-factor III): a variable that is set must hold a value, with no
-        // surrounding whitespace; a flag is exactly `true` or `false`.
-        let opt = |k: &str| -> Result<Option<String>, String> {
-            match get(k) {
-                None => Ok(None),
-                Some(v) if v.is_empty() || v != v.trim() => Err(format!("{k} is set but empty or has surrounding whitespace")),
-                Some(v) => Ok(Some(v)),
-            }
-        };
-        let need = |k: &str| opt(k)?.ok_or_else(|| format!("{k} must be set"));
-        let flag = |k: &str| -> Result<bool, String> {
-            match opt(k)?.as_deref() {
-                None | Some("false") => Ok(false),
-                Some("true") => Ok(true),
-                Some(other) => Err(format!("{k}={other}: use true or false")),
-            }
-        };
-        let environment = need("FIELDSEAL_ENVIRONMENT")?;
-        let production = match environment.as_str() {
-            "production" => true,
-            "development" | "staging" | "test" => false,
-            other => return Err(format!("FIELDSEAL_ENVIRONMENT={other}: use development, staging or production")),
-        };
-        let non_production = |what: &str| if production { Err(format!("{what} is not allowed in production")) } else { Ok(()) };
-        let bind = need("FIELDSEAL_FACTORY_BIND")?;
-        bind.parse::<std::net::SocketAddr>().map_err(|_| format!("FIELDSEAL_FACTORY_BIND={bind}: expected ip:port, for example 0.0.0.0:8080"))?;
-        let public_url = need("FIELDSEAL_FACTORY_URL")?;
-        if !factory_url_ok(&public_url) {
-            return Err("FIELDSEAL_FACTORY_URL must be an https URL (http only for a loopback host), at most 256 bytes".into());
-        }
-        let identity = match need("FIELDSEAL_IDENTITY")?.as_str() {
-            "oidc" => {
-                let mut c = OidcConfig::new(need("FIELDSEAL_OIDC_ISSUER")?, secret(&get, "FIELDSEAL_OIDC_CLIENT_ID")?.ok_or("FIELDSEAL_OIDC_CLIENT_ID must be set")?);
-                c.client_secret = secret(&get, "FIELDSEAL_OIDC_CLIENT_SECRET")?;
-                c.scopes = opt("FIELDSEAL_OIDC_SCOPES")?.map(|s| entries(&s, ' ', "FIELDSEAL_OIDC_SCOPES")).transpose()?.unwrap_or_default();
-                if let Some(r) = opt("FIELDSEAL_OIDC_ROLES_CLAIM")? {
-                    c.roles_claim = r;
-                }
-                c.acr_values = opt("FIELDSEAL_OIDC_ACR_VALUES")?;
-                let list = |k: &str| -> Result<Vec<String>, String> { opt(k)?.map(|s| entries(&s, ',', k)).transpose().map(Option::unwrap_or_default) };
-                c.phishing_resistant_amr = list("FIELDSEAL_OIDC_PHISHING_RESISTANT_AMR")?;
-                c.phishing_resistant_acr = list("FIELDSEAL_OIDC_PHISHING_RESISTANT_ACR")?;
-                c.asserted_methods = flag("FIELDSEAL_OIDC_ASSERTED_METHODS")?;
-                c.api_audience = opt("FIELDSEAL_OIDC_API_AUDIENCE")?;
-                c.cli_client_id = opt("FIELDSEAL_OIDC_CLI_CLIENT_ID")?;
-                c.accept_typ_jwt = flag("FIELDSEAL_OIDC_ACCEPT_TYP_JWT")?;
-                Identity::Oidc(Box::new(c))
-            }
-            "dev" => {
-                non_production("FIELDSEAL_IDENTITY=dev")?;
-                Identity::Dev(parse_dev_users(&need("FIELDSEAL_DEV_USERS")?)?)
-            }
-            other => return Err(format!("FIELDSEAL_IDENTITY={other}: use oidc or dev")),
-        };
-        let custody = match need("FIELDSEAL_CUSTODY")?.as_str() {
-            "memory-dev" => {
-                non_production("FIELDSEAL_CUSTODY=memory-dev (no production custody adapter exists yet)")?;
-                Custody::MemoryDev
-            }
-            "file-dev" => {
-                non_production("FIELDSEAL_CUSTODY=file-dev (no production custody adapter exists yet)")?;
-                if opt("FIELDSEAL_TRUST_BUNDLE")?.is_none() {
-                    return Err("FIELDSEAL_TRUST_BUNDLE must be set to the trust bundle file for FIELDSEAL_CUSTODY=file-dev".into());
-                }
-                Custody::FileDev { dir: need("FIELDSEAL_CUSTODY_DIR")? }
-            }
-            other => return Err(format!("FIELDSEAL_CUSTODY={other}: use memory-dev or file-dev")),
-        };
-        let state_dir = opt("FIELDSEAL_STATE_DIR")?;
-        if state_dir.is_some() {
-            non_production("FIELDSEAL_STATE_DIR (the file-backed state store is for development)")?;
-        }
-        // The operator API reads the artefact registry and writes the roster store; both are
-        // file adapters, and there is no production adapter for either yet.
-        let registry_dir = need("FIELDSEAL_FACTORY_REGISTRY_DIR")?;
-        non_production("FIELDSEAL_FACTORY_REGISTRY_DIR (the file artefact registry)")?;
-        let roster_dir = need("FIELDSEAL_ROSTER_DIR")?;
-        non_production("FIELDSEAL_ROSTER_DIR (the file roster store)")?;
-        let unattested = if flag("FIELDSEAL_ALLOW_UNATTESTED")? {
-            non_production("FIELDSEAL_ALLOW_UNATTESTED")?;
-            UnattestedKeys::AllowNonProduction
-        } else {
-            UnattestedKeys::Refuse
-        };
-        Ok(Self { production, bind, public_url, identity, custody, trust_bundle: opt("FIELDSEAL_TRUST_BUNDLE")?, state_dir, registry_dir, roster_dir, unattested })
-    }
-}
-
 fn main() {
     let config = match Config::from_lookup(|k| std::env::var(k).ok()) {
         Ok(c) => c,
@@ -319,8 +153,11 @@ fn main() {
 
 /// The authority the factory acts for: where its keys are and what it signs with.
 struct Authority {
-    custody: Box<dyn KeyCustody>,
+    custody: Box<dyn KeyCustody + Send + Sync>,
     bundle: TrustBundle,
+    /// The `factory` key's certificate (it signs bundles) and the `receipt` key (it signs anchors).
+    factory: KeyCertificate,
+    receipt: fieldseal_kernel::id::KeyId,
     signing: fieldseal_kernel::id::KeyId,
     sealing: fieldseal_kernel::id::KeyId,
     record: fieldseal_kernel::id::KeyId,
@@ -336,7 +173,16 @@ fn load_authority(config: &Config, now: AuthorityTime) -> Result<Authority, Stri
                 std::fs::write(path, a.bundle.encode().map_err(|e| e.to_string())?).map_err(|e| format!("{path}: {e}"))?;
                 eprintln!("fieldseal-factory: wrote the development trust bundle to {path}");
             }
-            Ok(Authority { signing: *a.signing.key_id(), sealing: *a.sealing.key_id(), record: *a.record.key_id(), custody: Box::new(a.custody), bundle: a.bundle, window: default_window })
+            Ok(Authority {
+                signing: *a.signing.key_id(),
+                sealing: *a.sealing.key_id(),
+                record: *a.record.key_id(),
+                receipt: *a.receipt.key_id(),
+                factory: a.factory,
+                custody: Box::new(a.custody),
+                bundle: a.bundle,
+                window: default_window,
+            })
         }
         Custody::FileDev { dir } => {
             let path = config.trust_bundle.as_deref().ok_or("FIELDSEAL_TRUST_BUNDLE is not set")?;
@@ -353,8 +199,29 @@ fn load_authority(config: &Config, now: AuthorityTime) -> Result<Authority, Stri
             let record = records.next().ok_or_else(|| format!("{path}: no record key certificate"))?;
             // The tenancy window is the record key's collection period, from now on.
             let window = Window { not_before: AuthorityTime(now.0.max(record.not_before().0)), not_after: record.not_after(), grace_ms: 30 * AuthorityTime::DAY };
+            // The newest certificate that is valid now, not the first one found: after a key
+            // roll the bundle holds both.
+            let purpose = |p: Purpose, what: &str| {
+                bundle
+                    .certificates()
+                    .iter()
+                    .filter(|c| c.purpose() == Some(p) && c.not_before() <= now && now < c.not_after())
+                    .max_by_key(|c| (c.not_before(), c.not_after()))
+                    .cloned()
+                    .ok_or_else(|| format!("{path}: no currently valid {what} key certificate"))
+            };
+            let (factory, receipt) = (purpose(Purpose::Factory, "factory")?, purpose(Purpose::Receipt, "receipt")?);
             eprintln!("fieldseal-factory: authority from {dir} and {path} (development custody)");
-            Ok(Authority { signing: *signing.key_id(), sealing: *sealing.key_id(), record: *record.key_id(), custody: Box::new(DirCustody::new(dir)), bundle, window })
+            Ok(Authority {
+                signing: *signing.key_id(),
+                sealing: *sealing.key_id(),
+                record: *record.key_id(),
+                receipt: *receipt.key_id(),
+                factory,
+                custody: Box::new(DirCustody::new(dir)),
+                bundle,
+                window,
+            })
         }
     }
 }
@@ -366,7 +233,7 @@ fn development_adapters(config: &Config) -> Vec<(&'static str, &'static str)> {
         Custody::MemoryDev => "memory-dev",
         Custody::FileDev { .. } => "file-dev",
     })];
-    out.push(("TenancyRegistry", if config.state_dir.is_some() { "file-dev" } else { "memory" }));
+    out.push(("TenancyRegistry", "file-dev"));
     if config.unattested == UnattestedKeys::AllowNonProduction {
         out.push(("AttestationVerifier", "software"));
     }
@@ -375,7 +242,30 @@ fn development_adapters(config: &Config) -> Vec<(&'static str, &'static str)> {
     }
     out.push(("ArtefactRegistry", "file-dev"));
     out.push(("RosterSource", "file-dev"));
+    out.push(("RuntimeProfiles", "file-dev"));
+    out.push(("BundleStore", "file-dev"));
     out
+}
+
+/// The event line for what the reconciler did. A tenancy is named by the first 16 hex digits
+/// of its identifier; nothing here is subject data (DEP-051).
+fn reconcile_event(e: &ReconcileEvent) -> String {
+    let name = |t: &fieldseal_kernel::id::TenancyId| fieldseal_kernel::digest::lower_hex(&t.as_bytes()[..8]);
+    match e {
+        ReconcileEvent::Built { tenancy, seq, address, instruments, layouts, rosters } => serde_json::json!({
+            "event": "bundle-built", "tenancy": name(tenancy), "sequence": seq, "address": address.to_text(),
+            "instruments": instruments, "layouts": layouts, "rosters": rosters,
+        }),
+        ReconcileEvent::Withheld { tenancy, reason, survey } => {
+            serde_json::json!({ "event": "bundle-withheld", "tenancy": name(tenancy), "reason": reason, "survey": survey })
+        }
+        ReconcileEvent::Failed { tenancy, reason } => serde_json::json!({ "event": "bundle-failed", "tenancy": name(tenancy), "reason": reason }),
+        ReconcileEvent::Skipped { kind, name, version, reason } => {
+            serde_json::json!({ "event": "artefact-skipped", "kind": kind, "name": name, "version": version, "reason": reason })
+        }
+        ReconcileEvent::PassFailed { reason } => serde_json::json!({ "event": "reconcile-failed", "reason": reason }),
+    }
+    .to_string()
 }
 
 /// The event line for a change the operator API made. It carries no roster value and no
@@ -395,6 +285,10 @@ fn run(config: Config) -> Result<(), String> {
     let clock = SystemClock;
     let now = clock.now();
     let authority = load_authority(&config, now)?;
+    // Custody must hold the keys the factory signs with. Asked by key identifier only; nothing is signed.
+    for (what, id) in [("factory", authority.factory.key_id()), ("receipt", &authority.receipt)] {
+        authority.custody.public_key(id).map_err(|e| format!("custody holds no {what} key {}: {e}", fieldseal_kernel::digest::lower_hex(id.as_bytes())))?;
+    }
     let factory_config = FactoryConfig {
         factory_url: config.public_url.clone(),
         signing_key: authority.signing,
@@ -406,13 +300,8 @@ fn run(config: Config) -> Result<(), String> {
     };
     // Schema defaults until policy is loaded from published layers (POL-022).
     let policy = EffectivePolicy { sources: vec![fieldseal_kernel::id::ContentAddress::of(b"schema-defaults")], controls: Controls::defaults() };
-    let store: Box<dyn RegistryStore> = match &config.state_dir {
-        Some(dir) => {
-            eprintln!("fieldseal-factory: state in {dir} (file-backed, development)");
-            Box::new(FileRegistryStore::open(dir).map_err(|e| format!("{dir}: {e}"))?)
-        }
-        None => Box::new(MemoryRegistryStore::new()),
-    };
+    eprintln!("fieldseal-factory: state in {} (file-backed, development)", config.state_dir);
+    let store: Box<dyn RegistryStore + Send + Sync> = Box::new(FileRegistryStore::open(&config.state_dir).map_err(|e| format!("{}: {e}", config.state_dir))?);
     let (verifier, engine, log, random, progress) = (SoftwareAttestationVerifier, BuiltInPolicyEngine, MemoryDecisionLog::new(), OsRandom, MemoryReceivedProgress::new());
     let (idp, bearer): (Box<dyn IdentityProvider>, Box<dyn BearerVerifier>) = match &config.identity {
         Identity::Oidc(c) => {
@@ -430,8 +319,8 @@ fn run(config: Config) -> Result<(), String> {
             (Box::new(idp), Box::new(NoBearer))
         }
     };
-    // The operator API's ports: the artefact registry (read) and the roster store (read and
-    // write). Phase 13 builds bundles from the same two.
+    // The artefact registry (read) and the roster store (read and write): the operator API
+    // uses them, and the reconciler builds bundles from the same two.
     let open_rosters = || RosterStore::open(&config.roster_dir).map_err(|e| format!("{}: {e}", config.roster_dir));
     let roster_issuer = FileRosterIssuer::new(open_rosters()?);
     let surveys = PublishedSurveys(FileRegistry::new(&config.registry_dir));
@@ -457,11 +346,54 @@ fn run(config: Config) -> Result<(), String> {
     .map_err(|e| e.to_string())?
     .with_operator_ports(OperatorPorts { rosters: &roster_issuer, surveys: &surveys, cohorts: &cohorts });
     let events: OperatorEvents = std::sync::Arc::new(|e| eprintln!("{}", operator_event(e)));
-    let http = FactoryHttp::new(&factory, idp.as_ref(), HttpConfig { public_url: config.public_url.clone(), session_ttl_ms: 8 * 3600 * 1000 })
-        .with_operator_api(bearer.as_ref(), no_reconcile(), events);
+    // The reconciler runs on its own thread over ports shared with this one; every request
+    // handler only tells it what changed.
+    let artefacts = FileRegistry::new(&config.registry_dir);
+    let roster_source = FileRosterSource::new(open_rosters()?, &config.state_dir);
+    let profiles = FileRuntimeProfiles::new(&config.state_dir);
+    let bundles = FileBundleStore::new(&config.bundle_dir);
+    let reconciler = Reconciler::new(
+        ReconcilerPorts {
+            registry: store.as_ref(),
+            artefacts: &artefacts,
+            rosters: &roster_source,
+            profiles: &profiles,
+            bundles: &bundles,
+            custody: authority.custody.as_ref(),
+            random: &random,
+            clock: &clock,
+        },
+        ReconcilerConfig {
+            trust: authority.bundle.clone(),
+            identity: FactoryIdentity { signer: *authority.factory.key_id(), chain: vec![authority.factory.clone()], caller: "fieldseal-factory".into(), unattested: config.unattested },
+            receipt: authority.receipt,
+            bundle_dir: config.bundle_dir.clone().into(),
+            issued_rosters_dir: config.issued_rosters_dir.clone().into(),
+            max_anchor_age_ms: config.max_anchor_age_s * 1000,
+            policy_trust: config.policy_trust.clone(),
+            state_dir: Some(config.state_dir.clone().into()),
+            // What the reconciler reads: the artefact registry (publications, and withdrawals
+            // in their own directory), the roster store, and the registry journal and its directory.
+            watch: vec![
+                config.registry_dir.clone().into(),
+                std::path::Path::new(&config.registry_dir).join("withdrawals"),
+                config.roster_dir.clone().into(),
+                config.state_dir.clone().into(),
+                std::path::Path::new(&config.state_dir).join(fieldseal_adapters_file::store::JOURNAL),
+            ],
+        },
+        std::sync::Arc::new(|e| eprintln!("{}", reconcile_event(e))),
+    );
+    let delivery = BundleDelivery::new(store.as_ref(), &bundles);
     let server = tiny_http::Server::http(&config.bind).map_err(|e| format!("{}: {e}", config.bind))?;
-    eprintln!("fieldseal-factory: listening on {} as {} (production: {})", config.bind, config.public_url, config.production);
-    http.run(&server);
+    std::thread::scope(|scope| {
+        let spawned = reconciler.spawn(scope, std::time::Duration::from_secs(config.build_interval_s));
+        let http = FactoryHttp::new(&factory, idp.as_ref(), HttpConfig { public_url: config.public_url.clone(), session_ttl_ms: 8 * 3600 * 1000 })
+            .with_operator_api(bearer.as_ref(), spawned.notify(), events)
+            .with_bundle_routes(BundleRoutes { fetch: &delivery, download: &delivery })
+            .with_registration_notify(spawned.notify());
+        eprintln!("fieldseal-factory: listening on {} as {} (production: {})", config.bind, config.public_url, config.production);
+        http.run(&server);
+    });
     Ok(())
 }
-

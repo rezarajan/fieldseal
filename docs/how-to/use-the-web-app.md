@@ -33,14 +33,14 @@ just web
 
 Open `http://127.0.0.1:8090`. Edit a file under `examples/surveys/` and reload: the change shows with no restart. An edit that does not load keeps the last good version on the Instruments page and shows the error, with file, line and column, above it. The Publishing page lists the artefacts in the log. `just publish <survey>` publishes a survey of your own through this log (see [Write and publish your first survey](../tutorials/write-and-publish-your-first-survey.md)). State is in `deploy/local/.state/dev-web/`; remove it to start over. `Ctrl-C` stops everything.
 
-It uses ports 8080, 8090, 8180, 8480, 8481 and 9001, the ports the compose stack uses, so run one or the other; if a port is taken, `just web` names it and starts nothing. The factory and the results reader sign in through the development identity provider on 8180 (`fieldseal-dev-idp`, which refuses production): pick a login on its page. For now the Device page's device and bundle steps need the compose stack.
+It uses ports 8080, 8090, 8180, 8480, 8481 and 9001, the ports the compose stack uses, so run one or the other; if a port is taken, `just web` names it and starts nothing. The factory and the results reader sign in through the development identity provider on 8180 (`fieldseal-dev-idp`, which refuses production): pick a login on its page. The Device page works here: register in the browser device flow, confirm the four words in the factory portal, and the device fetches its bundle from the factory.
 
 ## What each page does
 
 - **Instruments.** Pick an instrument, then a layout, a language and a window class. The page shows the instrument exactly as `fieldseal instrument preview` draws it, plus findings, the element tree, code lists, concepts and rules. Type answers into the form: rules and field checks are evaluated in your browser by the core compiled to WebAssembly (the "Live evaluation" panel), and questions hidden by a rule disappear.
 - **Publishing.** The log's checkpoint and entries, and for every published artefact its signatures against the threshold, reviewers and inclusion proofs, verified in the server by the publishing context.
 - **Registration.** How a device registers. In the demo, "Issue a registration token" gives a token like the portal's, and pending requests can be confirmed here (compare the four words first). The factory portal itself is at `http://127.0.0.1:8091` (sign-in is as the dev user alice).
-- **Device.** The browser device, in a worker: create the tenancy with a PIN, paste a token and register (the sealed request is built in the browser; compare its four words with the portal), fetch the bundle (verified step by step), capture, review, export (downloads a file), upload (challenge, proof of possession, verified receipt) and clear. The security log lists each step as the core reported it.
+- **Device.** The browser device, in a worker: create the tenancy with a PIN, paste a token and register (the sealed request is built in the browser; compare its four words with the portal), get the bundle (the device fetches it from the factory, then verifies it step by step), capture, review, export (downloads a file), upload (challenge, proof of possession, verified receipt) and clear. The security log lists each step as the core reported it.
 - **Intake.** What the gate landed: submissions, the loss ledger, the landed long-format rows as they are (paged, filterable by column), the data contract and a CSV of the rows. The tool computes nothing from the answers; that is the data platform's job. You can also run the gate on an export file.
 
 ## Honest limits
@@ -61,9 +61,8 @@ FIELDSEAL_LOG_URL=http://localhost:9001 \
 FIELDSEAL_WEB_PROVISIONING_FILE=provisioning.json cargo run -p fieldseal-web
 ```
 
-`provisioning.json` carries the stack's trust bundle: `{"authority":"local-stack","trustBundle":"<base64url of deploy/local/.state/factory/trust-bundle.bin>","allowedBuilders":[...],"allowedSources":[...],"provisionalRecordKey":"<hex>","buildAnchor":"<hex>","factoryUrl":"http://localhost:8080","uploadUrl":"http://localhost:8480"}`. The Device page then registers against the real factory through `/proxy/factory`; sign in at the portal for the token and confirm the four words there. Two things the stack does not do yet:
+`provisioning.json` carries the stack's trust bundle: `{"authority":"local-stack","trustBundle":"<base64url of deploy/local/.state/factory/trust-bundle.bin>","allowedBuilders":[...],"allowedSources":[...],"provisionalRecordKey":"<hex>","buildAnchor":"<hex>","factoryUrl":"http://localhost:8080","uploadUrl":"http://localhost:8480"}`. The Device page then registers against the real factory through `/proxy/factory`; sign in at the portal for the token and confirm the four words there. The device fetches its bundle from the factory (`GET /v1/bundle`) through the same proxy. One thing the stack does not do yet:
 
-- **Bundles.** Nothing serves bundles; build one for the web device with the CLI against the device's public keys (the Device page shows them) and open the file on the Device page.
 - **Upload.** The compose intake app accepts only devices the factory registered, so an upload from a browser device that has not registered is refused.
 
 The `web-image` Nix package (`nix build path:.#web-image`) is the same app as a container image for the compose file; add it as a service that publishes `8090` and sets the URLs above.

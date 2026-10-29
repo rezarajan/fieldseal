@@ -25,7 +25,6 @@ let lastExportName = null;
 let uploadUrl = null;
 let aboutLabel = "Capture";
 let ackChecked = false;
-let pickedInstrument = null;
 let summary = { sealed: new Set(), records: 0, undelivered: 0 };
 
 const PHASES = ["session", "about", "review", "export"];
@@ -101,7 +100,7 @@ function kv(box, rows) {
 
 // ---- which screen ---------------------------------------------------------------------------
 
-// Set by "Load another survey": the session shows the survey chooser again.
+// Set by "Check for a newer bundle": the session shows the bundle screen again.
 let choosingSurvey = false;
 // Set when the factory does not know this device's tenancy (it was reset): register again.
 let factoryForgot = false;
@@ -196,6 +195,7 @@ async function refresh() {
   if (ready() && !held) held = JSON.parse(await call("held"));
   if (ready() && phase === "session" && !capture) await renderRoster();
   paint();
+  askForBundle();
 }
 
 function storedFlag(key) {
@@ -386,53 +386,84 @@ async function importBundle(bytes) {
   }
 }
 
+// The factory serves the device its bundle (`GET /v1/bundle`, DIS-040): the device asks with a
+// token made by its own signing key and verifies what comes back in DIS-030 order before it holds
+// anything. The sequence number of the held bundle is kept here so the next ask can say `held`.
+let factoryUrl = "";
+let bundleTimer = null;
+let bundleBusy = false;
+let askedFor = null;
+
+function heldSequence() {
+  try {
+    const v = localStorage.getItem("fs-bundle-sequence-" + device.tenancy);
+    return v === null ? -1 : Number(v);
+  } catch { return -1; }
+}
+
+function bundleStatus(text) { $("bundle-status").textContent = text; }
+
+async function getBundle() {
+  if (bundleBusy) return;
+  bundleBusy = true;
+  clearTimeout(bundleTimer);
+  $("bundle-error").textContent = "";
+  $("fetch-bundle").disabled = true;
+  bundleStatus("Asking the factory for your bundle...");
+  let again = false;
+  try {
+    const r = JSON.parse(await call("fetchBundle", factoryUrl || root.dataset.factory, device.bundle ? heldSequence() : -1));
+    if (r.status === "imported") {
+      try { localStorage.setItem("fs-bundle-sequence-" + device.tenancy, String(r.sequence)); } catch { /* private window */ }
+      showBundle(r.report);
+      const n = r.report.publications.length;
+      const first = r.report.publications[0];
+      log(true, `bundle ${r.sequence} fetched from the factory and verified: ${first ? first.signatures + "-of-" + first.threshold + " publisher signatures" : "no publications"}, ${n} publication(s), log inclusion ok`);
+      bundleStatus("");
+      registered = true;
+      choosingSurvey = false;
+      await refresh();
+    } else if (r.status === "current") {
+      bundleStatus("You already have the latest bundle.");
+      log(true, "the factory says the bundle this device holds is the latest");
+      choosingSurvey = false;
+      await refresh();
+    } else if (r.status === "preparing") {
+      bundleStatus("The factory is still preparing your bundle. This page asks again in a few seconds.");
+      again = true;
+    } else {
+      bundleStatus("");
+      if (r.code === "not-registered") { forgotten(); paint(); }
+      else $("bundle-error").textContent = fail("fetch bundle", `the factory held the bundle back (${r.code || r.http}${r.reasons.length ? ": " + r.reasons.join("; ") : ""})`);
+    }
+  } catch (x) {
+    bundleStatus("");
+    $("bundle-error").textContent = fail("fetch bundle", x);
+  }
+  bundleBusy = false;
+  $("fetch-bundle").disabled = false;
+  if (again) bundleTimer = setTimeout(() => { if (sessionScreen() === "bundle") getBundle(); }, 3000);
+}
+
+// A registered device with no bundle asks once on its own when the page gets there.
+function askForBundle() {
+  if (!(started && device.unlocked && device.tenancy && !device.bundle && registered) || askedFor === device.tenancy) return;
+  askedFor = device.tenancy;
+  getBundle();
+}
+
 function setupBundleScreen() {
-  // The stack (and the standalone demo authority) build bundles on request.
-  const demo = root.dataset.mode === "demo" || root.dataset.mode === "stack";
-  $("fetch-bundle").hidden = !demo;
-  if (!demo) {
+  // Without a factory (a provisioning file for another authority) a bundle file is the only way.
+  const withFactory = !!root.dataset.factory;
+  $("fetch-bundle").hidden = !withFactory;
+  if (!withFactory) {
     const open = $("open-bundle");
     open.className = "btn btn-primary";
     open.textContent = "Open a bundle file";
   }
-  const names = (root.dataset.instruments || "").split(",").filter(Boolean);
-  // Every published survey is a choice; none is preselected (the demo shows a device carrying
-  // any of them). Loading is possible once one is chosen.
-  pickedInstrument = null;
-  const box = $("instrument-pick");
-  const fetchButton = $("fetch-bundle");
-  if (demo && names.length) {
-    box.replaceChildren(box.querySelector("legend") || el("legend"));
-    const title = (n) => n.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase());
-    for (const n of names) {
-      const label = el("label", "survey-choice");
-      const input = document.createElement("input");
-      input.type = "radio"; input.name = "instrument"; input.value = n;
-      input.addEventListener("change", () => { pickedInstrument = n; fetchButton.disabled = false; fetchButton.textContent = "Load: " + title(n); });
-      const name = el("span", "survey-name"); name.textContent = title(n);
-      const id = el("code", "survey-id"); id.textContent = n;
-      label.append(input, name, id);
-      box.append(label);
-    }
-    box.hidden = false;
-    fetchButton.disabled = true;
-  } else if (demo) {
-    $("bundle-error").textContent = "No survey is published yet. Publish one through the stack's log first: just publish";
-  }
 }
 
-$("fetch-bundle").addEventListener("click", async () => {
-  $("bundle-error").textContent = "";
-  const res = await fetch(`/device/bundle?tenancy=${device.tenancy}${pickedInstrument ? "&instrument=" + encodeURIComponent(pickedInstrument) : ""}`);
-  if (!res.ok) {
-    const why = await res.text();
-    if (/no such tenancy|not registered|unknown tenancy/i.test(why)) { forgotten(); paint(); return; }
-    $("bundle-error").textContent = fail("fetch bundle", why);
-    return;
-  }
-  if (res.headers.get("X-Bundle-Development-Allowance") === "true") log(true, "note: the device is unattested software; the development policy allows releasing rosters to it (REG-017). Production policy never does.");
-  await importBundle(new Uint8Array(await res.arrayBuffer()));
-});
+$("fetch-bundle").addEventListener("click", () => getBundle());
 
 $("bundle-file").addEventListener("change", async (e) => {
   const f = e.target.files[0];
@@ -1122,6 +1153,7 @@ paint();
     const p = await res.json();
     if (!res.ok) throw new Error(p.error || "the device is not provisioned");
     uploadUrl = p.uploadUrl;
+    factoryUrl = p.factoryUrl || "";
     const s = await call("start", JSON.stringify(p));
     log(true, `device started (boot ${s.boots}): provisioned with the ${p.authority || "authority"}'s trust bundle (${p.environment || "unspecified"} environment); keys are software keys, unattested`, "device started; software keys, unattested");
     started = true;

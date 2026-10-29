@@ -74,13 +74,7 @@
     } },
     { name: "bundle", shot: "02-session-roster.png", run: async () => {
       check("the bundle screen offers one primary", [...document.querySelectorAll("#screen-bundle .btn-primary")].length === 1);
-      const radios = [...document.querySelectorAll("#instrument-pick input")];
-      if (radios.length) {
-        check("the instrument picker is behind a disclosure", !$("bundle-options").open && $("bundle-options").tagName === "DETAILS");
-        const r = radios.find((x) => x.value === instrument);
-        if (r) r.click();
-      }
-      $("fetch-bundle").click();
+      // The registered device asks the factory for its bundle on its own; nothing is picked or clicked.
       await until(() => ["roster", "consent"].includes($("device").dataset.screen), "the roster", 300);
       await sleep(300);
     } },

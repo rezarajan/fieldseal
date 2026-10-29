@@ -1,6 +1,6 @@
 //! The HTTP client for the factory's runtime API (the same routes [`crate::FactoryHttp`]
 //! serves): submit a sealed registration request, read a tenancy's status, and fetch the
-//! tenancy certificate with a proof-of-possession token. The operator calls (`assign`,
+//! tenancy certificate and the stored bundle with a proof-of-possession token. The operator calls (`assign`,
 //! `assignments`, `issue_roster`) send an access token as `Authorization: Bearer`.
 //!
 //! It speaks bytes and returns the status code and body; the caller decides what they mean.
@@ -18,6 +18,34 @@ pub struct Answer {
     pub status: u16,
     /// The body.
     pub body: Vec<u8>,
+}
+
+/// What `GET /v1/bundle` answered (CLI-049).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum BundleAnswer {
+    /// `200`: the latest bundle, exactly as stored, and its sequence number.
+    Bundle {
+        /// The `FSB1` file.
+        bytes: Vec<u8>,
+        /// The `Fieldseal-Bundle-Sequence` header.
+        sequence: u64,
+        /// The DIS-023 file name from `Content-Disposition`; `None` when the header is missing
+        /// or does not hold a plain `fieldseal-bundle-<date>-<n>.fsb` name.
+        file_name: Option<String>,
+    },
+    /// `304`: the bundle the caller holds is the latest.
+    Current,
+    /// `401`, `403` or `404`: the factory said no, with its error code and any reasons.
+    Refused {
+        /// The HTTP status.
+        status: u16,
+        /// The `error` code, for example `withheld` or `no-bundle`.
+        code: String,
+        /// The `reasons` of a `withheld` answer.
+        reasons: Vec<String>,
+    },
+    /// `5xx`, or an answer that is not the contract.
+    Unavailable,
 }
 
 /// Why no answer came back.
@@ -84,6 +112,40 @@ impl FactoryHttpClient {
             .call()
             .map_err(|e| ClientError::Unreachable(e.to_string()))?;
         self.answer(r)
+    }
+
+    /// `GET /v1/bundle` with a `Fieldseal-PoP` header. `held` is the sequence number of the
+    /// bundle the caller holds; it is sent as a query and is not part of the token (WIRE-171).
+    /// The answer may be as large as a bundle ([`crate::BUNDLE_LIMIT`]).
+    pub fn bundle(&self, pop_header: &str, held: Option<u64>) -> Result<BundleAnswer, ClientError> {
+        let url = match held {
+            Some(h) => format!("{}/v1/bundle?held={h}", self.base),
+            None => format!("{}/v1/bundle", self.base),
+        };
+        let mut response = self.agent.get(url).header(fieldseal_kernel::pop::POP_HEADER, pop_header).call().map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        let status = response.status().as_u16();
+        let sequence = response.headers().get("Fieldseal-Bundle-Sequence").and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok());
+        let file_name = response
+            .headers()
+            .get("Content-Disposition")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.split_once("filename=\""))
+            .and_then(|(_, rest)| rest.split_once('"'))
+            .map(|(name, _)| name)
+            .filter(|n| n.starts_with("fieldseal-bundle-") && n.ends_with(".fsb") && n.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'.'))
+            .map(str::to_owned);
+        let body = response.body_mut().with_config().limit(crate::BUNDLE_LIMIT as u64).read_to_vec().map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        Ok(match (status, sequence) {
+            (200, Some(sequence)) => BundleAnswer::Bundle { bytes: body, sequence, file_name },
+            (304, _) => BundleAnswer::Current,
+            (401 | 403 | 404, _) => {
+                let json: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
+                let code = json.get("error").and_then(|c| c.as_str()).unwrap_or_default().to_owned();
+                let reasons = json.get("reasons").and_then(|r| r.as_array()).map(|a| a.iter().filter_map(|r| r.as_str().map(str::to_owned)).collect()).unwrap_or_default();
+                BundleAnswer::Refused { status, code, reasons }
+            }
+            _ => BundleAnswer::Unavailable,
+        })
     }
 
     /// `POST /v1/assignments`: assign `cohort` of `survey` to `account` (an OIDC subject).

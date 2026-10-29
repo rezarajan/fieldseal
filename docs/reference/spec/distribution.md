@@ -40,7 +40,7 @@
 | Port | Caller | Input | Output | Errors |
 |---|---|---|---|---|
 | `BuildBundle` | Factory, on registration, assignment change, artefact or policy change, key roll | Tenancy | `Bundle` | `NotRegistered`, `Withheld(reason)`, `ArtefactNotPublished`, `IncompatibleSchema` |
-| `FetchBundle` | Runtime (proof-of-possession token) | Tenancy, last bundle sequence held | Latest `Bundle` or `not-modified` | `NotRegistered`, `Withheld` |
+| `FetchBundle` | Runtime (proof-of-possession token) | Tenancy, last bundle sequence held | `BundleFetchResponse`: `NoBundle` (nothing stored), `Current` (the held sequence is the latest) or `Bundle` | `NotRegistered`, `Withheld` |
 | `DownloadBundle` | Portal (signed-in collector) | Device | Bundle file | `Withheld` |
 | `ImportBundle` | Runtime | Bundle bytes | Verified contents | as §5.4 |
 
@@ -72,7 +72,7 @@ On the runtime:
 
 - **DIS-001** The factory MUST NOT release a bundle containing a roster to a tenancy that is not `registered`.
 - **DIS-002** Release MUST be decided by `PolicyEngine`, and the decision MUST record the policy content address.
-- **DIS-003** The factory MUST withhold new bundles from a `flagged`, `lost`, `closing`, `closed` or `retired` tenancy, and from a `registered` tenancy when policy says so (for example a failed posture check).
+- **DIS-003** The factory MUST withhold new bundles from a `flagged`, `lost`, `closing`, `closed` or `retired` tenancy, and from a `registered` tenancy when policy says so (for example a failed posture check). A hold by policy also stops delivery of the bundle already stored: the factory writes a withheld marker with the reasons for the tenancy, fetch and download answer `withheld` while it exists, and the next successful build clears it.
 - **DIS-004** A tenancy that is not registered MAY receive a bundle with no rosters (a practice instrument), if policy allows.
 
 ### 5.2 Contents
@@ -119,9 +119,21 @@ On the runtime:
 
 ### 5.5 Delivery
 
-- **DIS-040** The runtime MUST fetch new bundles when online, through `FetchBundle` with a proof-of-possession token.
+- **DIS-040** The runtime MUST fetch new bundles when online, through `FetchBundle` with a proof-of-possession token. Over HTTP, `FetchBundle` is `GET /v1/bundle` with the optional query `held=<decimal sequence>`; the token's `url` is the request URL without its query (WIRE-171), and an unparseable `held` is ignored, so the full bundle is returned. The answers are:
+
+  | Status | Meaning |
+  |---|---|
+  | `200` | the latest stored bundle (`FSB1`, `application/octet-stream`) with `Fieldseal-Bundle-Sequence: <n>`, `Content-Disposition: attachment; filename="fieldseal-bundle-<date>-<n>.fsb"` (DIS-023) and `Cache-Control: no-store` |
+  | `304` | no body: the held bundle is the latest (`Current`) |
+  | `401` | `pop-required`, `proof-invalid` or `replay` |
+  | `403` | `not-registered` or `revoked` (the tenancy is unknown, `lost`, `closing`, `closed` or `retired`); `withheld` with a `reasons` list when policy or the tenancy's state withholds bundles (DIS-001, DIS-003, REG-081) |
+  | `404` | `no-bundle`: the tenancy is eligible and nothing is stored yet (`NoBundle`) |
+  | `503` | `unavailable` |
 - **DIS-041** The portal MUST let the signed-in collector download the latest bundle for each of their registered devices as a file, for import through the platform's file picker.
 - **DIS-042** Delivery MUST NOT require any particular transport. A bundle copied to another device MUST be unusable there (DIS-020, DIS-030 step 2).
+- **DIS-082** The factory MUST build a registered, eligible tenancy's next bundle, with the next sequence, when the tenancy becomes registered or when its selected artefacts, an assigned cohort's roster version, its assignments or its agreement key change. An assignment change MUST trigger the rebuild without a restart.
+- **DIS-083** A build MUST be idempotent on its inputs: the same inputs build no second bundle, including after a restart. A build that fails MUST leave the previous bundle in the store and MUST record the reason as an event without personal data.
+- **DIS-084** The factory MUST serve the latest stored bundle through `FetchBundle` and `DownloadBundle` and MUST NOT build in the request. It MUST check the tenancy's eligibility at each fetch as well as at each build.
 
 ### 5.6 Key roll and succession
 

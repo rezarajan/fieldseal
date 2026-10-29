@@ -1,8 +1,8 @@
 //! The browser device as a WebAssembly object (the `web` platform profile, ADR 0036).
 //!
 //! A thin shell over [`fieldseal_adapters_web::device::WebDevice`]. The host page runs it in a
-//! dedicated worker, because uploads use a blocking HTTP call (`fieldsealPost`, defined by the
-//! worker script) and the contexts' ports are synchronous. Persistence is the host's job:
+//! dedicated worker, because uploads and bundle requests use a blocking HTTP call (`fieldsealPost`
+//! and `fieldsealGet`, defined by the worker script) and the contexts' ports are synchronous. Persistence is the host's job:
 //! after every call it drains [`Device::drain_changes`] into IndexedDB.
 
 use std::rc::Rc;
@@ -18,6 +18,10 @@ extern "C" {
     /// Defined by the worker script: one blocking POST. Returns `{status, body: Uint8Array}`.
     #[wasm_bindgen(js_name = fieldsealPost, catch)]
     fn fieldseal_post(url: &str, pop: Option<String>, body: &[u8]) -> Result<JsValue, JsValue>;
+
+    /// Defined by the worker script: one blocking GET. Returns `{status, headers: [[name, value]], body: Uint8Array}`.
+    #[wasm_bindgen(js_name = fieldsealGet, catch)]
+    fn fieldseal_get(url: &str, pop: Option<String>) -> Result<JsValue, JsValue>;
 
     #[wasm_bindgen(js_namespace = performance, js_name = now)]
     fn performance_now() -> f64;
@@ -36,6 +40,20 @@ fn host() -> Host {
             let status = js_sys::Reflect::get(&r, &"status".into()).ok().and_then(|v| v.as_f64()).ok_or("no status")? as u16;
             let body = js_sys::Reflect::get(&r, &"body".into()).map_err(|_| "no body")?;
             Ok((status, Uint8Array::new(&body).to_vec()))
+        }),
+        get: Rc::new(|url, pop| {
+            let r = fieldseal_get(url, pop.map(str::to_owned)).map_err(|e| e.as_string().unwrap_or_else(|| "request failed".into()))?;
+            let status = js_sys::Reflect::get(&r, &"status".into()).ok().and_then(|v| v.as_f64()).ok_or("no status")? as u16;
+            let headers = js_sys::Reflect::get(&r, &"headers".into()).map_err(|_| "no headers")?;
+            let headers = Array::from(&headers)
+                .iter()
+                .filter_map(|h| {
+                    let pair = Array::from(&h);
+                    Some((pair.get(0).as_string()?, pair.get(1).as_string()?))
+                })
+                .collect();
+            let body = js_sys::Reflect::get(&r, &"body".into()).map_err(|_| "no body")?;
+            Ok((status, headers, Uint8Array::new(&body).to_vec()))
         }),
     }
 }
@@ -183,6 +201,15 @@ impl Device {
     #[wasm_bindgen(js_name = importBundle)]
     pub fn import_bundle(&mut self, file: &[u8]) -> Result<String, JsValue> {
         self.inner.import_bundle(file).map_err(js)
+    }
+
+    /// Asks the factory at `factory_url` for the device's bundle and imports it; `held` is the
+    /// sequence number of the bundle the device holds, or `-1`. The JSON says `imported` (with
+    /// the report), `current`, `preparing` or `refused`.
+    #[wasm_bindgen(js_name = fetchBundle)]
+    pub fn fetch_bundle(&mut self, factory_url: &str, held: f64) -> Result<String, JsValue> {
+        let held = (held >= 0.0).then_some(held as u64);
+        self.inner.fetch_bundle(factory_url, held).map(|f| f.to_json()).map_err(js)
     }
 
     /// The held instrument, subjects and consent bases as JSON.

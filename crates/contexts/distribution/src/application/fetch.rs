@@ -12,11 +12,24 @@ use crate::domain::file::file_name;
 use crate::domain::{BundleSeq, DistributionError, SealedBundle};
 use crate::ports::BundleStore;
 
+/// What a fetch found. The three outcomes are different answers for a runtime: it keeps
+/// asking, it keeps what it holds, or it imports.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum BundleFetchResponse {
+    /// The tenancy is eligible but nothing is stored yet (the first build is still to come).
+    NoBundle,
+    /// The bundle the runtime holds (`held`) is the latest.
+    Current,
+    /// The latest bundle, newer than `held`.
+    Bundle(SealedBundle),
+}
+
 /// `FetchBundle`: a runtime asks for its latest bundle, after authenticating with a
 /// proof-of-possession token (Registration's `authenticate_api`).
 pub trait FetchBundle {
-    /// The latest bundle, or `None` when the one held is current.
-    fn fetch(&self, tenancy: &TenancyId, held: Option<BundleSeq>) -> Result<Option<SealedBundle>, DistributionError>;
+    /// What is stored for `tenancy`, compared with the sequence number `held`. It reads the
+    /// store and never builds.
+    fn fetch(&self, tenancy: &TenancyId, held: Option<BundleSeq>) -> Result<BundleFetchResponse, DistributionError>;
 }
 
 /// `DownloadBundle`: the portal gives a signed-in collector the latest bundle for a device
@@ -46,6 +59,15 @@ impl<'a> BundleDelivery<'a> {
             .ok_or(DistributionError::NotRegistered)?;
         // A bundle already built is withheld the same way a new one would be (DIS-003).
         check_state(record.state, false)?;
+        // A policy hold on the stored bundle stops delivery too; a marker that can't be read
+        // fails closed.
+        let held = self
+            .bundles
+            .withheld(tenancy)
+            .map_err(|e| DistributionError::Port { port: "BundleStore", reason: e.to_string() })?;
+        if let Some(reasons) = held {
+            return Err(DistributionError::Withheld(reasons));
+        }
         Ok(record)
     }
 
@@ -57,9 +79,13 @@ impl<'a> BundleDelivery<'a> {
 }
 
 impl FetchBundle for BundleDelivery<'_> {
-    fn fetch(&self, tenancy: &TenancyId, held: Option<BundleSeq>) -> Result<Option<SealedBundle>, DistributionError> {
+    fn fetch(&self, tenancy: &TenancyId, held: Option<BundleSeq>) -> Result<BundleFetchResponse, DistributionError> {
         self.eligible(tenancy)?;
-        Ok(self.latest(tenancy)?.filter(|b| held.is_none_or(|h| b.seq > h)))
+        Ok(match self.latest(tenancy)? {
+            None => BundleFetchResponse::NoBundle,
+            Some(latest) if held.is_some_and(|h| latest.seq <= h) => BundleFetchResponse::Current,
+            Some(latest) => BundleFetchResponse::Bundle(latest),
+        })
     }
 }
 

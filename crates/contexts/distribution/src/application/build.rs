@@ -283,6 +283,11 @@ impl BuildBundle for BundleBuilder<'_, '_> {
             withdrawals,
         };
         let plaintext = Zeroizing::new(content.encode().map_err(DistributionError::Wire)?);
+        // The sealed file is larger than its plaintext: refuse before sealing or signing what
+        // could never be stored.
+        if plaintext.len() > self.max_size {
+            return Err(DistributionError::TooLarge { size: plaintext.len(), limit: self.max_size });
+        }
         let sealed = seal_with_context(
             &mut SourceRng(p.random),
             &RecipientKey::P256(agreement),
@@ -291,6 +296,13 @@ impl BuildBundle for BundleBuilder<'_, '_> {
             &plaintext,
         )
         .map_err(DistributionError::Wire)?;
+        // The envelope and its signer are known before the signature: check the size here, so a
+        // bundle that is too large costs no signature (the key-custody log records every use).
+        let unsigned = BundleFile::signed_structure(&sealed, &self.identity.signer);
+        let unsigned_size = fieldseal_kernel::cbor::encode(&unsigned).map_or(usize::MAX, |b| b.len());
+        if unsigned_size > self.max_size {
+            return Err(DistributionError::TooLarge { size: unsigned_size, limit: self.max_size });
+        }
         let sig = p
             .custody
             .sign(

@@ -22,6 +22,7 @@ Without a single definition, a second transport would restate each operation by 
 | `Factory` | `SubmitRegistration` | `POST /v1/registrations` | none (the sealed request proves possession) |
 | `Factory` | `GetRegistrationStatus` | `GET /v1/registrations/{tenancy}` | none (state only) |
 | `Factory` | `GetCertificate` | `GET /v1/certificate` | PoP |
+| `Factory` | `GetBundle` | `GET /v1/bundle` (optional query `held`) | PoP |
 | `Factory` | `IssueApiToken` | `POST /v1/api-token` | PoP |
 | `Factory` | `PostureNonce` | `POST /v1/posture/nonce` | PoP |
 | `Factory` | `CheckPosture` | `POST /v1/posture` | PoP |
@@ -35,6 +36,7 @@ Without a single definition, a second transport would restate each operation by 
 | `TransLog` | `GetCheckpoint` | `GET /checkpoint` | none |
 | `TransLog` | `GetInclusionProof` | `GET /inclusion/{leaf_index}/{tree_size}` | none |
 | `TransLog` | `GetConsistencyProof` | `GET /consistency/{old_size}/{new_size}` | none |
+| `TransLog` | `GetEntries` | `GET /entries/{from}/{to}` | none |
 
   The portal pages, sign-in and the OIDC flow served by the factory are a browser flow ([REG-002](../../reference/spec/registration.md)) and MUST stay HTTP only. They are not part of the contract. The log's HTTP routes are the ones the Fieldseal log adapter speaks; a public log such as Rekor keeps its own API behind its own adapter ([ADR 0030](./0030-public-transparency-log.md)) and is not described by this contract.
 - **Payloads stay canonical CBOR, as opaque `bytes`.** Each request and response envelope carries its payload as a `bytes` field holding the exact CBOR the HTTP body carries today (the sealed registration request, the challenge and its answer, the export file, the receipts, the log entry, the checkpoint note and proofs). Protobuf is only the envelope. Servers and clients MUST pass these bytes through unchanged and MUST verify signatures over them, never over a re-encoding. Hashes, content addresses, signatures and the golden vectors are therefore identical on both transports.

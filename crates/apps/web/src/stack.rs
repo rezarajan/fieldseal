@@ -1,34 +1,39 @@
 //! The web app as a service of the compose stack (`FIELDSEAL_WEB_STACK=true`): the browser
-//! device is provisioned from the stack's trust bundle, chooses among the surveys published
-//! through the stack's log, and gets its bundles from the stack's authority. Bundles are built by
-//! the stack's own `fieldseal bundle build --stack --tenancy …`, with every roster, so every
-//! cohort the factory assigned is carried. The mount points are the stack's (deploy/local);
-//! `just web` runs the same code natively and points the app at its own directories with
-//! `FIELDSEAL_WEB_AUTHORITY_DIR`, `FIELDSEAL_WEB_PUBLISHED_DIR` and `FIELDSEAL_WEB_REGISTRY_DIR`.
+//! device is provisioned from the stack's trust bundle, and its page names the surveys
+//! published through the stack's log. The device gets its bundle from the factory
+//! (`GET /v1/bundle`), through this app's proxy; nothing here builds one. The mount points are
+//! the stack's (deploy/local); `just web` runs the same code natively and points the app at
+//! its own directories with `FIELDSEAL_WEB_AUTHORITY_DIR`, `FIELDSEAL_WEB_PUBLISHED_DIR` and
+//! `FIELDSEAL_WEB_REGISTRY_DIR`.
 
-use std::process::Command;
-
+use fieldseal_adapters_translog::{HttpLogTransport, HttpTranslog};
+use fieldseal_publishing::domain::Publication;
 use fieldseal_trust::domain::{AuthorityPublicKey, TrustBundle};
 
 use crate::state::AppState;
 
-const FACTORY_STATE: &str = "/factory-state";
-const CLI_STATE: &str = "/clistate";
-const ROSTERS: &str = "/opt/fieldseal/examples/rosters";
-/// The provenance the stack's publishing policy allows (tools/stack-demo.sh).
-const BUILDER: &str = "https://ci.example.org/builders/fieldseal-publish";
-const SOURCE: &str = "https://git.example.org/authority/artefacts";
-
-/// The surveys published in the stack: every `*.published` but the deployment policy and the
-/// layouts (`<survey>.<window>.layout.published`).
+/// The surveys published in the stack: the `*.published` files of the published directory
+/// (not the deployment policy, not the layouts `<survey>.<window>.layout.published`) whose
+/// publication the log vouches for. The log's entries hold digests, not names (WIRE-191), so
+/// the names come from the files; a file is kept only when the entry at the index of its first
+/// log record, read with `GET /entries/{from}/{to}`, is the entry the file carries.
 #[must_use]
 pub fn surveys(state: &AppState) -> Vec<String> {
+    let Some(log) = state.log_url.as_deref().and_then(|url| HttpLogTransport::new(url).ok()).map(HttpTranslog::new) else { return Vec::new() };
     let mut names: Vec<String> = std::fs::read_dir(state.published())
         .into_iter()
         .flatten()
         .flatten()
-        .filter_map(|e| e.file_name().to_str().and_then(|n| n.strip_suffix(".published")).map(str::to_owned))
-        .filter(|n| n != "deployment-policy" && !n.ends_with(".layout"))
+        .filter_map(|e| {
+            let name = e.file_name().to_str()?.strip_suffix(".published")?.to_owned();
+            if name == "deployment-policy" || name.ends_with(".layout") {
+                return None;
+            }
+            let publication = Publication::decode(&std::fs::read(e.path()).ok()?).ok()?;
+            let record = publication.log.first()?;
+            let index = record.inclusion.leaf_index;
+            (log.entries(index, index + 1).ok()?.first() == Some(&record.entry)).then_some(name)
+        })
         .collect();
     names.sort();
     names
@@ -56,48 +61,14 @@ pub fn provisioning(state: &AppState) -> Result<String, String> {
         "authority": bundle.name(),
         "environment": "development",
         "trustBundle": fieldseal_kernel::base64url::base64url_encode(&bytes),
-        "allowedBuilders": [BUILDER],
-        "allowedSources": [SOURCE],
+        "allowedBuilders": state.allowed_builders,
+        "allowedSources": state.allowed_sources,
+        "factoryUrl": state.factory_url,
+        "uploadUrl": state.upload_url,
         "provisionalRecordKey": hex(&record),
         "buildAnchor": hex(&[0xbb; 32]),
         "schema": "1.0.0",
         "unattested": true,
     })
     .to_string())
-}
-
-/// A bundle of `survey` for the registered `tenancy`, built by the stack's authority.
-///
-/// # Errors
-///
-/// The survey is not published, or the CLI refuses (an unknown tenancy among other reasons).
-pub fn bundle(state: &AppState, cli: &str, tenancy: &str, survey: &str) -> Result<Vec<u8>, String> {
-    if !tenancy.chars().all(|c| c.is_ascii_hexdigit()) || tenancy.len() != 64 {
-        return Err("tenancy: expected 64 hexadecimal digits".into());
-    }
-    if !surveys(state).iter().any(|s| s == survey) {
-        return Err(format!("{survey}: not a published survey"));
-    }
-    let (authority, published) = (state.authority(), state.published());
-    let out = std::env::temp_dir().join(format!("fieldseal-web-bundle-{tenancy}"));
-    let _ = std::fs::remove_dir_all(&out);
-    let mut cmd = Command::new(cli);
-    cmd.args(["bundle", "build", "--stack", "--tenancy", tenancy])
-        .args(["--trust-bundle", &format!("{}/trust-bundle.bundle", authority.display()), "--custody", &format!("{}/online", authority.display())])
-        .args(["--publication", &format!("{}/{survey}.published", published.display()), "--policy-publication", &format!("{}/deployment-policy.published", published.display())])
-        .args(["--tenancy-dir", FACTORY_STATE, "--state", CLI_STATE, "--issued-dir", &format!("{}/rosters", published.display())])
-        .args(["--allow-unattested", "--out-dir"])
-        .arg(&out);
-    // Only files are rosters: a directory such as `rosters/next/` is not one.
-    for roster in std::fs::read_dir(ROSTERS).map_err(|e| format!("{ROSTERS}: {e}"))?.flatten().map(|e| e.path()) {
-        if roster.is_file() && roster.extension().is_some_and(|x| x == "yaml" || x == "yml" || x == "json") {
-            cmd.arg("--roster").arg(roster);
-        }
-    }
-    let run = cmd.output().map_err(|e| format!("{cli}: {e}"))?;
-    if !run.status.success() {
-        return Err(format!("{}{}", String::from_utf8_lossy(&run.stdout), String::from_utf8_lossy(&run.stderr)).trim().to_owned());
-    }
-    let file = std::fs::read_dir(&out).map_err(|e| e.to_string())?.flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|x| x == "fsb")).ok_or("no bundle was written")?;
-    std::fs::read(file).map_err(|e| e.to_string())
 }

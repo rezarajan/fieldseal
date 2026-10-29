@@ -116,13 +116,22 @@ pub enum BundleStoreError {
 /// Stores sealed bundles exactly as received, at the factory or on the runtime (DIS-033).
 ///
 /// Contract ([`crate::contract::bundle_store_contract`]): stores bytes unchanged; accepts only
-/// bundles newer than the latest held for the tenancy; returns the latest by sequence number.
+/// bundles newer than the latest held for the tenancy; returns the latest by sequence number;
+/// keeps a per-tenancy withheld marker (the reasons a policy hold gave) that is absent until set,
+/// replaced by a later set and gone once cleared; clearing an absent marker is not an error.
 pub trait BundleStore {
     /// Stores a bundle.
     fn put(&self, bundle: &SealedBundle) -> Result<(), BundleStoreError>;
 
     /// The latest bundle for a tenancy.
     fn latest(&self, tenancy: &TenancyId) -> Result<Option<SealedBundle>, BundleStoreError>;
+
+    /// The reasons a policy hold gave for withholding the tenancy's stored bundle, or `None`
+    /// when nothing is withheld. While a marker exists, delivery refuses the stored bundle.
+    fn withheld(&self, tenancy: &TenancyId) -> Result<Option<Vec<String>>, BundleStoreError>;
+
+    /// Sets (`Some`) or clears (`None`) the withheld marker. Clearing an absent marker succeeds.
+    fn set_withheld(&self, tenancy: &TenancyId, reasons: Option<&[String]>) -> Result<(), BundleStoreError>;
 }
 
 /// Errors from [`AgreementKey`].

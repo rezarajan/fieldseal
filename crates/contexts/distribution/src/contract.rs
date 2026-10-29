@@ -81,6 +81,21 @@ pub fn bundle_store_contract<S: BundleStore>(make: impl Fn() -> S) {
     );
     assert!(store.put(&sample_bundle(1, 1)).is_err(), "older bundles are refused");
     store.put(&sample_bundle(2, 1)).expect("other tenancies are independent");
+
+    // The withheld marker: absent, set with reasons, per tenancy, replaced, cleared.
+    let u = TenancyId::from([2; 32]);
+    assert_eq!(store.withheld(&t), Ok(None), "nothing is withheld at first");
+    let reasons = vec!["policy-hold".to_owned(), "second reason".to_owned()];
+    store.set_withheld(&t, Some(&reasons)).expect("set");
+    assert_eq!(store.withheld(&t), Ok(Some(reasons.clone())));
+    assert_eq!(store.withheld(&u), Ok(None), "the marker is per tenancy");
+    assert_eq!(store.latest(&t), Ok(Some(sample_bundle(1, 2))), "withholding does not touch the bundle");
+    store.set_withheld(&t, Some(&["other".to_owned()])).expect("replace");
+    assert_eq!(store.withheld(&t), Ok(Some(vec!["other".to_owned()])));
+    store.set_withheld(&t, None).expect("clear");
+    assert_eq!(store.withheld(&t), Ok(None));
+    store.set_withheld(&t, None).expect("clearing an absent marker is fine");
+    store.set_withheld(&TenancyId::from([9; 32]), None).expect("clearing for a tenancy with no bundle is fine");
 }
 
 /// [`AgreementKey`]: opens a seal addressed to it under the tag and context it was sealed

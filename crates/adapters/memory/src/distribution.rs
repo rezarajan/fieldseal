@@ -19,7 +19,7 @@ use fieldseal_kernel::id::{CohortId, KeyId, TenancyId};
 use fieldseal_kernel::seal::{RecipientSecret, SealedBox, open_with_context};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_trust::domain::{KeyRole, TrustBundle};
-use fieldseal_trust::ports::KeyCustody;
+use fieldseal_trust::ports::{AuthorityClock, KeyCustody};
 use zeroize::Zeroizing;
 
 /// In-memory [`RosterSource`]: rosters set by the test, per tenancy.
@@ -82,6 +82,27 @@ impl AnchorSource for MemoryAnchorSource<'_> {
     }
 }
 
+/// An [`AnchorSource`] that signs the current time of an [`AuthorityClock`] with a `receipt`
+/// key held in a [`KeyCustody`]: the factory's anchor, which is always as fresh as its clock.
+pub struct ClockAnchorSource<'a> {
+    clock: &'a dyn AuthorityClock,
+    custody: &'a dyn KeyCustody,
+    signer: KeyId,
+}
+
+impl<'a> ClockAnchorSource<'a> {
+    /// Signs `clock.now()` with `signer`, a receipt key in `custody`.
+    pub fn new(clock: &'a dyn AuthorityClock, custody: &'a dyn KeyCustody, signer: KeyId) -> Self {
+        Self { clock, custody, signer }
+    }
+}
+
+impl AnchorSource for ClockAnchorSource<'_> {
+    fn time_token(&self) -> Result<TimeToken, AnchorSourceError> {
+        sign_time_token(self.custody, &self.signer, self.clock.now())
+    }
+}
+
 /// Signs a time token stating `at` with the `receipt` key `signer` held in `custody`. Used
 /// for anchors and for the token that accompanies a log checkpoint (PUB-072).
 pub fn sign_time_token(custody: &dyn KeyCustody, signer: &KeyId, at: AuthorityTime) -> Result<TimeToken, AnchorSourceError> {
@@ -121,6 +142,7 @@ impl TrustStore for MemoryTrustStore {
 #[derive(Default)]
 pub struct MemoryBundleStore {
     bundles: Mutex<BTreeMap<TenancyId, SealedBundle>>,
+    withheld: Mutex<BTreeMap<TenancyId, Vec<String>>>,
 }
 
 impl MemoryBundleStore {
@@ -144,6 +166,19 @@ impl BundleStore for MemoryBundleStore {
 
     fn latest(&self, tenancy: &TenancyId) -> Result<Option<SealedBundle>, BundleStoreError> {
         Ok(self.bundles.lock().expect("lock").get(tenancy).cloned())
+    }
+
+    fn withheld(&self, tenancy: &TenancyId) -> Result<Option<Vec<String>>, BundleStoreError> {
+        Ok(self.withheld.lock().expect("lock").get(tenancy).cloned())
+    }
+
+    fn set_withheld(&self, tenancy: &TenancyId, reasons: Option<&[String]>) -> Result<(), BundleStoreError> {
+        let mut all = self.withheld.lock().expect("lock");
+        match reasons {
+            Some(r) => all.insert(*tenancy, r.to_vec()),
+            None => all.remove(tenancy),
+        };
+        Ok(())
     }
 }
 
@@ -187,6 +222,11 @@ impl MemoryRuntimeProfiles {
         Self::default()
     }
 
+    /// Forgets a tenancy's profile, as if its runtime had never reported one.
+    pub fn forget(&self, tenancy: &TenancyId) {
+        self.profiles.lock().expect("lock").remove(tenancy);
+    }
+
     /// Records a tenancy's profile.
     pub fn record(&self, tenancy: TenancyId, profile: RuntimeProfile) {
         self.profiles.lock().expect("lock").insert(tenancy, profile);
@@ -196,5 +236,89 @@ impl MemoryRuntimeProfiles {
 impl RuntimeProfiles for MemoryRuntimeProfiles {
     fn profile(&self, tenancy: &TenancyId) -> Result<Option<RuntimeProfile>, ProfileError> {
         Ok(self.profiles.lock().expect("lock").get(tenancy).cloned())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fieldseal_trust::domain::TrustStore;
+
+    use super::*;
+    use crate::demo::DemoWorld;
+    use crate::trust::FixedClock;
+
+    const T0: AuthorityTime = AuthorityTime(1_800_000_000_000);
+
+    #[test]
+    fn dis_010_the_clock_anchor_source_signs_the_current_time_of_its_clock() {
+        let world = DemoWorld::new(7, T0).expect("world");
+        let clock = FixedClock::new(world.now);
+        let anchors = ClockAnchorSource::new(&clock, &world.custody, world.receipt);
+        let first = anchors.time_token().expect("token");
+        assert_eq!(first.authority_time, world.now);
+        first.verify(&TrustStore::new(&world.trust)).expect("the token verifies against the trust bundle");
+        // Unlike the counter, the source follows its clock and never invents time.
+        clock.advance(90_000);
+        let second = anchors.time_token().expect("token");
+        assert_eq!(second.authority_time, AuthorityTime(world.now.0 + 90_000));
+        assert_eq!(anchors.time_token().expect("token").authority_time, second.authority_time);
+        second.verify(&TrustStore::new(&world.trust)).expect("the token verifies against the trust bundle");
+    }
+
+    #[test]
+    fn dis_003_a_withheld_marker_stops_fetch_and_download_until_it_is_cleared() {
+        use fieldseal_distribution::application::{BundleDelivery, BundleFetchResponse, DownloadBundle, FetchBundle};
+        use fieldseal_distribution::domain::{BundleSeq, DistributionError, RuntimeProfile};
+        use crate::demo::DEMO_SCHEMA;
+
+        let world = DemoWorld::new(1, T0).expect("world");
+        let device = world
+            .register("device-a", &[("cohort-a", 1)], true, RuntimeProfile { instrument_schema: DEMO_SCHEMA, localisation_reference: None })
+            .expect("registers");
+        let bundle = SealedBundle::new(device.tenancy, BundleSeq(1), T0, b"FSB1 sealed bytes".to_vec());
+        world.bundles.put(&bundle).expect("put");
+        let delivery = BundleDelivery::new(&world.registry, &world.bundles);
+        assert_eq!(delivery.fetch(&device.tenancy, None), Ok(BundleFetchResponse::Bundle(bundle.clone())));
+        assert!(delivery.download(&device.device).is_ok());
+
+        let reasons = vec!["policy-hold".to_owned()];
+        world.bundles.set_withheld(&device.tenancy, Some(&reasons)).expect("set");
+        let refused = Err(DistributionError::Withheld(reasons));
+        assert_eq!(delivery.fetch(&device.tenancy, None), refused);
+        assert_eq!(delivery.fetch(&device.tenancy, Some(BundleSeq(1))), refused, "a held sequence does not bypass it");
+        assert_eq!(delivery.download(&device.device).map(|_| ()), Err(DistributionError::Withheld(vec!["policy-hold".to_owned()])));
+
+        world.bundles.set_withheld(&device.tenancy, None).expect("clear");
+        assert_eq!(delivery.fetch(&device.tenancy, None), Ok(BundleFetchResponse::Bundle(bundle)));
+        assert!(delivery.download(&device.device).is_ok());
+    }
+
+    #[test]
+    fn dis_003_a_store_that_cannot_read_the_marker_fails_closed() {
+        use fieldseal_distribution::application::{BundleDelivery, FetchBundle};
+        use fieldseal_distribution::domain::{BundleSeq, DistributionError, RuntimeProfile};
+        use crate::demo::DEMO_SCHEMA;
+
+        struct Broken;
+        impl BundleStore for Broken {
+            fn put(&self, _: &SealedBundle) -> Result<(), BundleStoreError> {
+                Ok(())
+            }
+            fn latest(&self, t: &TenancyId) -> Result<Option<SealedBundle>, BundleStoreError> {
+                Ok(Some(SealedBundle::new(*t, BundleSeq(1), T0, vec![1])))
+            }
+            fn withheld(&self, _: &TenancyId) -> Result<Option<Vec<String>>, BundleStoreError> {
+                Err(BundleStoreError::Backend("disk".into()))
+            }
+            fn set_withheld(&self, _: &TenancyId, _: Option<&[String]>) -> Result<(), BundleStoreError> {
+                Ok(())
+            }
+        }
+        let world = DemoWorld::new(1, T0).expect("world");
+        let device = world
+            .register("device-a", &[("cohort-a", 1)], true, RuntimeProfile { instrument_schema: DEMO_SCHEMA, localisation_reference: None })
+            .expect("registers");
+        let r = BundleDelivery::new(&world.registry, &Broken).fetch(&device.tenancy, None);
+        assert!(matches!(r, Err(DistributionError::Port { port: "BundleStore", .. })), "{r:?}");
     }
 }

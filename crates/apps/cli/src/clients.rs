@@ -9,7 +9,7 @@
 //! `grpc://` and `grpcs://` are recognised and refused with a clear message until the gRPC
 //! adapters exist (exit 3), so a command line written for them today fails loudly.
 
-use fieldseal_adapters_factory_http::client::FactoryHttpClient;
+use fieldseal_adapters_factory_http::client::{BundleAnswer, FactoryHttpClient};
 use fieldseal_adapters_upload_http::{ClientConfig, HttpUploadTransport};
 use fieldseal_delivery::ports::UploadError;
 use serde_json::Value as Json;
@@ -89,6 +89,22 @@ pub struct IssueAnswer {
     pub digest: String,
 }
 
+/// What `GET /v1/bundle` answered (CLI-049).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum BundleReply {
+    /// The latest bundle, exactly as stored.
+    Bundle {
+        /// The `FSB1` file.
+        bytes: Vec<u8>,
+        /// Its sequence number.
+        sequence: u64,
+        /// Its DIS-023 file name, when the factory sent a usable one.
+        file_name: Option<String>,
+    },
+    /// The bundle the caller holds is the latest.
+    Current,
+}
+
 /// The factory's runtime API, as the CLI uses it. The last three calls are the operator API:
 /// they send the access token as `Authorization: Bearer` and nothing else.
 pub trait FactoryClient {
@@ -98,6 +114,9 @@ pub trait FactoryClient {
     fn status(&self, tenancy: &str) -> Result<RegistrationStatus, ClientError>;
     /// The tenancy certificate (CBOR), with a `Fieldseal-PoP` header made by the tenancy's key.
     fn certificate(&self, pop_header: &str) -> Result<Vec<u8>, ClientError>;
+    /// The latest bundle of the tenancy, with a `Fieldseal-PoP` header made by the tenancy's key.
+    /// `held` is the sequence number of the bundle the caller holds (not part of the token).
+    fn bundle(&self, pop_header: &str, held: Option<u64>) -> Result<BundleReply, ClientError>;
     /// Assigns `cohort` of `survey` to `account`, an OIDC subject (REG-046).
     fn assign(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<AssignAnswer, ClientError>;
     /// The journaled assignments, oldest first.
@@ -201,6 +220,15 @@ impl FactoryClient for HttpFactory {
     fn certificate(&self, pop_header: &str) -> Result<Vec<u8>, ClientError> {
         let a = self.0.certificate(pop_header).map_err(unreachable)?;
         if a.status == 200 { Ok(a.body) } else { Err(refusal(a.status, &a.body)) }
+    }
+
+    fn bundle(&self, pop_header: &str, held: Option<u64>) -> Result<BundleReply, ClientError> {
+        match self.0.bundle(pop_header, held).map_err(unreachable)? {
+            BundleAnswer::Bundle { bytes, sequence, file_name } => Ok(BundleReply::Bundle { bytes, sequence, file_name }),
+            BundleAnswer::Current => Ok(BundleReply::Current),
+            BundleAnswer::Refused { status, code, .. } => Err(ClientError::Refused { status, code }),
+            BundleAnswer::Unavailable => Err(ClientError::Unreachable("the factory could not serve the bundle".into())),
+        }
     }
 
     fn assign(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<AssignAnswer, ClientError> {

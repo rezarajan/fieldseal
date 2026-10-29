@@ -70,7 +70,7 @@ register token:
 wait:
     tools/stack-run.sh wait
 
-# Walkthrough 8: a bundle sealed to the registered device, verified as the device verifies it.
+# Walkthrough 8: the registered device fetches its bundle from the factory.
 bundle:
     tools/stack-run.sh bundle
 

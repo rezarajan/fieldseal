@@ -74,7 +74,7 @@ fn every_adapter_implementing_a_port_is_in_the_matrix() {
     let (_, matrix, _) = fieldseal(&["conformance", "matrix"]);
     let ports: BTreeSet<String> = ports_in_source().into_iter().map(|(_, p)| p).collect();
     // Implementations that are not adapters: test doubles, blanket impls and shims.
-    let exempt = ["AcceptAll", "Dyn", "Stub", "Leaky", "LabelCustody", "Fixed", "Opener", "Small", "FullAll", "PracticeAllowed"];
+    let exempt = ["AcceptAll", "Dyn", "Stub", "Leaky", "LabelCustody", "Fixed", "Opener", "Small", "FullAll", "PracticeAllowed", "SnapshotRosters"];
     let mut unlisted = Vec::new();
     let mut stack = vec![repo().join("crates")];
     while let Some(dir) = stack.pop() {

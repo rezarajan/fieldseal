@@ -19,7 +19,7 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
     }
     let body = match (&state.demo, &state.log_url) {
         (Some(d), _) => demo_body(d.0),
-        (None, Some(url)) if state.stack.is_some() => format!("{}{}", head(""), registry_and_log(state, url)),
+        (None, Some(url)) if state.stack => format!("{}{}", head(""), registry_and_log(state, url)),
         (None, Some(url)) => log_body(url),
         (None, None) => format!("{}<p>No publishing source is configured; start with FIELDSEAL_WEB_DEMO_AUTHORITY=true or set FIELDSEAL_LOG_URL.</p>", head("")),
     };

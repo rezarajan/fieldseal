@@ -8,7 +8,7 @@ use fieldseal_publishing::domain::merkle::MAX_PATH;
 use fieldseal_publishing::domain::{ConsistencyProof, InclusionProof, LogEntry, LogEntryType, SignedCheckpoint};
 use fieldseal_publishing::ports::{LogError, LogRequest, Transmission};
 
-use crate::store::FileLogStore;
+use crate::store::{FileLogStore, MAX_ENTRIES};
 
 /// The largest response body a client accepts: 1 MiB (a checkpoint note is at most 16 KiB
 /// and a proof at most 128 hashes).
@@ -60,6 +60,7 @@ pub fn render(t: &Transmission) -> Result<HttpRequest, LogError> {
         LogRequest::Consistency { old_size, new_size } => {
             HttpRequest { method: "GET", path: format!("/consistency/{old_size}/{new_size}"), body: Vec::new() }
         }
+        LogRequest::Entries { from, to } => HttpRequest { method: "GET", path: format!("/entries/{from}/{to}"), body: Vec::new() },
     })
 }
 
@@ -117,6 +118,7 @@ fn number(text: &str) -> Option<u64> {
 /// | `GET /checkpoint` | the signed checkpoint note |
 /// | `GET /inclusion/<leaf>/<size>` | an inclusion proof |
 /// | `GET /consistency/<old>/<new>` | a consistency proof |
+/// | `GET /entries/<from>/<to>` | per entry, a `u32` length and the canonical `LogEntry` bytes; at most 256 entries |
 ///
 /// Failures are `400` (malformed request), `404` (index or size the log doesn't have),
 /// `405` (wrong method), `413` (body over `max_body`) and `500`. A lookup with a body is `400`. Error bodies are short text.
@@ -171,8 +173,47 @@ pub fn handle(store: &FileLogStore, method: &str, path: &str, body: &[u8], max_b
             },
             _ => Response::error(400, "sizes are decimal numbers"),
         }),
+        ["entries", from, to] => allowed("GET").unwrap_or_else(|| match (number(from), number(to)) {
+            (Some(f), Some(t)) if t >= f => match store.entries(f, t) {
+                Ok(entries) => Response::ok(encode_entries(&entries)),
+                Err(LogError::OutOfRange) => Response::error(404, "no such entry"),
+                Err(e) => Response::error(500, &e.to_string()),
+            },
+            _ => Response::error(400, "indices are decimal numbers and `to` is not below `from`"),
+        }),
         _ => Response::error(404, "no such route"),
     }
+}
+
+/// Each entry as a 4-byte big-endian length and its canonical bytes (WIRE-199).
+fn encode_entries(entries: &[Vec<u8>]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for e in entries {
+        out.extend_from_slice(&(e.len() as u32).to_be_bytes());
+        out.extend_from_slice(e);
+    }
+    out
+}
+
+/// Reads an entries answer back, strictly: every entry canonical, no trailing bytes, at most
+/// 256 entries.
+pub fn decode_entries(bytes: &[u8]) -> Result<Vec<LogEntry>, LogError> {
+    let mut out = Vec::new();
+    let mut rest = bytes;
+    while !rest.is_empty() {
+        if out.len() == MAX_ENTRIES {
+            return Err(bad("more entries than one answer holds"));
+        }
+        let len = u32::from_be_bytes(rest.get(..4).ok_or_else(|| bad("entry length cut short"))?.try_into().expect("4 bytes")) as usize;
+        let entry = rest.get(4..4usize.saturating_add(len)).ok_or_else(|| bad("entry cut short"))?;
+        let decoded = LogEntry::decode(entry).map_err(|e| LogError::Malformed(e.to_string()))?;
+        if decoded.encode() != entry {
+            return Err(bad("entry is not canonical"));
+        }
+        out.push(decoded);
+        rest = &rest[4 + len..];
+    }
+    Ok(out)
 }
 
 fn encode_proof(a: u64, b: u64, path: &[Digest]) -> Vec<u8> {

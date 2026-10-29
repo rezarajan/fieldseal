@@ -30,7 +30,7 @@ spec:
     builds: { container: "localhost/fieldseal", runtime: "http://localhost:9002" }
   policies:
     layers:
-      - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+      - { ref: policy/deployment-default, digest: "sha256:78daf4a0c4ca30aec1aa86e6f7b868a86ed73f74bfde7c3c1a8c644024fc9266" }
   instruments:
     - { ref: instrument/school-meals-baseline, channel: development }
     - { ref: instrument/household-water-access, channel: development }
@@ -59,14 +59,28 @@ spec:
           adapter: file-dev
           config: { dir: /authority/online, trustBundle: /authority/trust-bundle.bundle }
         AttestationVerifier: { adapter: software, config: {} }
-        PolicyEngine: { adapter: built-in, config: {} }
+        # The release policy (`deployment-policy`) is verified against these before any value is read
+        # from it. Outside development the factory takes `policyDigest` instead: the content address
+        # of the policy it trusts.
+        PolicyEngine:
+          adapter: built-in
+          config:
+            allowedBuilders: "https://ci.example.org/builders/fieldseal-publish"
+            allowedSources: "https://git.example.org/authority/artefacts"
         # Tokens, accounts, tenancies and devices are kept in a journal, so a restart keeps them.
         # Cohorts reach a tenancy through `fieldseal roster assign`, which the journal records.
         TenancyRegistry: { adapter: file-dev, config: { dir: /state/factory } }
         # The artefact registry `artefact publish` writes (read here) and the roster store that
         # `roster issue` writes through the factory. Both are development adapters.
-        ArtefactRegistry: { adapter: file-dev, config: { dir: /clistate/registry } }
+        # `scanIntervalS` is how often the factory looks for new publications; the demo waits
+        # for it once between publishing and the first bundle.
+        ArtefactRegistry: { adapter: file-dev, config: { dir: /clistate/registry, scanIntervalS: 2 } }
         RosterSource: { adapter: file-dev, config: { dir: /rosters } }
+        # The factory builds each registered device's bundle into `dir` and records the rosters
+        # it issues in `issuedRostersDir`, which intake reads. It reads the schema versions a
+        # device reported at registration from the same journal as the tenancy registry.
+        BundleStore: { adapter: file-dev, config: { dir: /bundles, issuedRostersDir: /issued } }
+        RuntimeProfiles: { adapter: file-dev, config: { dir: /state/factory } }
       scaling: { replicas: 1 }
     intake:
       # Both listeners are on all interfaces: the service shares Keycloak's network namespace.
@@ -91,8 +105,8 @@ spec:
           config: { dir: /authority/online, trustBundle: /authority/trust-bundle.bundle }
         # Accepted submissions are kept, and run through the gate again at start-up (INT-013a).
         SubmissionStore: { adapter: file-dev, config: { dir: /submissions } }
-        # Phase 13 moves the roster history to /issued.
-        RosterHistory: { adapter: file-dev, config: { dir: /published/rosters } }
+        # The rosters the factory issued (read-only), for the consent checks.
+        RosterHistory: { adapter: file-dev, config: { dir: /issued } }
         InstrumentSource: { adapter: file-dev, config: { dir: /published } }
         DataPlatform: { adapter: landing-files, config: { dir: /landing } }
         # The publishing policy that instruments are verified under (Technical Plan 8):

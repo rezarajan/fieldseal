@@ -26,12 +26,14 @@ Wrapped crates: `fieldseal-kernel`, `fieldseal-instrument`, `fieldseal-adapters-
 - `RegistrationRequest` with getters `file`, `words`, `tenancy`.
 - `Device`: `new Device(provisioning, persisted, boot_count)`, `drainChanges`, `eraseAll`,
   `takeDownloads`, `state`, `createTenancy(pin)`, `unlock(pin)`, `lock`, `publicKeys`,
-  `registrationRequest(token, label)`, `importBundle(file)`, `held`, `render`, `evaluate`, `rosterFields`,
+  `registrationRequest(token, label)`, `importBundle(file)`, `fetchBundle(factoryUrl, held)`
+  (`held` is the held sequence number or `-1`; answers JSON with `status` `imported`, `current`, `preparing` or `refused`), `held`, `render`, `evaluate`, `rosterFields`,
   `recordConsent`, `recordStatus`, `startCapture`, `setValues`, `overrideSoft`, `acknowledgeIncomplete`,
   `seal`, `discardCapture`, `review`, `export(parity)`, `upload(address)`, `importReceipt`,
   `clearPreview`, `clear`, `lastSeq`.
 - Host imports the page must define: `fieldsealPost(url, pop, body)` returning `{status, body: Uint8Array}`
-  (one blocking POST), plus `performance.now`.
+  (one blocking POST), `fieldsealGet(url, pop)` returning `{status, headers: [[name, value]], body: Uint8Array}`
+  (one blocking GET, used for `fetchBundle`), plus `performance.now`.
 
 ## Invariants
 
@@ -42,7 +44,7 @@ Wrapped crates: `fieldseal-kernel`, `fieldseal-instrument`, `fieldseal-adapters-
 
 ## Side Effects
 
-- Reads the clock (`Date.now`, `performance.now`) and performs HTTP POSTs through the host's `fieldsealPost`.
+- Reads the clock (`Date.now`, `performance.now`) and performs HTTP POSTs and GETs through the host's `fieldsealPost` and `fieldsealGet`.
 - Build: the flake builds `fieldseal-wasm` for `wasm32-unknown-unknown` and runs `wasm-bindgen --target web`
   to produce `fieldseal_wasm.wasm` and its JS glue, consumed by `crates/apps/web`.
 

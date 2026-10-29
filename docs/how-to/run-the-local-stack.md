@@ -43,7 +43,7 @@ The `demo` service shares Keycloak's network namespace, so `localhost:8180` is K
 2. Issue the example rosters and assign their cohorts (see Issue and assign below). `just issue` and `just assign` run these two steps alone.
 3. Register a device. Headless Chromium with a virtual authenticator resets the `product-owner` user, registers a passkey, checks that the enrolment session is refused, signs in with the passkey, asks the portal for a registration token, and hands the token to the device: `fieldseal registration request` and `submit` against the factory. The four fingerprint words are confirmed in the portal ([REG-021](../reference/spec/registration.md)).
 4. `fieldseal registration wait` until the factory has registered the device and its tenancy certificate is in `/device`.
-5. Build a bundle sealed to that device and verify it the way a device does ([DIS](../reference/spec/distribution.md)).
+5. The device fetches its bundle with `fieldseal bundle fetch` ([DIS](../reference/spec/distribution.md)); see How a device gets its bundle below. `just bundle` runs this stage alone.
 6. Capture a scripted session on the device simulator.
 7. Export the registered device's records, upload them to the intake endpoint, and verify every receipt against the trust bundle ([DEL](../reference/spec/delivery.md), [INT](../reference/spec/intake.md)).
 8. Print the intake data contract and the long-format files the intake app landed in the `landing` volume.
@@ -67,6 +67,21 @@ Under `just web` there is no Keycloak and no browser. `tools/dev-web.sh` runs th
 
 The factory writes the roster store in the `rosters` volume (`/rosters`, owner-only). The `demo` service mounts it read-only for `roster diff` and `roster list`, and the web app reads it through `FIELDSEAL_WEB_ROSTER_DIR`.
 
+## How a device gets its bundle
+
+The factory builds the bundle; no command builds it for the device. When a device registers, and again when a publication, a roster version or an assignment changes what it may receive, the factory builds the device's next bundle, seals it to the device's agreement key and stores it in the `bundles` volume (`/bundles`, read-write for the factory only). A change made through the factory (a roster issued, a cohort assigned, a registration) is seen at once. A publication is a file the CLI writes into the `clistate` volume, so the factory looks for new ones every `scanIntervalS` seconds, which `examples/deployments/local-stack.yaml` sets to 2. The first bundle after a publication can therefore take a couple of seconds to appear.
+
+The device asks for it with a proof of possession made by its own key:
+
+```sh
+fieldseal bundle fetch --device-dir /device --factory-url http://localhost:8080 \
+  --trust-bundle /authority/trust-bundle.bundle --out /device/fetched/
+```
+
+`--out` ending in `/` names a directory and the file keeps its name, `fieldseal-bundle-<date>-<sequence>.fsb`. The command exits `0` when it stores the bundle (or, with `--held <sequence>`, when that is already the latest), `1` when the factory refuses and `3` when it cannot be reached. While the first build is still running the factory answers `404 no-bundle`, and the demo asks again for up to a minute. The factory serves only what it has stored and checks at every fetch that the device is still registered and allowed a bundle. The device checks the bundle when it imports it.
+
+The factory also records the rosters it issued in the `issued` volume (`/issued`), which the intake app mounts read-only for its consent checks. A signed-in collector can download the same file from the factory portal at `/devices/{device}/bundle.fsb`, for a device that is not online.
+
 ## 3. Stop, restart, resume
 
 ```sh
@@ -76,7 +91,7 @@ just resume    # the device registered before the restart is still registered, a
 just purge     # forgets everything: volumes, generated files, secrets
 ```
 
-All state lives in named volumes (`authority`, `factory-state`, `landing`, `log`, `device`, `clistate`, `rosters`, `published`, `submissions`, `keycloak-data`), so nothing is written to the repository and rootless Podman has no ownership problems: the service images own their mount points (uid 10001), which a fresh volume inherits.
+All state lives in named volumes (`authority`, `factory-state`, `landing`, `log`, `device`, `clistate`, `rosters`, `bundles`, `issued`, `published`, `submissions`, `keycloak-data`), so nothing is written to the repository and rootless Podman has no ownership problems: the service images own their mount points (uid 10001), which a fresh volume inherits.
 
 ## 4. By hand
 

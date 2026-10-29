@@ -24,9 +24,9 @@ The Fieldseal showcase web app (development only): a server-rendered viewer for 
 | `FIELDSEAL_WEB_DEMO_AUTHORITY` | `true` starts the embedded demo authority (practice factory, intake, log over in-memory ports, development keys) |
 | `FIELDSEAL_WEB_DEMO_FACTORY_BIND`, `FIELDSEAL_WEB_DEMO_UPLOAD_BIND` | Demo listeners, defaults `127.0.0.1:8091` and `127.0.0.1:8092`; they override the factory and upload URLs |
 | `FIELDSEAL_WEB_STACK` | `true` runs as a compose-stack service (see Side Effects) |
-| `FIELDSEAL_WEB_CLI` | The `fieldseal` executable used in stack mode, default `fieldseal` |
 | `FIELDSEAL_WEB_AUTHORITY_DIR` | Stack mode: the authority's directory (`trust-bundle.bundle`, `online/`), default `/authority` |
-| `FIELDSEAL_WEB_PUBLISHED_DIR` | Stack mode: the directory of the `*.published` files that name the surveys, default `/published` |
+| `FIELDSEAL_WEB_PUBLISHED_DIR` | Stack mode: the directory of the `*.published` files that name the surveys, default `/published` (mounted read only). A file names a survey only when the log (`FIELDSEAL_LOG_URL`) holds the entry the publication carries, read with `GET /entries/{from}/{to}` |
+| `FIELDSEAL_WEB_ALLOWED_BUILDERS`, `FIELDSEAL_WEB_ALLOWED_SOURCES` | Stack mode: the comma-separated builders and sources the device's publishing policy accepts, copied from `FIELDSEAL_INTAKE_ALLOWED_BUILDERS` and `_ALLOWED_SOURCES` of the intake environment (`tools/stack-up.sh` writes `.generated/web.env`; `tools/dev-web.sh` exports them) |
 | `FIELDSEAL_WEB_REGISTRY_DIR` | Stack mode: the CLI's artefact registry (`*.publication` files), listed above the checkpoint on the Publishing page; default none |
 | `FIELDSEAL_WEB_PROVISIONING_FILE` | Provisioning JSON served by `/device/provisioning` against another authority |
 
@@ -52,8 +52,7 @@ All responses get `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referr
 | `GET /registration` | How registration works, factory portal link |
 | `POST /registration/token`, `POST /registration/confirm` | Demo only (form field `tenancy`); otherwise an error message in the page |
 | `GET /device` | Browser device page |
-| `GET /device/provisioning` | JSON from the demo, the stack trust bundle, or `FIELDSEAL_WEB_PROVISIONING_FILE` (404 if none, 500 on read error) |
-| `GET /device/bundle?tenancy=&instrument=` | Bundle bytes (`application/octet-stream`) with `X-Bundle-*` headers; demo or stack only (400 missing parameter, 404, 409 demo failure, 422 stack failure) |
+| `GET /device/provisioning` | JSON from the demo, the stack trust bundle (with `factoryUrl`, `uploadUrl` and the allow-lists), or `FIELDSEAL_WEB_PROVISIONING_FILE` (404 if none, 500 on read error). The device gets its bundle from the factory (`GET /v1/bundle` through `/proxy/factory`); the app serves none |
 | `GET /device/frame` | Blank document the page renders the instrument into |
 | `GET /intake`, `/intake/rows.csv`, `/intake/contract.json`; `POST /intake/ingest` | Demo authority only (else 404); ingest accepts an export file up to `MAX_INGEST_BODY` |
 | `* /proxy/{factory,upload,log}/*` | Reverse proxy to `FIELDSEAL_FACTORY_URL`, `FIELDSEAL_UPLOAD_URL`, `FIELDSEAL_LOG_URL`; 404 text if unconfigured |
@@ -80,22 +79,21 @@ Request bodies over `MAX_BODY` (1 MiB; 32 MiB for `POST /intake/ingest`) get 413
 - Every response passes through `dispatch`, so carries the security headers.
 - Assets are served by exact table match; only `GET /assets/...` is handled.
 - Instrument routes are `GET` only; example files are re-read on every request. A survey that stops loading is shown as its last good version (kept in memory) with the findings of the file as it is now; with no good version yet, the findings alone.
-- Proxy forwards only `Content-Type`, `Fieldseal-PoP` and `Authorization`; an unreachable upstream gives 502 `{"error":"upstream-unreachable"}`.
+- Proxy forwards only `Content-Type`, `Fieldseal-PoP` and `Authorization`, and hands back the status (a `304` included), `Fieldseal-Bundle-Sequence` and `Content-Disposition`; an unreachable upstream gives 502 `{"error":"upstream-unreachable"}`.
 - Request bodies are capped (`MAX_BODY`, `MAX_INGEST_BODY` for `/intake/ingest`).
-- `stack::bundle` requires a 64-hex-digit tenancy and a survey listed by `stack::surveys` (excludes `deployment-policy`).
+- `stack::surveys` lists a `*.published` file (not `deployment-policy`, not a layout) only when the log holds the entry at the index of the publication's first log record and it equals the publication's; with no log it lists nothing.
 - `AppState` is shared read-only across workers.
 
 ## Side Effects
 
 - Ports: `FIELDSEAL_WEB_BIND` (default 8090); with the demo authority also 8091 (factory) and 8092 (upload) by default.
-- Files read: `FIELDSEAL_WEB_EXAMPLES_DIR` (`surveys/`, `rosters/`) per request, `FIELDSEAL_WEB_ROSTER_DIR` (the roster store, read only) when set, the surveys through the resolver: a survey that does not resolve is listed with the resolver's errors; WASM files from `FIELDSEAL_WEB_WASM_DIR`; `FIELDSEAL_WEB_PROVISIONING_FILE`. Stack mode reads `/authority/trust-bundle.bundle`, `/published`, `/opt/fieldseal/examples/rosters`.
-- Files written (stack mode only): the temporary directory `fieldseal-web-bundle-<tenancy>` in `std::env::temp_dir()`, removed and recreated per bundle build, by the spawned `fieldseal bundle build --stack` process (which uses `/authority/online`, `/factory-state`, `/clistate`).
-- Outbound network (`ureq`): `proxy` to the factory, upload and log upstreams (15 s timeout); `GET {log}/checkpoint` from `/publishing` (10 s timeout).
-- Subprocess: the `FIELDSEAL_WEB_CLI` executable in stack mode.
-- Browser-side: `device.js` uses `localStorage` (`fs-registered-<tenancy>`) and the worker uses IndexedDB `fieldseal-web-device`.
+- Files read: `FIELDSEAL_WEB_EXAMPLES_DIR` (`surveys/`, `rosters/`) per request, `FIELDSEAL_WEB_ROSTER_DIR` (the roster store, read only) when set, the surveys through the resolver: a survey that does not resolve is listed with the resolver's errors; WASM files from `FIELDSEAL_WEB_WASM_DIR`; `FIELDSEAL_WEB_PROVISIONING_FILE`. Stack mode reads `/authority/trust-bundle.bundle` and `/published`.
+- Outbound network (`ureq`): `proxy` to the factory, upload and log upstreams (15 s timeout); `GET {log}/checkpoint` from `/publishing` (10 s timeout); in stack mode `GET {log}/entries/{from}/{to}` for each published file.
+- No subprocess: the app builds no bundle.
+- Browser-side: `device.js` uses `localStorage` (`fs-registered-<tenancy>`, `fs-bundle-sequence-<tenancy>`) and the worker uses IndexedDB `fieldseal-web-device`.
 - In-memory state: immutable `AppState`; the demo authority (`fieldseal_adapters_web_demo::Demo`, in-memory ports) holds registrations, intake and log state for the process lifetime.
 
 ## Verification
 
-- `cargo test -p fieldseal-web` (integration tests in `tests/`: `accessibility.rs`, `browser_constraints.rs`, `e2e_web.rs`, `parity.rs`).
+- `cargo test -p fieldseal-web` (integration tests in `tests/`: `accessibility.rs`, `browser_constraints.rs`, `dev_loop.rs`, `parity.rs`, `roster_store.rs`, `stack_mode.rs`).
 - Repo-wide: `just test`.

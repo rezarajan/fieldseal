@@ -93,9 +93,29 @@ globalThis.fieldsealPost = (url, pop, body) => {
   return { status: x.status, body: new Uint8Array(x.response || new ArrayBuffer(0)) };
 };
 
+// One blocking GET for the bundle request. The device addresses the factory by its real URL (the
+// proof-of-possession token is bound to it); the page reaches it through the same-origin proxy,
+// which passes the token on and sends the bundle's headers back. `held` is a query, not signed.
+let factoryUpstream = null;
+globalThis.fieldsealGet = (url, pop) => {
+  if (factoryUpstream && url.startsWith(factoryUpstream)) url = "/proxy/factory" + url.slice(factoryUpstream.length);
+  const x = new XMLHttpRequest();
+  x.open("GET", url, false);
+  x.responseType = "arraybuffer";
+  if (pop) x.setRequestHeader("Fieldseal-PoP", pop);
+  x.send();
+  const headers = x.getAllResponseHeaders().trim().split(/\r?\n/).filter(Boolean).map((line) => {
+    const at = line.indexOf(":");
+    return [line.slice(0, at).trim(), line.slice(at + 1).trim()];
+  });
+  return { status: x.status, headers, body: new Uint8Array(x.response || new ArrayBuffer(0)) };
+};
+
 async function start(provisioning) {
   await init();
-  upstream = (JSON.parse(provisioning).uploadUrl || "").replace(/\/$/, "") || null;
+  const provisioned = JSON.parse(provisioning);
+  upstream = (provisioned.uploadUrl || "").replace(/\/$/, "") || null;
+  factoryUpstream = (provisioned.factoryUrl || "").replace(/\/$/, "") || null;
   db = await openDb();
   await loadWrapKey();
   const boots = ((await meta("boots")) || 0) + 1;

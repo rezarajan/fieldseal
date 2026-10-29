@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-455 tests prove 147 requirements.
+579 tests prove 168 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -76,8 +76,30 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `reg_032_a_tenancy_of_another_account_keeps_its_certificate` ([assignments.rs:195](../../crates/adapters/factory-http/tests/assignments.rs#L195)) | REG-032 | REG-032 (registration) |
 | `reg_046_an_account_that_is_empty_too_long_or_holds_a_control_character_is_malformed` ([assignments.rs:205](../../crates/adapters/factory-http/tests/assignments.rs#L205)) | REG-046 | REG-046 (registration) |
 | `reg_046_the_token_is_checked_before_the_body_is_read` ([assignments.rs:217](../../crates/adapters/factory-http/tests/assignments.rs#L217)) | REG-046 | REG-046 (registration) |
-| `reg_046_a_journaled_assignment_reaches_a_tenancy_that_registers_after_it` ([assignments.rs:248](../../crates/adapters/factory-http/tests/assignments.rs#L248)) | REG-046 | REG-046 (registration) |
-| `reg_046_assigning_again_applies_a_journaled_assignment_to_a_registered_tenancy` ([assignments.rs:263](../../crates/adapters/factory-http/tests/assignments.rs#L263)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_journaled_assignment_reaches_a_tenancy_that_registers_after_it` ([assignments.rs:249](../../crates/adapters/factory-http/tests/assignments.rs#L249)) | REG-046 | REG-046 (registration) |
+| `reg_046_assigning_again_applies_a_journaled_assignment_to_a_registered_tenancy` ([assignments.rs:264](../../crates/adapters/factory-http/tests/assignments.rs#L264)) | REG-046 | REG-046 (registration) |
+| `dis_040_a_registered_device_with_a_valid_token_gets_the_stored_bundle` ([bundle_routes.rs:98](../../crates/adapters/factory-http/tests/bundle_routes.rs#L98)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_held_equal_to_latest_gives_304` ([bundle_routes.rs:110](../../crates/adapters/factory-http/tests/bundle_routes.rs#L110)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_the_query_is_outside_the_pop_binding` ([bundle_routes.rs:120](../../crates/adapters/factory-http/tests/bundle_routes.rs#L120)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_rewritten_held_gives_a_full_bundle_or_304_and_never_a_forged_one` ([bundle_routes.rs:132](../../crates/adapters/factory-http/tests/bundle_routes.rs#L132)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_no_token_gives_pop_required` ([bundle_routes.rs:149](../../crates/adapters/factory-http/tests/bundle_routes.rs#L149)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_replayed_token_is_refused` ([bundle_routes.rs:157](../../crates/adapters/factory-http/tests/bundle_routes.rs#L157)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_an_unknown_tenancy_is_not_registered` ([bundle_routes.rs:167](../../crates/adapters/factory-http/tests/bundle_routes.rs#L167)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_lost_closing_closed_or_retired_tenancy_is_revoked` ([bundle_routes.rs:176](../../crates/adapters/factory-http/tests/bundle_routes.rs#L176)) | DIS-040 | DIS-040 (distribution) |
+| `dis_003_a_withheld_tenancy_gets_403_with_reasons_and_can_still_upload` ([bundle_routes.rs:187](../../crates/adapters/factory-http/tests/bundle_routes.rs#L187)) | DIS-003 | DIS-003 (distribution) |
+| `dis_040_an_eligible_tenancy_with_no_bundle_yet_gets_no_bundle` ([bundle_routes.rs:202](../../crates/adapters/factory-http/tests/bundle_routes.rs#L202)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_current_held_bundle_gives_304_and_nothing_stored_gives_404_no_bundle` ([bundle_routes.rs:209](../../crates/adapters/factory-http/tests/bundle_routes.rs#L209)) | DIS-040 | DIS-040 (distribution) |
+| `dis_084_the_route_never_builds` ([bundle_routes.rs:217](../../crates/adapters/factory-http/tests/bundle_routes.rs#L217)) | DIS-084 | DIS-084 (distribution) |
+| `dis_022_the_answer_reveals_nothing_outside_the_seal` ([bundle_routes.rs:228](../../crates/adapters/factory-http/tests/bundle_routes.rs#L228)) | DIS-022 | DIS-022 (distribution) |
+| `dis_040_responses_carry_cache_control_no_store` ([bundle_routes.rs:241](../../crates/adapters/factory-http/tests/bundle_routes.rs#L241)) | DIS-040 | DIS-040 (distribution) |
+| `dis_041_the_portal_download_needs_a_session` ([bundle_routes.rs:276](../../crates/adapters/factory-http/tests/bundle_routes.rs#L276)) | DIS-041 | DIS-041 (distribution) |
+| `reg_043_the_portal_download_serves_only_the_collectors_own_device` ([bundle_routes.rs:285](../../crates/adapters/factory-http/tests/bundle_routes.rs#L285)) | REG-043 | REG-043 (registration) |
+| `dis_003_a_policy_hold_on_the_stored_bundle_gets_403_with_reasons_until_it_is_cleared` ([bundle_routes.rs:308](../../crates/adapters/factory-http/tests/bundle_routes.rs#L308)) | DIS-003 | DIS-003 (distribution) |
+| `a_304_has_no_sequence_header` ([bundle_writers.rs:25](../../crates/adapters/factory-http/tests/bundle_writers.rs#L25)) | DIS-040 | DIS-040 (distribution) |
+| `a_client_that_never_reads_a_bundle_does_not_stop_other_routes` ([bundle_writers.rs:41](../../crates/adapters/factory-http/tests/bundle_writers.rs#L41)) | DIS-040 | DIS-040 (distribution) |
+| `a_stalled_request_body_does_not_stop_other_routes` ([bundle_writers.rs:95](../../crates/adapters/factory-http/tests/bundle_writers.rs#L95)) | DIS-040 | DIS-040 (distribution) |
+| `a_chunked_body_that_stops_does_not_stop_other_routes` ([bundle_writers.rs:111](../../crates/adapters/factory-http/tests/bundle_writers.rs#L111)) | DIS-040 | DIS-040 (distribution) |
+| `a_pipelining_client_that_never_reads_does_not_stop_other_routes` ([bundle_writers.rs:126](../../crates/adapters/factory-http/tests/bundle_writers.rs#L126)) | DIS-040 | DIS-040 (distribution) |
 | `reg_002_sign_in_redirects_to_the_provider_with_a_state` ([portal_session.rs:151](../../crates/adapters/factory-http/tests/portal_session.rs#L151)) | REG-002 | REG-002 (registration) |
 | `reg_002_callback_with_an_unknown_state_is_refused` ([portal_session.rs:163](../../crates/adapters/factory-http/tests/portal_session.rs#L163)) | REG-002 | REG-002 (registration) |
 | `reg_092_a_session_cookie_is_httponly_samesite_lax_and_secure_on_https` ([portal_session.rs:173](../../crates/adapters/factory-http/tests/portal_session.rs#L173)) | REG-092 | REG-092 (registration) |
@@ -102,8 +124,19 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `no_temporary_file_remains` ([atomic.rs:127](../../crates/adapters/file/src/atomic.rs#L127)) | INT-085 | INT-085 (intake) |
 | `the_mode_applies_to_the_file` ([atomic.rs:142](../../crates/adapters/file/src/atomic.rs#L142)) | INT-085 | INT-085 (intake) |
 | `a_new_write_never_replaces` ([atomic.rs:156](../../crates/adapters/file/src/atomic.rs#L156)) | INT-085 | INT-085 (intake) |
-| `a_missing_directory_holds_no_files` ([registry.rs:150](../../crates/adapters/file/src/registry.rs#L150)) | PUB-062 | PUB-062 (publishing) |
-| `a_directory_that_cannot_be_listed_is_a_backend_error` ([registry.rs:161](../../crates/adapters/file/src/registry.rs#L161)) | PUB-062 | PUB-062 (publishing) |
+| `dis_003_a_garbled_or_oversized_or_non_file_withheld_marker_reads_as_withheld` ([bundles.rs:194](../../crates/adapters/file/src/bundles.rs#L194)) | DIS-003 | DIS-003 (distribution) |
+| `dis_003_the_withheld_marker_is_owner_only_and_a_symlink_is_not_followed` ([bundles.rs:215](../../crates/adapters/file/src/bundles.rs#L215)) | DIS-003 | DIS-003 (distribution) |
+| `a_missing_directory_holds_no_files` ([registry.rs:198](../../crates/adapters/file/src/registry.rs#L198)) | PUB-062 | PUB-062 (publishing) |
+| `a_directory_that_cannot_be_listed_is_a_backend_error` ([registry.rs:209](../../crates/adapters/file/src/registry.rs#L209)) | PUB-062 | PUB-062 (publishing) |
+| `a_garbage_publication_is_skipped_and_reported` ([registry.rs:223](../../crates/adapters/file/src/registry.rs#L223)) | PUB-062 | PUB-062 (publishing) |
+| `an_oversize_publication_is_skipped_unread` ([registry.rs:234](../../crates/adapters/file/src/registry.rs#L234)) | PUB-062 | PUB-062 (publishing) |
+| `a_fifo_is_skipped_without_waiting_for_a_writer` ([registry.rs:249](../../crates/adapters/file/src/registry.rs#L249)) | PUB-062 | PUB-062 (publishing) |
+| `a_symlink_is_skipped_even_to_a_readable_file` ([registry.rs:263](../../crates/adapters/file/src/registry.rs#L263)) | PUB-062 | PUB-062 (publishing) |
+| `a_recorded_roster_reads_back_and_a_second_is_added` ([rosters.rs:154](../../crates/adapters/file/src/rosters.rs#L154)) | INT-040 | INT-040 (intake) |
+| `a_file_cut_short_is_an_error_and_is_not_added_to` ([rosters.rs:166](../../crates/adapters/file/src/rosters.rs#L166)) | INT-040 | INT-040 (intake) |
+| `an_unknown_consent_word_is_an_error` ([rosters.rs:187](../../crates/adapters/file/src/rosters.rs#L187)) | INT-040 | INT-040 (intake) |
+| `the_directory_is_created_owner_only_and_the_file_is_0600` ([rosters.rs:201](../../crates/adapters/file/src/rosters.rs#L201)) | INT-040 | INT-040 (intake) |
+| `a_directory_others_can_reach_is_refused_not_narrowed` ([rosters.rs:214](../../crates/adapters/file/src/rosters.rs#L214)) | INT-040 | INT-040 (intake) |
 | `pub_060_the_file_registry_satisfies_the_artefact_registry_contract` ([contracts.rs:127](../../crates/adapters/file/tests/contracts.rs#L127)) | PUB-060 | PUB-060 (publishing) |
 | `dis_080_the_file_roster_source_satisfies_the_roster_source_contract` ([contracts.rs:136](../../crates/adapters/file/tests/contracts.rs#L136)) | DIS-080 | DIS-080 (distribution) |
 | `dis_015_the_file_bundle_store_satisfies_the_bundle_store_contract` ([contracts.rs:166](../../crates/adapters/file/tests/contracts.rs#L166)) | DIS-015 | DIS-015 (distribution) |
@@ -135,7 +168,7 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `reg_046_the_published_surveys_satisfy_the_survey_directory_contract` ([contracts.rs:819](../../crates/adapters/file/tests/contracts.rs#L819)) | REG-046 | REG-046 (registration) |
 | `int_006_the_file_tenancy_registry_satisfies_the_contract` ([intake_ports.rs:47](../../crates/adapters/file/tests/intake_ports.rs#L47)) | INT-006 | INT-006 (intake) |
 | `int_040_the_file_roster_history_satisfies_the_contract` ([intake_ports.rs:57](../../crates/adapters/file/tests/intake_ports.rs#L57)) | INT-040 | INT-040 (intake) |
-| `int_070_the_published_instruments_reader_satisfies_the_contract` ([intake_ports.rs:75](../../crates/adapters/file/tests/intake_ports.rs#L75)) | INT-070 | INT-070 (intake) |
+| `int_070_the_published_instruments_reader_satisfies_the_contract` ([intake_ports.rs:77](../../crates/adapters/file/tests/intake_ports.rs#L77)) | INT-070 | INT-070 (intake) |
 | `int_013_the_file_submission_store_satisfies_the_contract` ([submissions.rs:10](../../crates/adapters/file/tests/submissions.rs#L10)) | INT-013 | INT-013 (intake) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `int_085_duckdb_converts_jsonl_and_csv_to_parquet_with_the_manifest_row_count` ([duckdb_recipe.rs:12](../../crates/adapters/landing-files/tests/duckdb_recipe.rs#L12)) | INT-085 | INT-085 (intake) |
@@ -167,6 +200,14 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `int_072_a_snapshot_refuses_a_row_that_does_not_fit_its_column` ([snapshot.rs:58](../../crates/adapters/landing-files/tests/snapshot.rs#L58)) | INT-072 | INT-072 (intake) |
 | `int_011_the_file_platform_satisfies_the_data_platform_contract` ([snapshot.rs:80](../../crates/adapters/landing-files/tests/snapshot.rs#L80)) | INT-011 | INT-011 (intake) |
 | `int_085_the_landing_files_keep_their_bytes` ([snapshot.rs:89](../../crates/adapters/landing-files/tests/snapshot.rs#L89)) | INT-085 | INT-085 (intake) |
+| `dis_010_the_clock_anchor_source_signs_the_current_time_of_its_clock` ([distribution.rs:253](../../crates/adapters/memory/src/distribution.rs#L253)) | DIS-010 | DIS-010 (distribution) |
+| `dis_003_a_withheld_marker_stops_fetch_and_download_until_it_is_cleared` ([distribution.rs:269](../../crates/adapters/memory/src/distribution.rs#L269)) | DIS-003 | DIS-003 (distribution) |
+| `dis_003_a_store_that_cannot_read_the_marker_fails_closed` ([distribution.rs:297](../../crates/adapters/memory/src/distribution.rs#L297)) | DIS-003 | DIS-003 (distribution) |
+| `dis_040_fetch_reports_no_bundle_when_nothing_is_stored` ([fetch_response.rs:84](../../crates/adapters/memory/tests/fetch_response.rs#L84)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_fetch_reports_current_when_held_is_the_latest` ([fetch_response.rs:91](../../crates/adapters/memory/tests/fetch_response.rs#L91)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_fetch_returns_the_bundle_when_held_is_older` ([fetch_response.rs:100](../../crates/adapters/memory/tests/fetch_response.rs#L100)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_fetch_refuses_an_ineligible_tenancy_before_it_reads_the_store` ([fetch_response.rs:114](../../crates/adapters/memory/tests/fetch_response.rs#L114)) | DIS-040 | DIS-040 (distribution) |
+| `dis_041_download_reports_withheld_no_bundle_built_when_nothing_is_stored` ([fetch_response.rs:132](../../crates/adapters/memory/tests/fetch_response.rs#L132)) | DIS-041 | DIS-041 (distribution) |
 | `reg_070a_a_valid_token_yields_the_person_roles_and_methods` ([access_token.rs:138](../../crates/adapters/oidc/tests/access_token.rs#L138)) | REG-070a | REG-070a (registration) |
 | `reg_070a_a_bad_signature_is_refused` ([access_token.rs:149](../../crates/adapters/oidc/tests/access_token.rs#L149)) | REG-070a | REG-070a (registration) |
 | `reg_070a_alg_none_and_hs256_are_refused` ([access_token.rs:164](../../crates/adapters/oidc/tests/access_token.rs#L164)) | REG-070a | REG-070a (registration) |
@@ -231,11 +272,27 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `int_090_events_carry_no_account_personal_data` ([reader_access.rs:115](../../crates/adapters/results-http/tests/reader_access.rs#L115)) | INT-090 | INT-090 (intake) |
 | `int_089_a_request_for_another_host_is_refused_before_any_route` ([reader_access.rs:126](../../crates/adapters/results-http/tests/reader_access.rs#L126)) | INT-089 | INT-089 (intake) |
 | `int_089_a_callback_without_the_browsers_pre_auth_cookie_signs_nobody_in` ([reader_access.rs:155](../../crates/adapters/results-http/tests/reader_access.rs#L155)) | INT-089 | INT-089 (intake) |
-| `plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands` ([device_flow.rs:53](../../crates/adapters/web/tests/device_flow.rs#L53)) | PLAT-100, PLAT-105, PLAT-106, PLAT-108, PLAT-110, PLAT-111, PLAT-113, PLAT-114, PLAT-115, PLAT-116 | PLAT-100 (platform-profiles); PLAT-105 (platform-profiles); PLAT-106 (platform-profiles) |
+| `pub_110_get_entries_returns_the_canonical_entries_in_order` ([entries.rs:37](../../crates/adapters/translog/tests/entries.rs#L37)) | PUB-110 | PUB-110 (publishing) |
+| `pub_110_get_entries_stops_at_256_entries` ([entries.rs:55](../../crates/adapters/translog/tests/entries.rs#L55)) | PUB-110 | PUB-110 (publishing) |
+| `pub_110_get_entries_past_the_end_is_404` ([entries.rs:64](../../crates/adapters/translog/tests/entries.rs#L64)) | PUB-110 | PUB-110 (publishing) |
+| `pub_110_get_entries_with_a_bad_range_is_400` ([entries.rs:72](../../crates/adapters/translog/tests/entries.rs#L72)) | PUB-110 | PUB-110 (publishing) |
+| `pub_110_get_entries_with_a_body_or_another_method_is_refused` ([entries.rs:80](../../crates/adapters/translog/tests/entries.rs#L80)) | PUB-110 | PUB-110 (publishing) |
+| `pub_110_the_client_reads_back_what_the_server_stores` ([entries.rs:88](../../crates/adapters/translog/tests/entries.rs#L88)) | PUB-110 | PUB-110 (publishing) |
+| `plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands` ([device_flow.rs:54](../../crates/adapters/web/tests/device_flow.rs#L54)) | PLAT-100, PLAT-105, PLAT-106, PLAT-108, PLAT-110, PLAT-111, PLAT-113, PLAT-114, PLAT-115, PLAT-116 | PLAT-100 (platform-profiles); PLAT-105 (platform-profiles); PLAT-106 (platform-profiles) |
+| `dis_040_the_device_fetches_and_imports_a_bundle` ([fetch_bundle.rs:97](../../crates/adapters/web/tests/fetch_bundle.rs#L97)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_304_keeps_the_held_bundle` ([fetch_bundle.rs:110](../../crates/adapters/web/tests/fetch_bundle.rs#L110)) | DIS-040 | DIS-040 (distribution) |
+| `dis_040_a_404_no_bundle_is_reported_as_still_preparing` ([fetch_bundle.rs:123](../../crates/adapters/web/tests/fetch_bundle.rs#L123)) | DIS-040 | DIS-040 (distribution) |
+| `dis_030_a_bundle_that_fails_verification_is_not_imported` ([fetch_bundle.rs:139](../../crates/adapters/web/tests/fetch_bundle.rs#L139)) | DIS-030 | DIS-030 (distribution) |
+| `dis_040_the_pop_token_is_bound_to_the_factory_url_not_the_proxy_url` ([fetch_bundle.rs:154](../../crates/adapters/web/tests/fetch_bundle.rs#L154)) | DIS-040, WIRE-171 | DIS-040 (distribution); WIRE-171 (wire-formats) |
 | `pub_072_a_bundle_whose_tree_heads_are_dated_and_recent_verifies` ([dis_release.rs:288](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L288)) | PUB-072 | PUB-072 (publishing) |
 | `pub_072_a_tree_head_with_no_time_token_is_too_old` ([dis_release.rs:295](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L295)) | PUB-072 | PUB-072 (publishing) |
 | `pub_072_age_is_measured_from_the_checkpoints_token_to_the_bundles_time_token` ([dis_release.rs:302](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L302)) | PUB-072 | PUB-072 (publishing) |
 | `pub_072_a_forged_or_unreadable_checkpoint_token_is_refused` ([dis_release.rs:312](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L312)) | PUB-072 | PUB-072 (publishing) |
+| `cli_049_fetch_stores_the_bundle_under_its_dated_name` ([bundle_fetch.rs:91](../../crates/apps/cli/tests/bundle_fetch.rs#L91)) | CLI-049 | CLI-049 (cli) |
+| `cli_049_fetch_with_held_current_exits_0_and_writes_nothing` ([bundle_fetch.rs:124](../../crates/apps/cli/tests/bundle_fetch.rs#L124)) | CLI-049 | CLI-049 (cli) |
+| `cli_049_a_refusal_exits_1` ([bundle_fetch.rs:137](../../crates/apps/cli/tests/bundle_fetch.rs#L137)) | CLI-049 | CLI-049 (cli) |
+| `cli_049_an_unreachable_factory_exits_3` ([bundle_fetch.rs:147](../../crates/apps/cli/tests/bundle_fetch.rs#L147)) | CLI-049 | CLI-049 (cli) |
+| `cli_049_the_token_is_bound_to_the_factory_url` ([bundle_fetch.rs:161](../../crates/apps/cli/tests/bundle_fetch.rs#L161)) | CLI-049 | CLI-049 (cli) |
 | `cli_017_conformance_run_reports_every_suite_per_requirement_and_passes` ([conformance.rs:19](../../crates/apps/cli/tests/conformance.rs#L19)) | CLI-017 | CLI-017 (cli) |
 | `cli_017_a_single_suite_and_unknown_suites` ([conformance.rs:31](../../crates/apps/cli/tests/conformance.rs#L31)) | CLI-017 | CLI-017 (cli) |
 | `every_driven_port_has_a_contract_run_against_at_least_one_adapter` ([conformance.rs:56](../../crates/apps/cli/tests/conformance.rs#L56)) | CLI-017 | CLI-017 (cli) |
@@ -338,6 +395,56 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_258_no_hard_coded_loader_names_an_old_example_path` ([migration_gate.rs:184](../../crates/apps/e2e/tests/migration_gate.rs#L184)) | INS-258 | INS-258 (instrument) |
 | `reg_042_dis_042_int_054_two_devices_are_registered_apart_and_intake_orders_their_records` ([multi_device.rs:33](../../crates/apps/e2e/tests/multi_device.rs#L33)) | DIS-042, INT-054, REG-042 | DIS-042 (distribution); INT-054 (intake); REG-042 (registration) |
 | `reg_042_the_device_limit_is_checked_again_when_the_words_are_confirmed` ([multi_device.rs:144](../../crates/apps/e2e/tests/multi_device.rs#L144)) | REG-042 | REG-042 (registration) |
+| `dep_012_the_build_settings_have_their_defaults` ([config.rs:36](../../crates/apps/factory/tests/config.rs#L36)) | DEP-012 | DEP-012 (deployment) |
+| `dep_012_an_out_of_range_build_setting_is_refused` ([config.rs:45](../../crates/apps/factory/tests/config.rs#L45)) | DEP-012 | DEP-012 (deployment) |
+| `dep_023_production_refuses_the_development_adapters_the_factory_is_configured_with` ([config.rs:60](../../crates/apps/factory/tests/config.rs#L60)) | DEP-023 | DEP-023 (deployment) |
+| `dep_012_the_new_directories_are_required` ([config.rs:68](../../crates/apps/factory/tests/config.rs#L68)) | DEP-012 | DEP-012 (deployment) |
+| `sr3_b1_outside_development_the_release_policy_must_be_pinned` ([config.rs:79](../../crates/apps/factory/tests/config.rs#L79)) | DEP-012 | DEP-012 (deployment) |
+| `sr3_b1_development_verifies_the_release_policy_under_the_configured_allow_lists` ([config.rs:92](../../crates/apps/factory/tests/config.rs#L92)) | DEP-012 | DEP-012 (deployment) |
+| `dis_083_a_crash_after_record_issued_leaves_the_previous_bundle_and_the_next_pass_rebuilds` ([crash_order.rs:52](../../crates/apps/factory/tests/crash_order.rs#L52)) | DIS-083 | DIS-083 (distribution) |
+| `dis_083_a_crash_after_the_bundle_rename_leaves_a_digest_that_does_not_claim_the_new_inputs` ([crash_order.rs:65](../../crates/apps/factory/tests/crash_order.rs#L65)) | DIS-083 | DIS-083 (distribution) |
+| `dis_083_a_crash_after_the_digest_rename_leaves_a_consistent_store` ([crash_order.rs:79](../../crates/apps/factory/tests/crash_order.rs#L79)) | DIS-083 | DIS-083 (distribution) |
+| `dis_083_no_crash_point_leaves_a_partial_bundle_file_in_the_store` ([crash_order.rs:91](../../crates/apps/factory/tests/crash_order.rs#L91)) | DIS-083 | DIS-083 (distribution) |
+| `dis_082_registration_builds_sequence_one` ([reconciler.rs:31](../../crates/apps/factory/tests/reconciler.rs#L31)) | DIS-082 | DIS-082 (distribution) |
+| `dis_082_a_new_publication_builds_the_next_sequence` ([reconciler.rs:43](../../crates/apps/factory/tests/reconciler.rs#L43)) | DIS-082 | DIS-082 (distribution) |
+| `dis_082_a_new_roster_version_builds_the_next_sequence` ([reconciler.rs:53](../../crates/apps/factory/tests/reconciler.rs#L53)) | DIS-082 | DIS-082 (distribution) |
+| `dis_082_an_assignment_rebuilds_without_a_restart` ([reconciler.rs:63](../../crates/apps/factory/tests/reconciler.rs#L63)) | DIS-082 | DIS-082 (distribution) |
+| `dis_082_a_roster_issue_rebuilds_without_a_restart` ([reconciler.rs:75](../../crates/apps/factory/tests/reconciler.rs#L75)) | DIS-082 | DIS-082 (distribution) |
+| `dis_082_an_assignment_that_changes_the_cohort_set_brings_the_reissued_certificate_in_the_next_bundle` ([reconciler.rs:84](../../crates/apps/factory/tests/reconciler.rs#L84)) | DIS-082 | DIS-082 (distribution) |
+| `dis_083_an_unchanged_input_digest_builds_nothing` ([reconciler.rs:107](../../crates/apps/factory/tests/reconciler.rs#L107)) | DIS-083 | DIS-083 (distribution) |
+| `dis_083_a_restart_builds_nothing_new` ([reconciler.rs:116](../../crates/apps/factory/tests/reconciler.rs#L116)) | DIS-083 | DIS-083 (distribution) |
+| `dis_010_a_bundle_whose_anchor_is_older_than_the_maximum_age_is_rebuilt_with_the_next_sequence` ([reconciler.rs:125](../../crates/apps/factory/tests/reconciler.rs#L125)) | DIS-010 | DIS-010 (distribution) |
+| `dis_010_a_fresh_anchor_with_an_unchanged_digest_builds_nothing` ([reconciler.rs:136](../../crates/apps/factory/tests/reconciler.rs#L136)) | DIS-010 | DIS-010 (distribution) |
+| `dis_013_two_accounts_get_only_their_own_cohorts` ([reconciler.rs:146](../../crates/apps/factory/tests/reconciler.rs#L146)) | DIS-013 | DIS-013 (distribution) |
+| `reg_041_a_retired_tenancy_frees_the_cohort_slot_for_the_accounts_new_device` ([reconciler.rs:157](../../crates/apps/factory/tests/reconciler.rs#L157)) | REG-041 | REG-041 (registration) |
+| `reg_041_a_second_active_tenancy_of_one_cohort_is_held_by_the_cohort_limit` ([reconciler.rs:175](../../crates/apps/factory/tests/reconciler.rs#L175)) | REG-041 | REG-041 (registration) |
+| `dis_083_a_failed_build_keeps_the_previous_bundle` ([reconciler.rs:188](../../crates/apps/factory/tests/reconciler.rs#L188)) | DIS-083 | DIS-083 (distribution) |
+| `dis_003_a_lost_retired_or_flagged_tenancy_gets_no_new_bundle` ([reconciler.rs:201](../../crates/apps/factory/tests/reconciler.rs#L201)) | DIS-003 | DIS-003 (distribution) |
+| `dis_075_a_build_with_an_unpublished_artefact_releases_nothing` ([reconciler.rs:216](../../crates/apps/factory/tests/reconciler.rs#L216)) | DIS-075 | DIS-075 (distribution) |
+| `dis_002_with_no_published_policy_nothing_is_built_and_no_policy_is_recorded` ([reconciler.rs:228](../../crates/apps/factory/tests/reconciler.rs#L228)) | DIS-002 | DIS-002 (distribution) |
+| `dis_012_the_highest_non_withdrawn_version_the_runtime_can_run_is_bundled` ([reconciler.rs:246](../../crates/apps/factory/tests/reconciler.rs#L246)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_a_withdrawn_version_is_never_bundled` ([reconciler.rs:257](../../crates/apps/factory/tests/reconciler.rs#L257)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_a_tenancy_whose_runtime_reported_an_older_schema_gets_no_instrument_it_cannot_run` ([reconciler.rs:267](../../crates/apps/factory/tests/reconciler.rs#L267)) | DIS-012 | DIS-012 (distribution) |
+| `dis_077_the_profile_used_is_the_one_recorded_at_registration` ([reconciler.rs:284](../../crates/apps/factory/tests/reconciler.rs#L284)) | DIS-077 | DIS-077 (distribution) |
+| `dis_016_the_default_bundles_every_bound_layout_newest_per_window_class` ([reconciler.rs:308](../../crates/apps/factory/tests/reconciler.rs#L308)) | DIS-016 | DIS-016 (distribution) |
+| `ins_207_at_most_one_layout_per_window_class` ([reconciler.rs:318](../../crates/apps/factory/tests/reconciler.rs#L318)) | INS-207 | INS-207 (instrument) |
+| `dis_016_an_explicit_none_bundles_no_layout` ([reconciler.rs:328](../../crates/apps/factory/tests/reconciler.rs#L328)) | DIS-016 | DIS-016 (distribution) |
+| `dis_016_a_layout_bound_to_another_fingerprint_is_never_included` ([reconciler.rs:340](../../crates/apps/factory/tests/reconciler.rs#L340)) | DIS-016 | DIS-016 (distribution) |
+| `dis_016_layouts_are_found_by_the_name_survey_hyphen_window` ([reconciler.rs:351](../../crates/apps/factory/tests/reconciler.rs#L351)) | DIS-016 | DIS-016 (distribution) |
+| `dis_002_the_bundle_release_decision_gates_roster_release` ([reconciler.rs:361](../../crates/apps/factory/tests/reconciler.rs#L361)) | DIS-002 | DIS-002 (distribution) |
+| `dep_051_build_events_carry_no_subject_data` ([reconciler.rs:377](../../crates/apps/factory/tests/reconciler.rs#L377)) | DEP-051 | DEP-051 (deployment) |
+| `int_040_issued_rosters_are_recorded_for_intake_with_restricted_fields` ([reconciler.rs:389](../../crates/apps/factory/tests/reconciler.rs#L389)) | INT-040 | INT-040 (intake) |
+| `sr3_b1_a_policy_signed_by_one_key_that_lowers_its_own_threshold_is_refused` ([reconciler.rs:441](../../crates/apps/factory/tests/reconciler.rs#L441)) | DIS-002 | DIS-002 (distribution) |
+| `sr3_b1_with_only_a_forged_policy_nothing_is_built` ([reconciler.rs:452](../../crates/apps/factory/tests/reconciler.rs#L452)) | DIS-002 | DIS-002 (distribution) |
+| `sr3_b1_a_pinned_policy_is_the_only_one_read` ([reconciler.rs:463](../../crates/apps/factory/tests/reconciler.rs#L463)) | DIS-002 | DIS-002 (distribution) |
+| `sr3_m2_a_forged_withdrawal_withdraws_nothing` ([reconciler.rs:487](../../crates/apps/factory/tests/reconciler.rs#L487)) | DIS-011 | DIS-011 (distribution) |
+| `sr3_m3_a_forged_higher_version_is_skipped_and_the_next_is_built` ([reconciler.rs:499](../../crates/apps/factory/tests/reconciler.rs#L499)) | DIS-011 | DIS-011 (distribution) |
+| `sr3_m7_a_failed_build_is_retried_only_after_a_backoff_or_when_its_inputs_change` ([reconciler.rs:525](../../crates/apps/factory/tests/reconciler.rs#L525)) | DIS-083 | DIS-083 (distribution) |
+| `sr2_m2_a_policy_hold_leaves_a_marker_that_the_next_build_clears` ([reconciler.rs:553](../../crates/apps/factory/tests/reconciler.rs#L553)) | DIS-003 | DIS-003 (distribution) |
+| `sr2_m2_a_hold_that_appears_after_a_build_stops_the_stored_bundle_though_the_inputs_are_unchanged` ([reconciler.rs:572](../../crates/apps/factory/tests/reconciler.rs#L572)) | DIS-003 | DIS-003 (distribution) |
+| `sr2_m2_a_policy_fault_withholds_every_tenancy_the_pass_covers` ([reconciler.rs:592](../../crates/apps/factory/tests/reconciler.rs#L592)) | DIS-003 | DIS-003 (distribution) |
+| `sr3_m11_nothing_is_read_while_the_watched_paths_are_unchanged` ([reconciler.rs:615](../../crates/apps/factory/tests/reconciler.rs#L615)) | DIS-083 | DIS-083 (distribution) |
+| `sr3_m7_a_bundle_over_the_size_limit_is_refused_before_it_is_signed` ([reconciler.rs:637](../../crates/apps/factory/tests/reconciler.rs#L637)) | DIS-075 | DIS-075 (distribution) |
 | `dep_012_every_variable_is_read_from_the_environment_only` ([config.rs:17](../../crates/apps/intake/tests/config.rs#L17)) | DEP-012 | DEP-012 (deployment) |
 | `dep_012_an_empty_or_untrimmed_value_is_unusable_configuration` ([config.rs:31](../../crates/apps/intake/tests/config.rs#L31)) | DEP-012 | DEP-012 (deployment) |
 | `dep_012_flags_are_true_or_false` ([config.rs:40](../../crates/apps/intake/tests/config.rs#L40)) | DEP-012 | DEP-012 (deployment) |
@@ -376,6 +483,12 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `dis_030_2_stale_and_premature_anchors_do_not_validate_the_factory_signature` ([bundle_attacks.rs:227](../../crates/apps/security-tests/tests/bundle_attacks.rs#L227)) | DIS-030 | DIS-030 (distribution) |
 | `dis_042_a_bundle_copied_to_another_device_is_unusable` ([bundle_attacks.rs:242](../../crates/apps/security-tests/tests/bundle_attacks.rs#L242)) | DIS-042 | DIS-042 (distribution) |
 | `dis_022_the_outer_envelope_and_file_name_carry_no_personal_data` ([bundle_attacks.rs:257](../../crates/apps/security-tests/tests/bundle_attacks.rs#L257)) | DIS-022 | DIS-022 (distribution) |
+| `dis_021_a_stolen_token_yields_bytes_only_the_device_can_open` ([bundle_delivery.rs:221](../../crates/apps/security-tests/tests/bundle_delivery.rs#L221)) | DIS-021 | DIS-021 (distribution) |
+| `dis_040_a_token_for_another_url_is_refused` ([bundle_delivery.rs:238](../../crates/apps/security-tests/tests/bundle_delivery.rs#L238)) | DIS-040 | DIS-040 (distribution) |
+| `reg_082_a_withheld_tenancy_can_still_upload` ([bundle_delivery.rs:251](../../crates/apps/security-tests/tests/bundle_delivery.rs#L251)) | REG-082 | REG-082 (registration) |
+| `dis_020_neither_bundle_bytes_nor_decrypted_contents_contain_the_record_key_secret_or_the_export_pseudonymisation_key` ([bundle_delivery.rs:317](../../crates/apps/security-tests/tests/bundle_delivery.rs#L317)) | DIS-020 | DIS-020 (distribution) |
+| `dis_040_the_replay_ledger_is_shared_with_the_other_pop_routes` ([bundle_delivery.rs:338](../../crates/apps/security-tests/tests/bundle_delivery.rs#L338)) | DIS-040 | DIS-040 (distribution) |
+| `dis_013_neither_account_receives_the_others_cohort_roster` ([bundle_delivery.rs:353](../../crates/apps/security-tests/tests/bundle_delivery.rs#L353)) | DIS-013 | DIS-013 (distribution) |
 | `wire_160_every_decoder_survives_seeded_hostile_input` ([decoder_hardening.rs:130](../../crates/apps/security-tests/tests/decoder_hardening.rs#L130)) | WIRE-160 | WIRE-160 (wire-formats) |
 | `wire_160_length_bombs_are_refused_without_allocating` ([decoder_hardening.rs:168](../../crates/apps/security-tests/tests/decoder_hardening.rs#L168)) | WIRE-160 | WIRE-160 (wire-formats) |
 | `wire_122_non_ascii_text_forms_are_refused_not_a_panic` ([decoder_hardening.rs:187](../../crates/apps/security-tests/tests/decoder_hardening.rs#L187)) | WIRE-122 | WIRE-122 (wire-formats) |
@@ -419,15 +532,20 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
 | `web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory` ([dev_loop.rs:37](../../crates/apps/web/tests/dev_loop.rs#L37)) | WEB-140 | WEB-140 (web-app) |
 | `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:65](../../crates/apps/web/tests/dev_loop.rs#L65)) | WEB-111 | WEB-111 (web-app) |
-| `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
 | `web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examples_otherwise` ([roster_store.rs:57](../../crates/apps/web/tests/roster_store.rs#L57)) | WEB-110 | WEB-110 (web-app) |
+| `web_153_get_device_bundle_is_gone` ([stack_mode.rs:45](../../crates/apps/web/tests/stack_mode.rs#L45)) | WEB-153 | WEB-153 (web-app) |
+| `web_153_the_proxy_passes_the_pop_header_and_bundle_headers` ([stack_mode.rs:54](../../crates/apps/web/tests/stack_mode.rs#L54)) | WEB-153 | WEB-153 (web-app) |
+| `web_191_the_stack_mode_needs_no_cli_path` ([stack_mode.rs:90](../../crates/apps/web/tests/stack_mode.rs#L90)) | WEB-191 | WEB-191 (web-app) |
+| `web_191_the_surveys_are_the_published_files_the_log_vouches_for` ([stack_mode.rs:115](../../crates/apps/web/tests/stack_mode.rs#L115)) | WEB-191 | WEB-191 (web-app) |
 | `the_runtime_profile_names_the_schema_the_core_implements` ([lib.rs:39](../../crates/bindings/uniffi/src/lib.rs#L39)) | WIRE-130 | WIRE-130 (wire-formats) |
-| `dep_012_a_cohorts_key_in_the_tenancy_registry_config_is_no_longer_rendered` ([factory_component.rs:91](../../crates/contexts/deployment/tests/factory_component.rs#L91)) | DEP-012 | DEP-012 (deployment) |
-| `dep_012_the_factory_component_renders_the_new_variables` ([factory_component.rs:101](../../crates/contexts/deployment/tests/factory_component.rs#L101)) | DEP-012 | DEP-012 (deployment) |
-| `dep_002_a_manifest_without_the_new_factory_ports_is_refused` ([factory_component.rs:117](../../crates/contexts/deployment/tests/factory_component.rs#L117)) | DEP-002 | DEP-002 (deployment) |
-| `dep_002_the_example_manifests_bind_the_new_factory_ports` ([factory_component.rs:128](../../crates/contexts/deployment/tests/factory_component.rs#L128)) | DEP-002 | DEP-002 (deployment) |
-| `dep_023_validate_refuses_the_factory_file_adapters_in_production` ([factory_component.rs:141](../../crates/contexts/deployment/tests/factory_component.rs#L141)) | DEP-023 | DEP-023 (deployment) |
+| `dep_012_a_cohorts_key_in_the_tenancy_registry_config_is_no_longer_rendered` ([factory_component.rs:93](../../crates/contexts/deployment/tests/factory_component.rs#L93)) | DEP-012 | DEP-012 (deployment) |
+| `dep_012_the_factory_component_renders_the_new_variables` ([factory_component.rs:103](../../crates/contexts/deployment/tests/factory_component.rs#L103)) | DEP-012 | DEP-012 (deployment) |
+| `dep_002_a_manifest_without_the_new_factory_ports_is_refused` ([factory_component.rs:119](../../crates/contexts/deployment/tests/factory_component.rs#L119)) | DEP-002 | DEP-002 (deployment) |
+| `dep_002_the_example_manifests_bind_the_new_factory_ports` ([factory_component.rs:130](../../crates/contexts/deployment/tests/factory_component.rs#L130)) | DEP-002 | DEP-002 (deployment) |
+| `dep_023_validate_refuses_the_factory_file_adapters_in_production` ([factory_component.rs:143](../../crates/contexts/deployment/tests/factory_component.rs#L143)) | DEP-023 | DEP-023 (deployment) |
+| `dep_057_the_factory_renders_the_bundle_directories_and_the_optional_timing` ([factory_component.rs:152](../../crates/contexts/deployment/tests/factory_component.rs#L152)) | DEP-012, DEP-057 | DEP-012 (deployment); DEP-057 (deployment) |
+| `dep_057_outside_development_the_factory_needs_a_pinned_release_policy` ([factory_component.rs:178](../../crates/contexts/deployment/tests/factory_component.rs#L178)) | DEP-057 | DEP-057 (deployment) |
 | `dep_057_the_intake_component_renders_the_listed_variables` ([intake_component.rs:79](../../crates/contexts/deployment/tests/intake_component.rs#L79)) | DEP-057 | DEP-057 (deployment) |
 | `dep_057_a_file_submission_store_is_a_development_adapter` ([intake_component.rs:104](../../crates/contexts/deployment/tests/intake_component.rs#L104)) | DEP-057 | DEP-057 (deployment) |
 | `dep_023_validate_refuses_intake_development_adapters_in_production` ([intake_component.rs:111](../../crates/contexts/deployment/tests/intake_component.rs#L111)) | DEP-023 | DEP-023 (deployment) |
@@ -444,6 +562,12 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `dis_063_a_generation_key_is_refused_in_the_issue_form` ([roster_form.rs:71](../../crates/contexts/distribution/tests/roster_form.rs#L71)) | DIS-063 | DIS-063 (distribution) |
 | `dis_063_a_consent_state_outside_the_declared_set_is_a_finding` ([roster_form.rs:78](../../crates/contexts/distribution/tests/roster_form.rs#L78)) | DIS-063 | DIS-063 (distribution) |
 | `dis_063_every_finding_is_reported_not_only_the_first` ([roster_form.rs:87](../../crates/contexts/distribution/tests/roster_form.rs#L87)) | DIS-063 | DIS-063 (distribution) |
+| `pol_068_the_default_is_bound` ([release_layouts.rs:21](../../crates/contexts/policy/tests/release_layouts.rs#L21)) | POL-068 | POL-068 (policy) |
+| `pol_068_none_is_accepted` ([release_layouts.rs:29](../../crates/contexts/policy/tests/release_layouts.rs#L29)) | POL-068 | POL-068 (policy) |
+| `pol_068_an_unknown_value_is_refused` ([release_layouts.rs:36](../../crates/contexts/policy/tests/release_layouts.rs#L36)) | POL-068 | POL-068 (policy) |
+| `pol_068_a_tighter_layer_can_set_none_but_a_looser_layer_cannot_restore_bound` ([release_layouts.rs:43](../../crates/contexts/policy/tests/release_layouts.rs#L43)) | POL-068 | POL-068 (policy) |
+| `pol_068_the_typed_section_exposes_the_layout_choice` ([release_layouts.rs:55](../../crates/contexts/policy/tests/release_layouts.rs#L55)) | POL-068 | POL-068 (policy) |
+| `pol_068_the_other_control_defaults_are_unchanged` ([release_layouts.rs:69](../../crates/contexts/policy/tests/release_layouts.rs#L69)) | POL-068 | POL-068 (policy) |
 | `wire_130_the_request_body_vectors_decode_with_schema_and_catalogue` ([vectors.rs:176](../../crates/contexts/registration/tests/vectors.rs#L176)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `wire_130_a_body_without_schema_is_refused` ([vectors.rs:220](../../crates/contexts/registration/tests/vectors.rs#L220)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `wire_130_the_vectors_are_current` ([vectors.rs:241](../../crates/contexts/registration/tests/vectors.rs#L241)) | WIRE-130, WIRE-151 | WIRE-130 (wire-formats); WIRE-151 (wire-formats) |

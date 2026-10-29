@@ -37,7 +37,7 @@ use crate::collection::{LocalTransport, MemoryBundleOpener};
 use crate::delivery::{MemoryFileAccess, MemoryPrivateStorage, MemoryQrScanner, MemoryRegistrationRecords, MemoryShareTarget};
 use crate::deployment::{MemoryBuildRegistry, MemoryDocumentationSink, MemorySecretStore};
 use crate::distribution::{
-    MemoryAnchorSource, MemoryBundleStore, MemoryRosterSource, MemoryRuntimeProfiles, MemoryTrustStore, SoftwareAgreementKey,
+    ClockAnchorSource, MemoryAnchorSource, MemoryBundleStore, MemoryRosterSource, MemoryRuntimeProfiles, MemoryTrustStore, SoftwareAgreementKey,
 };
 use crate::instrument::FullCatalogue;
 use crate::intake::{MemoryDataPlatform, MemoryRosterHistory, MemorySubmissionStore, MemoryTenancyRegistry};
@@ -254,6 +254,14 @@ pub fn contract_cases() -> Vec<ContractCase> {
             let w = crate::demo::DemoWorld::new(1, SIMULATION_T0).expect("world");
             dis::anchor_source_contract(
                 || MemoryAnchorSource::new(w.now, &w.custody, w.receipt),
+                |t| t.verify(&fieldseal_trust::domain::TrustStore::new(&w.trust)).is_ok(),
+            );
+        }),
+        case!("distribution", "AnchorSource", "anchor_source_contract", "ClockAnchorSource", [], || {
+            let w = crate::demo::DemoWorld::new(1, SIMULATION_T0).expect("world");
+            let clock = crate::trust::FixedClock::new(w.now);
+            dis::anchor_source_contract(
+                || ClockAnchorSource::new(&clock, &w.custody, w.receipt),
                 |t| t.verify(&fieldseal_trust::domain::TrustStore::new(&w.trust)).is_ok(),
             );
         }),

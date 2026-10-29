@@ -174,8 +174,28 @@ fn factory_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::C
             put(env, var, v);
         }
     }
+    // The bundle store, the issued-roster record for intake and the build timing (DIS-082). Absent optional keys render nothing; the factory has defaults.
+    for (port, key, var) in [
+        ("BundleStore", "dir", "FIELDSEAL_BUNDLE_DIR"),
+        ("BundleStore", "issuedRostersDir", "FIELDSEAL_ISSUED_ROSTERS_DIR"),
+        ("BundleStore", "maxAnchorAgeS", "FIELDSEAL_FACTORY_MAX_ANCHOR_AGE_S"),
+        ("ArtefactRegistry", "scanIntervalS", "FIELDSEAL_FACTORY_BUILD_INTERVAL_S"),
+    ] {
+        if let Some(v) = spec.adapters.get(port).filter(|a| a.adapter == "file-dev").and_then(|a| a.config.get(key)) {
+            put(env, var, v);
+        }
+    }
     if spec.adapters.get("AttestationVerifier").is_some_and(|a| a.adapter == "software" || a.adapter == "memory") {
         env.insert("FIELDSEAL_ALLOW_UNATTESTED".into(), "true".into());
+    }
+    // What the release policy is verified against: the pinned content address (required outside
+    // development), or in development the builders and sources it may name.
+    if let Some(engine) = spec.adapters.get("PolicyEngine") {
+        for (key, var) in [("policyDigest", "FIELDSEAL_FACTORY_POLICY_DIGEST"), ("allowedBuilders", "FIELDSEAL_FACTORY_ALLOWED_BUILDERS"), ("allowedSources", "FIELDSEAL_FACTORY_ALLOWED_SOURCES")] {
+            if let Some(v) = engine.config.get(key) {
+                put(env, var, v);
+            }
+        }
     }
 }
 

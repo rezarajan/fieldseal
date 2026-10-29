@@ -104,6 +104,7 @@ fn build() -> Vec<ControlSpec> {
         spec("factory.posture.onFailure", Kind::Choice(PostureFailure::NAMES), choice("pause-release"), TIGHTER_HIGH),
         spec("factory.posture.unknownRestriction", Kind::Choice(UnknownRestriction::NAMES), choice("flag"), TIGHTER_HIGH),
         spec("factory.release.requireRegisteredTenancy", Kind::Bool, flag(true), TIGHTER_HIGH),
+        spec("factory.release.layouts", Kind::Choice(LayoutAssignment::NAMES), choice("bound"), TIGHTER_HIGH),
         // runtime
         spec("runtime.pin.minLength", int(1, 64), count(6), TIGHTER_HIGH),
         spec("runtime.pin.lockoutSteps", Kind::Durations, durs(&["30s", "1m", "5m", "15m", "1h"]), TIGHTER_HIGH),

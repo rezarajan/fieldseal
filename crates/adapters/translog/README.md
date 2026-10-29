@@ -10,14 +10,14 @@ Source files: `src/store.rs` (log store), `src/client.rs` (client adapter), `src
 
 | Symbol | Role |
 |---|---|
-| `FileLogStore` | File-backed append-only log. `open(dir, origin, SigningKey) -> Result<_, StoreError>`; `pin() -> LogPin`, `origin()`, `size()`, `append_entry(&LogEntry)`, `latest_checkpoint()`, `inclusion_at(leaf_index, tree_size)`, `consistency_between(old, new)`. Implements `TransparencyLog` for in-process use. Logs the `LeafFormat::Fieldseal` leaf, signs C2SP checkpoints with the supplied P-256 key. |
+| `FileLogStore` | File-backed append-only log. `open(dir, origin, SigningKey) -> Result<_, StoreError>`; `pin() -> LogPin`, `origin()`, `size()`, `append_entry(&LogEntry)`, `latest_checkpoint()`, `inclusion_at(leaf_index, tree_size)`, `consistency_between(old, new)`, `entries(from, to)` (canonical entry bytes, at most `MAX_ENTRIES` = 256). Implements `TransparencyLog` for in-process use. Logs the `LeafFormat::Fieldseal` leaf, signs C2SP checkpoints with the supplied P-256 key. |
 | `StoreError` | `Io`, `Locked`, `Corrupt`, `Origin`. |
-| `HttpTranslog<T: LogTransport>` | `TransparencyLog` client: `new(transport)`, `pinned(LogPin)` (every checkpoint must verify under the pinned key). |
+| `HttpTranslog<T: LogTransport>` | `TransparencyLog` client: `new(transport)`, `pinned(LogPin)` (every checkpoint must verify under the pinned key), `entries(from, to)` (an inherent method, not part of the port). |
 | `HttpLogTransport` | `LogTransport` over HTTP(S) with `ureq`: `new(base_url)` (30 s timeout), `with_timeout(base_url, timeout)`. |
 | `HandlerTransport<S>` | `LogTransport` that calls `handle` in-process on a `FileLogStore` (`S: Deref<Target = FileLogStore>`). |
 | `handle(store, method, path, body, max_body) -> Response` | Server side, no sockets. |
 | `render`, `interpret` | Transmission to `HttpRequest`; status and body to payload or `LogError`. |
-| `encode_inclusion`, `encode_consistency`, `decode_inclusion`, `decode_consistency`, `decode_checkpoint`, `decode_append` | Proof and note codecs. |
+| `encode_inclusion`, `encode_consistency`, `decode_inclusion`, `decode_consistency`, `decode_checkpoint`, `decode_append`, `decode_entries` | Proof and note codecs. |
 | `HttpRequest`, `Response`, `DEFAULT_MAX_BODY` (4096), `MAX_RESPONSE` (1 MiB) | Wire types and limits. |
 
 HTTP API served by `handle`:
@@ -28,6 +28,7 @@ HTTP API served by `handle`:
 | `GET /checkpoint` | signed C2SP checkpoint note |
 | `GET /inclusion/<leaf_index>/<tree_size>` | inclusion proof |
 | `GET /consistency/<old_size>/<new_size>` | consistency proof |
+| `GET /entries/<from>/<to>` | per entry a `u32` length and the canonical entry bytes, at most 256 entries (WIRE-199) |
 
 Errors: `404` for unknown entry, size or route, `400` for a malformed request, `413` for an oversized body, `500` for other store errors.
 

@@ -44,7 +44,7 @@ fn load(args: &Args, out: &mut Outcome) -> Option<Vec<Entry>> {
         fail(out, exit::NOT_FOUND, "not-found", &[("file", &dir.to_string_lossy()), ("reason", "no such register directory")]);
         return None;
     };
-    let policy = crate::bundle_stack::publishing_policy();
+    let policy = crate::policy_support::publishing_policy();
     let verifier = VerifyPublication::new(TrustStore::new(&bundle), &policy);
     let mut files: Vec<PathBuf> = rd.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "published")).collect();
     files.sort();
