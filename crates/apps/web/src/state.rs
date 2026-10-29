@@ -2,8 +2,11 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use fieldseal_adapters_web_demo::Demo;
+
+use crate::catalogue::Entry;
 
 /// What the routes need to know, set once at start-up from the environment.
 #[derive(Clone, Debug, Default)]
@@ -12,6 +15,9 @@ pub struct AppState {
     /// each cohort and version). Files are re-read on every request, so edits show up without a
     /// restart.
     pub examples_dir: PathBuf,
+    /// The last version of each survey that loaded, by survey name. A load that fails leaves it
+    /// alone; the pages show it beside the error. It lives in memory only.
+    pub last_good: Arc<Mutex<BTreeMap<String, Entry>>>,
     /// Which cohort's roster each survey's pages use, by survey name
     /// (`FIELDSEAL_WEB_SURVEY_COHORTS`). A survey with no entry has no roster.
     pub survey_cohorts: BTreeMap<String, String>,
@@ -34,6 +40,14 @@ pub struct AppState {
     /// authority (`/authority`), its published artefacts (`/published`), the factory's records
     /// (`/factory-state`) and the `fieldseal` CLI to build bundles (`FIELDSEAL_WEB_CLI`).
     pub stack: Option<String>,
+    /// Stack mode: the authority's directory (`FIELDSEAL_WEB_AUTHORITY_DIR`, default `/authority`).
+    pub authority_dir: Option<PathBuf>,
+    /// Stack mode: the directory of the `*.published` files (`FIELDSEAL_WEB_PUBLISHED_DIR`,
+    /// default `/published`).
+    pub published_dir: Option<PathBuf>,
+    /// Stack mode: the CLI's artefact registry, the directory of `*.publication` files that the
+    /// Publishing page lists (`FIELDSEAL_WEB_REGISTRY_DIR`, default none).
+    pub registry_dir: Option<PathBuf>,
 }
 
 /// The demo authority, as a cheap copyable handle.
@@ -47,6 +61,16 @@ impl std::fmt::Debug for DemoHandle {
 }
 
 impl AppState {
+    /// The authority's directory in stack mode.
+    pub fn authority(&self) -> PathBuf {
+        self.authority_dir.clone().unwrap_or_else(|| PathBuf::from("/authority"))
+    }
+
+    /// The directory of the published artefacts in stack mode.
+    pub fn published(&self) -> PathBuf {
+        self.published_dir.clone().unwrap_or_else(|| PathBuf::from("/published"))
+    }
+
     /// The two files of the WASM bundle and whether both are present.
     pub fn wasm_available(&self) -> bool {
         self.wasm_dir.as_ref().is_some_and(|d| d.join("fieldseal_wasm.js").is_file() && d.join("fieldseal_wasm_bg.wasm").is_file())

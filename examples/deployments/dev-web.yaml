@@ -1,0 +1,76 @@
+# The manifest of `just web` (tools/dev-web.sh, docs/how-to/use-the-web-app.md): the services
+# that run natively, without containers. Like local-stack.yaml, but the directories are under
+# deploy/local/.state/dev-web/ (relative to the repository root, where tools/dev-web.sh starts
+# every process), the processes bind 127.0.0.1, and the factory's identity is the development one
+# (`memory-dev`, FIELDSEAL_IDENTITY=dev), which `fieldseal deployment validate` refuses in an
+# environment named `production` (DEP-023).
+#
+#   fieldseal deployment validate examples/deployments/dev-web.yaml
+#   fieldseal deployment render examples/deployments/dev-web.yaml --environment development --out deploy/local/.state/dev-web/env
+apiVersion: fieldseal.dev/v1alpha1
+kind: Deployment
+metadata:
+  name: dev-web
+  schemaVersion: 1.0.0
+spec:
+  authority:
+    displayName: Dev Web Authority
+    trustBundle: { ref: trust/development-root, channel: development }
+  registries:
+    artefacts: { url: "http://localhost:9000", transparencyLog: "http://localhost:9001" }
+    builds: { container: "localhost/fieldseal", runtime: "http://localhost:9002" }
+  policies:
+    layers:
+      - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
+  instruments:
+    - { ref: instrument/school-meals-baseline, channel: development }
+    - { ref: instrument/household-water-access, channel: development }
+  components:
+    factory:
+      bind: "127.0.0.1:8080"
+      adapters:
+        # The development identity: the factory runs FIELDSEAL_IDENTITY=dev (memory-dev).
+        IdentityProvider: { adapter: memory-dev, config: {} }
+        # The authority that tools/stack-init.sh creates (development custody: files).
+        Signer:
+          adapter: file-dev
+          config:
+            dir: deploy/local/.state/dev-web/authority/online
+            trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle
+        # The render writes FIELDSEAL_ALLOW_UNATTESTED=true for this adapter (REG-017, non-production only).
+        AttestationVerifier: { adapter: software, config: {} }
+        PolicyEngine: { adapter: built-in, config: {} }
+        # Every new tenancy is assigned the cohorts of both sample rosters.
+        TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory, cohorts: "cohort-a:1,village-a:1" } }
+      scaling: { replicas: 1 }
+    # DEP-040 asks for the intake component. `just web` does not start it yet (the intake app
+    # arrives with a later phase); the manifest says where it will keep its files.
+    intake:
+      bind: "127.0.0.1:8480"
+      adapters:
+        RecordKeyUnsealer:
+          adapter: file-dev
+          config: { dir: deploy/local/.state/dev-web/authority/online, trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle }
+        SubmissionStore: { adapter: memory, config: {} }
+        DataPlatform: { adapter: landing-files, config: { dir: deploy/local/.state/dev-web/landing } }
+        PolicyEngine: { adapter: built-in, config: {} }
+        TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory } }
+      scaling: { replicas: 1 }
+    publishing:
+      bind: "127.0.0.1:9001"
+      adapters:
+        TransparencyLog:
+          adapter: translog
+          config:
+            origin: "fieldseal.local/log"
+            dir: deploy/local/.state/dev-web/log
+            keyFile: deploy/local/.state/dev-web/authority/translog.key
+        Signer: { adapter: memory, config: {} }
+  runtime:
+    provisioning:
+      factoryUrl: "http://localhost:8080"
+      destinationUrl: "http://localhost:8480"
+      platforms:
+        android: { management: self-managed, deviceOwner: fieldseal, lockTask: false }
+  environments:
+    development: {}

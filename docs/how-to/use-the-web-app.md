@@ -23,6 +23,18 @@ FIELDSEAL_WEB_WASM_DIR=target/web FIELDSEAL_WEB_DEMO_AUTHORITY=true \
 
 Open `http://127.0.0.1:8090`. All settings are environment variables, listed at the top of `crates/apps/web/src/main.rs`. Without `FIELDSEAL_WEB_DEMO_AUTHORITY` the Instruments page works from `examples/` alone (a `surveys/<name>/` folder for each survey, `rosters/<cohort>.yaml` for each roster; `FIELDSEAL_WEB_SURVEY_COHORTS` says which cohort's roster a survey uses) and the other pages say what they need.
 
+## Run it with the real services, without containers
+
+`just web` runs the transparency log, the factory and the web app (as the collector stand-in) on your machine from `examples/deployments/dev-web.yaml`, publishes the bundled examples through the log, and re-reads survey files on every request:
+
+```sh
+just web
+```
+
+Open `http://127.0.0.1:8090`. Edit a file under `examples/surveys/` and reload: the change shows with no restart. An edit that does not load keeps the last good version on the Instruments page and shows the error, with file, line and column, above it. The Publishing page lists the artefacts in the log. `just publish <survey>` publishes a survey of your own through this log (see [Write and publish your first survey](../tutorials/write-and-publish-your-first-survey.md)). State is in `deploy/local/.state/dev-web/`; remove it to start over. `Ctrl-C` stops everything.
+
+It uses ports 8080, 8090 and 9001, the ports the compose stack uses, so run one or the other; if a port is taken, `just web` names it and starts nothing. The factory's sign-in is its development identity (`FIELDSEAL_IDENTITY=dev`, which production refuses). For now the Device page's device and bundle steps need the compose stack, and there is no upload target.
+
 ## What each page does
 
 - **Instruments.** Pick an instrument, then a layout, a language and a window class. The page shows the instrument exactly as `fieldseal instrument preview` draws it, plus findings, the element tree, code lists, concepts and rules. Type answers into the form: rules and field checks are evaluated in your browser by the core compiled to WebAssembly (the "Live evaluation" panel), and questions hidden by a rule disappear.

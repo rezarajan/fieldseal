@@ -2,14 +2,15 @@
 # The stack's one authority, made once (marker /authority/.initialised) and shared read-only by
 # the services: the root ceremony, the purpose keys and their certificates, the transparency
 # log's signing key and the trust bundle that pins the log by origin and key.
-# Development custody: software keys in a volume. Runs as the `init` compose service.
+# Development custody: software keys in a volume. Runs as the `init` compose service, and from
+# tools/dev-web.sh with FIELDSEAL_AUTHORITY_DIR (an absolute path) and FIELDSEAL_BIN set.
 set -euo pipefail
 
-A=/authority
+A="${FIELDSEAL_AUTHORITY_DIR:-/authority}"
 LOG_ORIGIN="${FIELDSEAL_LOG_ORIGIN:-fieldseal.local/log}"
 [ ! -f "$A/.initialised" ] || { echo "authority already initialised"; exit 0; }
 
-FS=fieldseal
+FS="${FIELDSEAL_BIN:-fieldseal}"
 today="$(date -u +%F)"
 yesterday="$(date -u -d 'yesterday' +%F)"
 later="$(date -u -d '+700 days' +%F)"

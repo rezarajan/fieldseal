@@ -45,7 +45,7 @@ fn provisioning(state: &AppState) -> Response {
 fn bundle(state: &AppState, req: &Request) -> Response {
     if let Some(cli) = &state.stack {
         let (Some(tenancy), Some(survey)) = (req.param("tenancy"), req.param("instrument")) else { return Response::text(400, "tenancy and instrument are required") };
-        return match crate::stack::bundle(cli, tenancy, survey) {
+        return match crate::stack::bundle(state, cli, tenancy, survey) {
             Ok(bytes) => Response::new(200, "application/octet-stream", bytes).with("X-Bundle-Development-Allowance", "true"),
             Err(e) if e.contains("does not know this tenancy") => Response::text(404, "no such tenancy: the factory does not know this device"),
             Err(e) => Response::text(422, &e),
@@ -75,7 +75,7 @@ fn page(state: &AppState) -> Response {
         _ => "none",
     };
     let wasm = if state.wasm_available() { "" } else { "<p class=\"notice warn\">The WebAssembly bundle is not available (set FIELDSEAL_WEB_WASM_DIR); the device cannot run.</p>" };
-    let instruments = if state.stack.is_some() { crate::stack::surveys().join(",") } else { state.demo.map(|d| d.0.examples().join(",")).unwrap_or_default() };
+    let instruments = if state.stack.is_some() { crate::stack::surveys(state).join(",") } else { state.demo.map(|d| d.0.examples().join(",")).unwrap_or_default() };
     let body = DEVICE_BODY
         .replace("{{wasm}}", wasm)
         .replace("{{mode}}", mode)

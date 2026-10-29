@@ -168,7 +168,9 @@ Recorded on 2026-10-28 on an AMD Ryzen 9 7950X (16 cores, 32 threads), 62 GB of 
 |---|---|
 | Machine time: `new survey t --lang es`, then `survey check surveys/t --roster rosters/t-cohort.yaml` | under 0.01 s (no errors; 14 translation warnings) |
 | Test newcomer, following [the tutorial](../tutorials/write-and-publish-your-first-survey.md) up to the first passing check | not measured: the test newcomer and the target are the open Open Question 1 |
-| From a passing check to the published address | measured with the publish step (Phase 5b) |
+| From a passing check to the published address (`just publish my-survey` against a running `just web`; three runs with the instrument and its one layout) | 0.08 s to 0.11 s in total; the instrument's address printed after 49 ms to 65 ms |
+
+**First `just web` (Phase 5b).** On the machine above, with the services built. Starting from an empty `deploy/local/.state/dev-web/` (the authority is created and the examples are published), `just web` is ready, with the log, factory and collector stand-in answering, in 2.7 s. The one cost that is not a start-up cost is building the CLI with Nix (`tools/stack-cli.sh`): 71 s after a change to the workspace sources, and instant when nothing changed. The publish time above is the target's baseline for Open Question 1; the test newcomer's time is still to be measured.
 
 Targets for `just up`, for CI and for a first survey are added here when Open Question 1 is answered.
 

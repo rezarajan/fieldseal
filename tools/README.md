@@ -35,6 +35,8 @@ spec coverage, test inventory, test budget). Everything normally runs inside the
 | `stack-cli.sh` | Prints the path of the `fieldseal` CLI (built on demand by Nix; `FIELDSEAL_BIN` overrides). |
 | `stack-images.sh [names]` | Builds images with Nix and loads them (`factory upload translog cli web demo`). |
 | `stack-up.sh` | Generates secrets once, renders per-service env files, loads images, starts compose, waits for endpoints. `FIELDSEAL_SKIP_IMAGE_BUILD=1` reuses images. |
+| `dev-web.sh [--check]` | `just web`: the log, the factory and the collector stand-in natively from `examples/deployments/dev-web.yaml`, the bundled examples published, state in `deploy/local/.state/dev-web/`. `--check` starts them, waits for each, runs the edit-and-reload check and stops them. Uses ports 8080, 8090, 9001. |
+| `dev-publish.sh <survey>\|--all` | `just publish <survey>`: publishes a survey (and its layouts) through the log of `just web`; `--all` the bundled examples and the publishing policy. |
 | `stack-init.sh` | Runs as the `init` compose service: root ceremony, purpose keys, log key and trust bundle (once). |
 | `stack-compose.sh args...` | Runs compose for the stack; requires `just up` to have run. |
 | `stack-status.sh` | Containers and endpoint health. |

@@ -120,7 +120,35 @@ Two other warnings mean something else. *Orphaned* means an entry no longer matc
 
 ## 7. Publish
 
-Publishing signs the survey and puts it in the register. That step has its own guide, which arrives with the first `just web`; it begins from a survey that passes `survey check --strict`, so you are ready.
+Publishing signs the survey and puts it in the register, so that anyone can check that it is the survey you reviewed. It needs the authority's keys, a trust bundle, a publishing policy and a transparency log. `just web` makes them.
+
+In a second terminal, start the dev loop:
+
+```sh
+just web
+```
+
+It creates the authority once (under `deploy/local/.state/dev-web/`), starts the log, the factory and the collector stand-in on your machine, publishes the bundled examples and prints the addresses. Leave it running. In the first terminal, from the folder that holds `surveys/`:
+
+```sh
+just publish my-survey
+```
+
+The command prints each step it runs: `artefact provenance` (who built it and who reviewed it, with a random salt for the survey), `artefact sign` twice (two of the three publisher keys) and `artefact publish` (the entries go into the log). Then it publishes the survey's layouts the same way, tied to the survey you just published. The output ends with the address of the survey:
+
+```text
+published my-survey 0.1.0 at sha256:7af2c2757c6d… in 49 ms
+```
+
+Open `http://127.0.0.1:8090/publishing`. The page lists the survey with its name, version, kind, address and log index, and the log has new entries.
+
+Three things to know:
+
+- The command keeps its register in files, because it sets `FIELDSEAL_ADAPTERS=files` and `FIELDSEAL_STATE_DIR=deploy/local/.state/dev-web/cli`. Without `files` the CLI keeps the register in memory and forgets everything when the command ends, so a second run would not know the first.
+- A name and a version publish once. Run `just publish my-survey` again and it is refused, saying the version is taken. To publish a change, raise `survey.version` in `instrument.yaml` and publish again. The old version stays in the register.
+- To start over, stop `just web` and remove `deploy/local/.state/dev-web/`.
+
+The time to record is the time from a passing `survey check` to the address on the last line. [The build notes](../explanation/build-system.md#measured-baselines) have the figure for this machine.
 
 ## What to read next
 

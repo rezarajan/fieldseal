@@ -89,7 +89,7 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
 }
 
 fn with_entry(state: &AppState, id: &str, f: impl FnOnce(&Entry) -> Response) -> Response {
-    match catalogue::load(&state.examples_dir, id, &state.survey_cohorts) {
+    match catalogue::load_cached(state, id) {
         Some(e) => f(&e),
         None => ui::error_page(404, "There is no such instrument."),
     }
@@ -98,12 +98,12 @@ fn with_entry(state: &AppState, id: &str, f: impl FnOnce(&Entry) -> Response) ->
 /// The list: a short stack of instrument cards, each with one action. The first card is the
 /// recommended one and carries the page's only filled button.
 fn list(state: &AppState) -> Response {
-    let entries = catalogue::load_all(&state.examples_dir, &state.survey_cohorts);
+    let entries = catalogue::load_all_cached(state);
     let mut cards = String::new();
     for (n, e) in entries.iter().enumerate() {
         let id = escape(&e.id);
         let open = if n == 0 { "btn btn-primary" } else { "btn" };
-        let (name, meta, status) = match &e.status {
+        let (name, meta, mut status) = match &e.status {
             Ok(s) => (
                 escape(&s.name),
                 format!("version {} &middot; {} &middot; {} elements, {} layout{}", escape(&s.version), escape(&s.languages.join(", ")), s.elements, e.layouts.len(), if e.layouts.len() == 1 { "" } else { "s" }),
@@ -115,6 +115,9 @@ fn list(state: &AppState) -> Response {
                 format!("<span class=\"chip chip-bad\">Invalid: {} error{}</span>", errors.len(), if errors.len() == 1 { "" } else { "s" }),
             ),
         };
+        if let Some(errors) = &e.current_errors {
+            status = format!("<span class=\"chip chip-bad\">Edit invalid: {} error{}, showing the last good version</span>", errors.len(), if errors.len() == 1 { "" } else { "s" });
+        }
         cards.push_str(&format!(
             "<article class=\"card instrument-card\">\n<div class=\"card-top\"><h2>{name}</h2>{status}</div>\n<p class=\"muted\"><code>{id}</code></p>\n<p class=\"muted\">{meta}</p>\n<p class=\"card-action\"><a class=\"{open}\" href=\"/instruments/{id}\">Open</a></p>\n</article>\n"
         ));

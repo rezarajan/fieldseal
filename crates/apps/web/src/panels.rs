@@ -21,6 +21,7 @@ pub fn detail(entry: &Entry, choice: &Choice, wasm: bool) -> String {
         out.push_str(&format!("<section class=\"card\">{}</section>\n", sources(entry, choice, false)));
         return out;
     };
+    let notice = current_errors(entry);
     let q = escape(&choice.query());
     let sep = if q.is_empty() { "?" } else { "&amp;" };
     let langs = summary.languages.join(", ");
@@ -30,6 +31,7 @@ pub fn detail(entry: &Entry, choice: &Choice, wasm: bool) -> String {
         escape(&summary.version),
         escape(&langs)
     );
+    out.push_str(&notice);
     out.push_str(&picker(entry, summary, choice));
     out.push_str(&frame(entry, choice));
     out.push_str(&live(entry, choice, wasm));
@@ -48,6 +50,13 @@ pub fn detail(entry: &Entry, choice: &Choice, wasm: bool) -> String {
     }
     out.push_str(&ui::tabs("More about this instrument", &items));
     out
+}
+
+/// The findings of a file that no longer loads, above the last good version that is shown.
+fn current_errors(entry: &Entry) -> String {
+    let Some(errors) = &entry.current_errors else { return String::new() };
+    let items: String = errors.iter().map(|m| format!("<li class=\"error\">{}</li>", escape(m))).collect();
+    format!("<section id=\"current-errors\" class=\"card\" role=\"alert\"><h2>The survey on disk is invalid</h2>\n<p class=\"error\">This page shows the last version that loaded. Fix these and reload.</p>\n<ul>{items}</ul></section>\n")
 }
 
 fn checks_label(s: &Summary, entry: &Entry) -> String {

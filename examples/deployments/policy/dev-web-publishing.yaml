@@ -1,0 +1,22 @@
+# The publishing policy that `just web` publishes at start-up and that the CLI checks every
+# publication against (tools/dev-web.sh, tools/dev-publish.sh). The publishing values are the ones
+# tools/stack-demo.sh writes for the stack; the two URLs are also what the collector stand-in
+# (crates/apps/web/src/stack.rs) allows. Kinds not listed take the schema defaults (2 approvals,
+# a threshold of 2 of 3), which covers kind Layout.
+apiVersion: fieldseal.dev/v1alpha1
+kind: Policy
+metadata: { name: dev-web-publishing, version: 1.0.0 }
+spec:
+  schemaVersion: 1.0.0
+  layer: { scope: deployment }
+  publishing:
+    requiredApprovals: { Instrument: 2, Policy: 2, TrustBundle: 2, Deployment: 2 }
+    authorMayApprove: false
+    publisherThreshold: { m: 2, n: 3 }
+    allowedBuilders: [ "https://ci.example.org/builders/fieldseal-publish" ]
+    allowedSources: [ "https://git.example.org/authority/artefacts" ]
+    requireTransparencyLog: true
+  factory:
+    # Equal to the default. The demo's reset retires the old device before it registers a new
+    # one, so the limit is not raised (Technical Plan 7.4).
+    cohorts: { maxActiveTenanciesPerCohort: 1 }

@@ -11,6 +11,10 @@ export FIELDSEAL_CONTAINER_ENGINE := engine
 default:
     @just --list
 
+# The dev loop without containers: the log, the factory and the collector stand-in, natively, with the bundled examples published; edit a survey and reload (Ctrl-C stops).
+web:
+    tools/dev-web.sh
+
 # Start the local stack (builds the images with Nix, waits for every endpoint).
 up:
     tools/stack-up.sh
@@ -33,9 +37,9 @@ resume:
 authority:
     tools/stack-run.sh authority
 
-# Walkthrough 2: publish the instruments and the policy (two of three signatures, the log).
-publish:
-    tools/stack-run.sh publish
+# Walkthrough 2: publish the instruments and the policy (two of three signatures, the log). With a survey (a name or a folder): publish that survey through the log of `just web`.
+publish survey="":
+    if [ -z "{{survey}}" ]; then tools/stack-run.sh publish; else tools/dev-publish.sh "{{survey}}"; fi
 
 # Walkthrough 3: browse the register; give an address to see one artefact in full.
 registry address="":
@@ -102,9 +106,9 @@ smoke *flags:
 images *names:
     tools/stack-images.sh {{names}}
 
-# shellcheck on the stack's scripts.
+# shellcheck on the stack's scripts and the dev loop's.
 lint:
-    shellcheck -x -P SCRIPTDIR -s bash tools/stack-*.sh
+    shellcheck -x -P SCRIPTDIR -s bash tools/stack-*.sh tools/dev-web.sh tools/dev-publish.sh
 
 # The three flake checks CI runs: clippy, tests, architecture.
 check:

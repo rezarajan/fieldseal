@@ -6,6 +6,7 @@
 use std::time::Duration;
 
 use fieldseal_adapters_web_demo::{Demo, PublicationReport};
+use fieldseal_publishing::domain::Publication;
 
 use crate::http::{Request, Response};
 use crate::state::AppState;
@@ -18,6 +19,7 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
     }
     let body = match (&state.demo, &state.log_url) {
         (Some(d), _) => demo_body(d.0),
+        (None, Some(url)) if state.stack.is_some() => format!("{}{}", head(""), registry_and_log(state, url)),
         (None, Some(url)) => log_body(url),
         (None, None) => format!("{}<p>No publishing source is configured; start with FIELDSEAL_WEB_DEMO_AUTHORITY=true or set FIELDSEAL_LOG_URL.</p>", head("")),
     };
@@ -38,9 +40,58 @@ fn short(hex: &str) -> String {
     format!("<code class=\"hash\" title=\"{0}\">{0}</code>", escape(hex))
 }
 
+/// In stack mode: the artefacts of the CLI's registry above the log's checkpoint.
+fn registry_and_log(state: &AppState, url: &str) -> String {
+    let mut out = registry_section(state);
+    out.push_str(&log_body_without_head(url));
+    out
+}
+
+/// One row for each `*.publication` file in the registry directory, in log order.
+fn registry_section(state: &AppState) -> String {
+    let mut rows = Vec::new();
+    let mut unreadable = Vec::new();
+    let files = state.registry_dir.iter().flat_map(std::fs::read_dir).flatten().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "publication"));
+    for path in files {
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        match std::fs::read(&path).map_err(|e| e.to_string()).and_then(|b| Publication::decode(&b).map_err(|e| e.to_string())) {
+            Ok(p) => rows.push((p.log.first().map(|l| l.inclusion.leaf_index), p)),
+            Err(_) => unreadable.push(name),
+        }
+    }
+    rows.sort_by_key(|(index, p)| (*index, p.artefact.name().to_owned()));
+    let mut out = String::from("<section id=\"registry\" class=\"card\">\n<h2>Published artefacts</h2>\n");
+    if rows.is_empty() && unreadable.is_empty() {
+        out.push_str("<p>No artefact has been published yet. <code>just publish &lt;survey&gt;</code> publishes one.</p>\n");
+    } else {
+        out.push_str("<div class=\"scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Table, scrolls sideways\"><table>\n<tr><th>Name</th><th>Version</th><th>Kind</th><th>Address</th><th>Log index</th></tr>\n");
+        for (index, p) in &rows {
+            let index = index.map_or_else(|| "none".to_owned(), |i| i.to_string());
+            out.push_str(&format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n",
+                escape(p.artefact.name()),
+                escape(p.artefact.version()),
+                escape(p.artefact.kind().as_str()),
+                short(&p.address().to_text()),
+                index
+            ));
+        }
+        for name in &unreadable {
+            out.push_str(&format!("<tr><td colspan=\"5\" class=\"bad\">{} is unreadable</td></tr>\n", escape(name)));
+        }
+        out.push_str("</table></div>\n");
+    }
+    out.push_str("</section>\n");
+    out
+}
+
 /// Without a demo: the log's own checkpoint text, unverified.
 fn log_body(url: &str) -> String {
-    let mut out = head("");
+    format!("{}{}", head(""), log_body_without_head(url))
+}
+
+fn log_body_without_head(url: &str) -> String {
+    let mut out = String::new();
     out.push_str(&format!("<p>Transparency log: <code>{}</code></p>\n", escape(url)));
     let agent: ureq::Agent = ureq::Agent::config_builder().http_status_as_error(false).timeout_global(Some(Duration::from_secs(10))).build().into();
     let target = format!("{}/checkpoint", url.trim_end_matches('/'));

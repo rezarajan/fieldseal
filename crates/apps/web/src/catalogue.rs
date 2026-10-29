@@ -12,6 +12,8 @@ use fieldseal_adapters_authoring::Format;
 use fieldseal_adapters_web::workbench::{LoadError, Workbench};
 use fieldseal_instrument::domain::WindowClass;
 
+use crate::state::AppState;
+
 /// A layout that belongs to an instrument and validated against it.
 #[derive(Clone, Debug)]
 pub struct LayoutFile {
@@ -65,6 +67,9 @@ pub struct Entry {
     pub layout_errors: Vec<(String, Vec<String>)>,
     /// The latest roster of the survey's cohort, if the survey has a cohort and the cohort a roster.
     pub roster: Option<PathBuf>,
+    /// Set when the survey on disk fails to load but an earlier version loaded: the other fields
+    /// are that last good version, and this holds the findings of the file as it is now.
+    pub current_errors: Option<Vec<String>>,
 }
 
 impl Entry {
@@ -86,6 +91,32 @@ impl Entry {
     }
 }
 
+/// Like [`load_all`], keeping the last good version of each survey in `state` and showing it,
+/// with the findings of the file as it is now, when the survey no longer loads.
+pub fn load_all_cached(state: &AppState) -> Vec<Entry> {
+    load_all(&state.examples_dir, &state.survey_cohorts).into_iter().map(|e| remember(state, e)).collect()
+}
+
+/// Like [`load`], with the last-good cache of [`load_all_cached`].
+pub fn load_cached(state: &AppState, id: &str) -> Option<Entry> {
+    load(&state.examples_dir, id, &state.survey_cohorts).map(|e| remember(state, e))
+}
+
+/// A good load replaces the cache; a failed one leaves it alone and is shown beside it.
+fn remember(state: &AppState, entry: Entry) -> Entry {
+    let Ok(mut cache) = state.last_good.lock() else { return entry };
+    match &entry.status {
+        Ok(_) => {
+            cache.insert(entry.id.clone(), entry.clone());
+            entry
+        }
+        Err(errors) => match cache.get(&entry.id) {
+            Some(good) => Entry { current_errors: Some(errors.clone()), ..good.clone() },
+            None => entry,
+        },
+    }
+}
+
 /// Loads every survey in `<dir>/surveys`. `cohorts` maps a survey name to the cohort whose roster
 /// its pages use (`FIELDSEAL_WEB_SURVEY_COHORTS`); a survey with no entry has no roster.
 pub fn load_all(dir: &Path, cohorts: &BTreeMap<String, String>) -> Vec<Entry> {
@@ -103,7 +134,7 @@ pub fn load(dir: &Path, id: &str, cohorts: &BTreeMap<String, String>) -> Option<
 
 fn load_one(tree: &SurveyTree, id: &str, rosters: Option<&RosterSet>, cohorts: &BTreeMap<String, String>) -> Entry {
     let roster = cohorts.get(id).and_then(|cohort| rosters?.latest(cohort)).map(|f| f.path.clone());
-    let mut entry = Entry { id: id.to_owned(), source: Vec::new(), format: Format::Json, status: Err(Vec::new()), layouts: Vec::new(), layout_errors: Vec::new(), roster };
+    let mut entry = Entry { id: id.to_owned(), source: Vec::new(), format: Format::Json, status: Err(Vec::new()), layouts: Vec::new(), layout_errors: Vec::new(), roster, current_errors: None };
     let loaded = match tree.survey(id).map_err(|e| vec![e]).and_then(|survey| survey.load()) {
         Ok(loaded) => loaded,
         Err(errors) => {

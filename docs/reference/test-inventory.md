@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-155 tests prove 101 requirements.
+157 tests prove 103 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -144,6 +144,8 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_192_pin_fields_allow_password_managers` ([accessibility.rs:6](../../crates/apps/web/tests/accessibility.rs#L6)) | WEB-192 | WEB-192 (web-app) |
 | `web_192_scrollable_tables_are_keyboard_reachable` ([accessibility.rs:16](../../crates/apps/web/tests/accessibility.rs#L16)) | WEB-192 | WEB-192 (web-app) |
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
+| `web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory` ([dev_loop.rs:37](../../crates/apps/web/tests/dev_loop.rs#L37)) | WEB-140 | WEB-140 (web-app) |
+| `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:65](../../crates/apps/web/tests/dev_loop.rs#L65)) | WEB-111 | WEB-111 (web-app) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
 | `dis_013_roster_fields_read_through_message_variables_and_roster_items_are_found` ([facts.rs:186](../../crates/contexts/distribution/src/domain/facts.rs#L186)) | DIS-013 | DIS-013 (distribution) |

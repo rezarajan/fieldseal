@@ -24,9 +24,14 @@ The Fieldseal showcase web app (development only): a server-rendered viewer for 
 | `FIELDSEAL_WEB_DEMO_FACTORY_BIND`, `FIELDSEAL_WEB_DEMO_UPLOAD_BIND` | Demo listeners, defaults `127.0.0.1:8091` and `127.0.0.1:8092`; they override the factory and upload URLs |
 | `FIELDSEAL_WEB_STACK` | `true` runs as a compose-stack service (see Side Effects) |
 | `FIELDSEAL_WEB_CLI` | The `fieldseal` executable used in stack mode, default `fieldseal` |
+| `FIELDSEAL_WEB_AUTHORITY_DIR` | Stack mode: the authority's directory (`trust-bundle.bundle`, `online/`), default `/authority` |
+| `FIELDSEAL_WEB_PUBLISHED_DIR` | Stack mode: the directory of the `*.published` files that name the surveys, default `/published` |
+| `FIELDSEAL_WEB_REGISTRY_DIR` | Stack mode: the CLI's artefact registry (`*.publication` files), listed above the checkpoint on the Publishing page; default none |
 | `FIELDSEAL_WEB_PROVISIONING_FILE` | Provisioning JSON served by `/device/provisioning` against another authority |
 
 Empty values count as unset.
+
+Stack mode runs in two ways: as the `web` service of the compose stack (`just up`, the defaults above are the stack's mount points), and natively from `just web` (`tools/dev-web.sh`), which sets the three directory variables to `deploy/local/.state/dev-web/` and the log and factory URLs to the processes it starts.
 
 ### HTTP routes
 
@@ -42,7 +47,7 @@ All responses get `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referr
 | `GET /instruments/{id}` | Detail page; query `layout` (index or `default`), `lang`, `window` (window class) |
 | `GET /instruments/{id}/render`, `/plan`, `/source`, `/roster` | Rendered instrument, plan, source text, roster |
 | `GET /instruments/{id}/layout/{i}/source` | Layout source |
-| `GET /publishing` | Demo publications, or the log's `/checkpoint` text if `FIELDSEAL_LOG_URL` is set |
+| `GET /publishing` | Demo publications, or the log's `/checkpoint` text if `FIELDSEAL_LOG_URL` is set; in stack mode also the artefacts of `FIELDSEAL_WEB_REGISTRY_DIR` (name, version, kind, address, log index) |
 | `GET /registration` | How registration works, factory portal link |
 | `POST /registration/token`, `POST /registration/confirm` | Demo only (form field `tenancy`); otherwise an error message in the page |
 | `GET /device` | Browser device page |
@@ -58,7 +63,7 @@ Request bodies over `MAX_BODY` (1 MiB; 32 MiB for `POST /intake/ingest`) get 413
 
 - `routes::dispatch(&AppState, &Request) -> Response`: the single entry; each page module exposes `handle(state, req) -> Option<Response>`.
 - `http`: `Request`, `Response`, `parse_query`, `url_encode`, `proxy`, `MAX_BODY`, `MAX_INGEST_BODY`, `PAGE_CSP`.
-- `state`: `AppState` (`examples_dir`, `wasm_dir`, `factory_url`, `upload_url`, `log_url`, `public_url`, `demo`, `provisioning_file`, `stack`; `wasm_available()`), `DemoHandle`.
+- `state`: `AppState` (`examples_dir`, `last_good`, `wasm_dir`, `factory_url`, `upload_url`, `log_url`, `public_url`, `demo`, `provisioning_file`, `stack`, `authority_dir`, `published_dir`, `registry_dir`; `wasm_available()`), `DemoHandle`.
 - `assets`: `ASSETS` table, `Source`. `ui`: `NAV`, `FOOTER`, `escape`, `shell`, `tabs`, `page`, `error_page`, `placeholder`.
 - `catalogue`: `Entry`, `Summary`, `LayoutFile`, `load_all`, `load`. `instruments`: `Choice`. `panels::detail`. `intake::ROW_PAGE_SIZE`.
 - `stack`: `surveys`, `provisioning`, `bundle`. Modules `device`, `publishing`, `registration` hold page handlers.
@@ -73,7 +78,7 @@ Request bodies over `MAX_BODY` (1 MiB; 32 MiB for `POST /intake/ingest`) get 413
 - `FIELDSEAL_WEB_EXAMPLES_DIR` must be an existing directory; configured service URLs must start with `http://` or `https://`.
 - Every response passes through `dispatch`, so carries the security headers.
 - Assets are served by exact table match; only `GET /assets/...` is handled.
-- Instrument routes are `GET` only; example files are re-read on every request.
+- Instrument routes are `GET` only; example files are re-read on every request. A survey that stops loading is shown as its last good version (kept in memory) with the findings of the file as it is now; with no good version yet, the findings alone.
 - Proxy forwards only `Content-Type`, `Fieldseal-PoP` and `Authorization`; an unreachable upstream gives 502 `{"error":"upstream-unreachable"}`.
 - Request bodies are capped (`MAX_BODY`, `MAX_INGEST_BODY` for `/intake/ingest`).
 - `stack::bundle` requires a 64-hex-digit tenancy and a survey listed by `stack::surveys` (excludes `deployment-policy`).
