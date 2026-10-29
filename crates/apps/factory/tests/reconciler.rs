@@ -391,7 +391,8 @@ fn int_040_issued_rosters_are_recorded_for_intake_with_restricted_fields() {
     env.reconciler().run_once();
     let recorded = std::fs::read_to_string(env.issued_file(&device)).expect("recorded");
     assert!(recorded.contains("roster cohort-a 1 "), "{recorded}");
-    assert!(recorded.contains("consent s-001=granted") && recorded.contains("consent s-002=unknown"), "{recorded}");
+    // Subjects as intake names them: the hex of the roster identifier's bytes (INT-051).
+    assert!(recorded.contains("consent 732d303031=granted") && recorded.contains("consent 732d303032=unknown"), "{recorded}");
     // The address is that of the roster as the bundle carries it: only the fields the
     // instrument reads (`age`, not `district`).
     let bundle = env.open(&device, &env.latest(&device).expect("stored"));

@@ -57,7 +57,7 @@ use fieldseal_intake::ports::RosterHistory;
 use fieldseal_kernel::cbor;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_kernel::digest::{lower_hex, sha256};
-use fieldseal_kernel::id::{CohortId, ContentAddress, Digest, KeyId, TenancyId};
+use fieldseal_kernel::id::{CohortId, ContentAddress, Digest, KeyId, SubjectId, TenancyId};
 use fieldseal_policy::application::{ComputeEffectivePolicy, PolicyService};
 use fieldseal_policy::domain::{Controls, LayerSelector, PublishedPolicy, PublishingPolicy, decode_document};
 use fieldseal_publishing::application::VerifyPublication;
@@ -753,7 +753,8 @@ impl<'a> Reconciler<'a> {
                 .iter()
                 .map(|e| {
                     (
-                        e.subject.clone(),
+                        // As intake names the subject: the hex of the roster identifier's bytes (INT-051).
+                        SubjectId::new(lower_hex(e.subject.as_str().as_bytes())).expect("hex is a valid subject ID"),
                         match e.consent {
                             ConsentState::Granted => IssuedConsent::Granted,
                             ConsentState::Refused => IssuedConsent::Refused,
