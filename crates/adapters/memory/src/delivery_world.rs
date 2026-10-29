@@ -111,7 +111,7 @@ impl Bench {
     pub fn registration(&self, tenancy: TenancyId, handle: TenancyHandle, sign_pub: &P256PublicKey, spec: Enrolment<'_>) -> Result<(OpenedBundle, Fingerprint), String> {
         let Enrolment { instrument, layouts, rosters, cohorts } = spec;
         let mut bundle = self.sim.bundle(tenancy, BundleSpec { instrument, layouts, rosters, register: true, issued_day: 15, seq: 1 })?;
-        let fingerprint = bundle.instrument.artefact.fingerprint().ok_or("an instrument has a fingerprint")?;
+        let fingerprint = bundle.instruments[0].artefact.fingerprint().ok_or("an instrument has a fingerprint")?;
         let certified: Vec<(&str, u64)> = cohorts.iter().map(|c| (*c, 1)).collect();
         let certificate = self.practice.tenancy_certificate_for(tenancy, handle, sign_pub.clone(), window(), &certified);
         let encoded = cbor::encode(&certificate.to_value()).map_err(|e| e.to_string())?;
@@ -168,6 +168,7 @@ impl Bench {
                             )
                         })
                         .collect::<BTreeMap<_, _>>(),
+                    covers: r.consent_covers.iter().cloned().collect(),
                 },
             );
         }

@@ -19,7 +19,7 @@ use fieldseal_instrument::domain::evaluation::{Evaluation, RecordInput, Verdict,
 use fieldseal_instrument::domain::{EvaluationLimitExceeded, Instrument};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::cbor;
-use fieldseal_kernel::id::{ItemPath, SubjectId};
+use fieldseal_kernel::id::{Fingerprint, ItemPath, SubjectId};
 use fieldseal_kernel::payload::{ConsentRef, Layout, Mode};
 use fieldseal_kernel::time::ElapsedReading;
 
@@ -143,6 +143,8 @@ pub struct SealContent {
 pub struct CaptureStart {
     /// The subject.
     pub subject: SubjectId,
+    /// The instrument being conducted: the survey.
+    pub instrument: Fingerprint,
     /// The mode.
     pub mode: CaptureMode,
     /// The subject's current values from the local record (empty in `first` mode).
@@ -168,6 +170,7 @@ pub struct CaptureStart {
 #[derive(Clone, Debug)]
 pub struct Capture {
     subject: SubjectId,
+    instrument: Fingerprint,
     mode: CaptureMode,
     baseline: BTreeMap<String, Value>,
     values: BTreeMap<String, Value>,
@@ -192,6 +195,7 @@ impl Capture {
         };
         let mut c = Self {
             subject: start.subject,
+            instrument: start.instrument,
             mode: start.mode,
             baseline: if start.mode == CaptureMode::First { BTreeMap::new() } else { start.baseline },
             values,
@@ -220,6 +224,11 @@ impl Capture {
     /// The subject.
     pub fn subject(&self) -> &SubjectId {
         &self.subject
+    }
+
+    /// The instrument being conducted.
+    pub fn instrument(&self) -> &Fingerprint {
+        &self.instrument
     }
 
     /// The mode.

@@ -97,6 +97,7 @@ fn roster(cohort: &str, version: u64, generation: u32) -> Roster {
         version,
         generation: Generation(generation),
         entries: vec![entry(1, "s-001", None), entry(2, "s-002", Some("carried"))],
+        consent_covers: vec![],
     }
 }
 

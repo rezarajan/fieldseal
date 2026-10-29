@@ -1,6 +1,8 @@
 // The browser device, end to end, as a collector would use it: create the PIN on the pad,
 // register with a token from the factory portal, take the bundle, start a capture, fill in a few
-// answers, review, seal by holding, hand over (export, upload and receipt), clear. Evaluated in
+// answers, review, seal by holding, hand over (export, upload and receipt), clear. The device is
+// used as on a phone: after the bundle it shows the surveys the account is assigned, and the
+// collector chooses one. Evaluated in
 // the Device page by demo-e2e.py, which runs the steps of `window.flow` by name, one at a time,
 // and does the factory portal's part of registration itself (the token, the four words).
 (() => {
@@ -75,14 +77,26 @@
     { name: "registered", run: async () => {
       await screen("bundle");
     } },
-    { name: "bundle", shot: "02-session-roster.png", run: async () => {
+    { name: "bundle", shot: "02-session-surveys.png", run: async () => {
       check("the bundle screen offers one primary", [...document.querySelectorAll("#screen-bundle .btn-primary")].length === 1);
+      check("the bundle screen says it loads the surveys assigned to the account", /surveys assigned to this account/i.test($("screen-bundle").textContent), $("screen-bundle").textContent.slice(0, 120));
       // The registered device asks the factory for its bundle on its own; nothing is picked or clicked.
+      await until(() => $("device").dataset.screen === "surveys", "the list of surveys", 300);
+      const rows = [...document.querySelectorAll("#survey-list .subject")];
+      check("the list shows one row for the survey group the factory assigned", rows.length === 1, rows.length);
+      const title = rows[0].querySelector("b").textContent;
+      window.__surveyTitle = title;
+      check("the row is titled by the survey, with the cohort only as who to visit", title.length > 0 && !/^(cohort|village)-/.test(title) && /Who to visit: (cohort|village)-/.test(rows[0].textContent), rows[0].textContent);
+      check("a short list has no search box", $("survey-filter").hidden);
+      check("the surveys screen has one primary", [...document.querySelectorAll("#screen-surveys .btn-primary")].length === 1);
+      check("checking for new surveys is offered", visible($("check-surveys")));
+      $("open-survey").click();
       await until(() => ["roster", "consent"].includes($("device").dataset.screen), "the roster", 300);
       await sleep(300);
     } },
     { name: "roster", shot: "03-about.png", run: async () => {
       check("the roster lists the people", document.querySelectorAll("#subjects .subject").length > 0, document.querySelectorAll("#subjects .subject").length);
+      check("the roster is titled by the survey, not the cohort", $("roster-title").textContent === window.__surveyTitle, $("roster-title").textContent);
       check("the latest result names the verified bundle", /bundle/i.test($("latest").textContent), $("latest").textContent);
       check("the security log keeps every step", +$("log-count").textContent >= 5, $("log-count").textContent);
       check("the roster has one primary", [...document.querySelectorAll("#screen-roster .btn-primary")].length === 1);
@@ -202,9 +216,12 @@
     { name: "newer", run: async () => {
       if ($("device").dataset.screen === "sealed") $("sealed-next").click();
       await screen("roster");
-      $("another-survey").click();
-      await screen("bundle");
-      $("fetch-bundle").click();
+      $("switch-survey").click();
+      await screen("surveys");
+      $("check-surveys").click();
+      await until(() => /bundle \d+ fetched/.test($("latest").textContent) || /updated|up to date/.test($("surveys-status").textContent), "the check for new surveys", 300);
+      await until(() => !$("check-surveys").disabled, "the check to finish", 300);
+      $("open-survey").click();
       await until(() => ["roster", "consent"].includes($("device").dataset.screen), "the roster of the newer bundle", 300);
       check("the latest result names the newer bundle", /bundle/i.test($("latest").textContent), $("latest").textContent);
     } },

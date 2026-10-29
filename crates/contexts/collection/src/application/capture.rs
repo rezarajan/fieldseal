@@ -10,14 +10,15 @@ use fieldseal_instrument::domain::{LayoutIdentity, RenderPlan};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::cbor;
 use fieldseal_kernel::digest::sha256;
-use fieldseal_kernel::id::{Digest, ItemPath, Seq, SubjectId};
+use fieldseal_kernel::id::{Digest, Fingerprint, ItemPath, Seq, SubjectId};
 use fieldseal_kernel::local_record::LocalEntry;
 use fieldseal_kernel::payload::{ConsentRef, ItemsPayload, Layout};
 use fieldseal_kernel::structure::Fields;
 
 /// The `seq` the paused-capture positions are encrypted under: no record ever takes it.
 const PROGRESS_SEQ: u64 = u64::MAX - 1;
-use super::{CollectionError, CollectionEvent, Runtime, names};
+use super::{CollectionError, CollectionEvent, Held, HeldInstrument, Runtime, names};
+use crate::domain::bundle::HeldRoster;
 use crate::domain::capture::{Capture, CaptureError, CaptureMode, CaptureStart, SealBlock};
 use crate::domain::payload::{EvidenceRef, Payload, StatusCode};
 use crate::domain::{CaptureConstraints, TenancyState};
@@ -36,6 +37,8 @@ pub enum StatusOutcome {
 /// What `RecordConsent` records (COL-040).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ConsentInput {
+    /// The survey the consent is for.
+    pub instrument: Fingerprint,
     /// The basis code, from the instrument's list.
     pub basis: String,
     /// The statement version the collector confirmed.
@@ -49,6 +52,8 @@ pub struct ConsentInput {
 pub struct CaptureView {
     /// The subject.
     pub subject: SubjectId,
+    /// The survey being conducted.
+    pub instrument: Fingerprint,
     /// The mode.
     pub mode: CaptureMode,
     /// The render plan the capture is drawn from (COL-108).
@@ -75,6 +80,15 @@ fn capture_error(e: CaptureError) -> CollectionError {
     }
 }
 
+/// A survey is conducted only with the cohorts it is assigned to (COL-111).
+fn not_assigned(held: &Held, survey: &HeldInstrument, roster: &HeldRoster) -> Result<(), CollectionError> {
+    if held.is_assigned(survey, roster) {
+        Ok(())
+    } else {
+        Err(CollectionError::NotAllowed("this survey is not assigned to this person's cohort".into()))
+    }
+}
+
 fn subject_bytes(s: &SubjectId) -> Vec<u8> {
     s.as_str().as_bytes().to_vec()
 }
@@ -89,6 +103,7 @@ pub(crate) fn statement_address(version: u32, text: &fieldseal_instrument::domai
 #[derive(Clone, PartialEq, Eq, Debug)]
 struct Progress {
     subject: SubjectId,
+    instrument: Fingerprint,
     step: u64,
 }
 
@@ -104,9 +119,15 @@ impl Runtime<'_> {
         Ok(())
     }
 
-    fn plan_for(&self) -> Result<(RenderPlan, Layout), CollectionError> {
+    /// The held instrument with this fingerprint.
+    fn held_instrument(&self, instrument: &Fingerprint) -> Result<&HeldInstrument, CollectionError> {
+        let held = self.held().ok_or(CollectionError::NoBundle)?;
+        held.instrument(instrument).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))
+    }
+
+    fn plan_for(&self, instrument: &Fingerprint) -> Result<(RenderPlan, Layout), CollectionError> {
         let session = self.session.as_ref().ok_or(CollectionError::Locked)?;
-        let held = session.held.as_ref().ok_or(CollectionError::NoBundle)?;
+        let held = self.held_instrument(instrument)?;
         let layouts: Vec<_> = held.layouts.iter().map(|(l, _)| l).collect();
         let chosen = select_layout(&layouts, session.window_class);
         let plan_layout = match chosen {
@@ -130,7 +151,8 @@ impl Runtime<'_> {
         if self.capture.is_none() {
             return Ok(());
         }
-        let (plan, _) = self.plan_for()?;
+        let instrument = *self.capture.as_ref().map(Capture::instrument).ok_or(CollectionError::NoCapture)?;
+        let (plan, _) = self.plan_for(&instrument)?;
         if let Some(c) = self.capture.as_mut() {
             c.note_language(plan.language.as_str());
         }
@@ -140,15 +162,18 @@ impl Runtime<'_> {
     /// `StartCapture` (COL-030–COL-033, COL-108): checks the subject's roster consent, picks
     /// the starting values for the mode, compiles the render plan for the device's window
     /// class and the session's languages, and opens the capture in memory.
-    pub fn start_capture(&mut self, subject: &SubjectId, mode: CaptureMode) -> Result<CaptureView, CollectionError> {
+    ///
+    /// `instrument` names the survey to conduct: a bundle may carry several, each with its own
+    /// record of the subject.
+    pub fn start_capture(&mut self, subject: &SubjectId, instrument: &Fingerprint, mode: CaptureMode) -> Result<CaptureView, CollectionError> {
         self.require_collection()?;
         if self.capture.as_ref().is_some_and(Capture::has_unsealed_changes) {
             return Err(CollectionError::CaptureOpen);
         }
-        let consent_ref = self.consent_ref_for(subject)?;
+        let consent_ref = self.consent_ref_for(subject, instrument)?;
         let local = self.local_state()?;
-        let state = local.get(&subject_bytes(subject)).cloned().unwrap_or_default();
-        let progress = self.read_progress()?.into_iter().find(|p| &p.subject == subject);
+        let state = local.get(&(subject_bytes(subject), *instrument)).cloned().unwrap_or_default();
+        let progress = self.read_progress()?.into_iter().find(|p| &p.subject == subject && &p.instrument == instrument);
         let step = match mode {
             CaptureMode::Resume => usize::try_from(progress.ok_or_else(|| CollectionError::NotAllowed("no paused capture to resume".into()))?.step).unwrap_or(0),
             CaptureMode::Resurvey | CaptureMode::Correction if state.items.is_empty() => {
@@ -156,11 +181,12 @@ impl Runtime<'_> {
             }
             _ => 0,
         };
-        let (plan, layout) = self.plan_for()?;
+        let (plan, layout) = self.plan_for(instrument)?;
         let held = self.held().ok_or(CollectionError::NoBundle)?;
         let (_, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
         let start = CaptureStart {
             subject: subject.clone(),
+            instrument: *instrument,
             mode,
             baseline: state.current.clone(),
             prior_overrides: state.overrides.clone(),
@@ -171,24 +197,27 @@ impl Runtime<'_> {
             step,
             started: self.now(),
         };
-        let capture = Capture::new(&held.instrument, start).map_err(capture_error)?;
+        let capture = Capture::new(&self.held_instrument(instrument)?.instrument, start).map_err(capture_error)?;
         self.capture = Some(capture);
         self.capture_view_with(plan)
     }
 
     /// The consent a record about `subject` relies on (COL-030, COL-031, COL-041).
-    fn consent_ref_for(&mut self, subject: &SubjectId) -> Result<ConsentRef, CollectionError> {
+    fn consent_ref_for(&mut self, subject: &SubjectId, instrument: &Fingerprint) -> Result<ConsentRef, CollectionError> {
         let local = self.local_state()?;
         let held = self.held().ok_or(CollectionError::NoBundle)?;
+        let survey = held.instrument(instrument).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))?;
         let (roster, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
+        not_assigned(held, survey, roster)?;
         if entry.consent == ConsentState::Refused {
             return Err(CollectionError::ConsentRefused);
         }
-        Ok(match &held.instrument.definition().consent {
+        Ok(match &survey.instrument.definition().consent {
             ConsentRequirement::NotRequired => ConsentRef::NotRequired,
-            ConsentRequirement::Required { .. } => match (entry.consent, local.get(&subject_bytes(subject)).and_then(|s| s.consent_record)) {
+            ConsentRequirement::Required { .. } => match (entry.consent, local.get(&(subject_bytes(subject), *instrument)).and_then(|s| s.consent_record)) {
                 (_, Some(id)) => ConsentRef::Record(id),
-                (ConsentState::Granted, None) => ConsentRef::Roster { roster: roster.address, version: roster.version },
+                // A roster's `granted` covers only the surveys its version names (COL-031).
+                (ConsentState::Granted, None) if roster.covers(&survey.instrument.definition().name) => ConsentRef::Roster { roster: roster.address, version: roster.version },
                 _ => return Err(CollectionError::ConsentNeeded),
             },
         })
@@ -201,6 +230,7 @@ impl Runtime<'_> {
         hard.extend(e.problems.iter().map(|p| format!("{} ({}): {}", p.path, p.requirement, p.message)));
         Ok(CaptureView {
             subject: c.subject().clone(),
+            instrument: *c.instrument(),
             mode: c.mode(),
             plan,
             values: c.values().clone(),
@@ -217,7 +247,8 @@ impl Runtime<'_> {
         if self.capture.is_none() {
             return Err(CollectionError::NoCapture);
         }
-        let (plan, _) = self.plan_for()?;
+        let instrument = *self.capture.as_ref().map(Capture::instrument).ok_or(CollectionError::NoCapture)?;
+        let (plan, _) = self.plan_for(&instrument)?;
         self.capture_view_with(plan)
     }
 
@@ -226,7 +257,8 @@ impl Runtime<'_> {
         let session = self.session.as_ref().ok_or(CollectionError::Locked)?;
         let held = session.held.as_ref().ok_or(CollectionError::NoBundle)?;
         let capture = self.capture.as_mut().ok_or(CollectionError::NoCapture)?;
-        f(capture, &held.instrument).map_err(capture_error)
+        let survey = held.instrument(capture.instrument()).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))?;
+        f(capture, &survey.instrument).map_err(capture_error)
     }
 
     /// `SetValue`: sets an item's value as recorded (WIRE-052). A nonresponse is
@@ -269,9 +301,12 @@ impl Runtime<'_> {
     /// carrying its layout and languages, and closes it.
     pub fn seal(&mut self) -> Result<Seq, CollectionError> {
         let seq = self.seal_capture(false)?.ok_or(CollectionError::NothingToSeal)?;
-        let subject = self.capture.take().map(|c| c.subject().clone());
-        if let Some(s) = subject {
-            self.forget_progress(&s)?;
+        let who = self.capture.take().map(|c| (c.subject().clone(), *c.instrument()));
+        // The record is sealed: a paused position that can't be cleared is reported, not an error.
+        if let Some((s, i)) = who
+            && let Err(e) = self.forget_progress(&s, &i)
+        {
+            self.events.push(CollectionEvent::ProgressNotCleared(e.to_string()));
         }
         Ok(seq)
     }
@@ -286,8 +321,8 @@ impl Runtime<'_> {
         };
         let capture = self.capture.take().ok_or(CollectionError::NoCapture)?;
         let mut all = self.read_progress()?;
-        all.retain(|p| &p.subject != capture.subject());
-        all.push(Progress { subject: capture.subject().clone(), step: capture.step() as u64 });
+        all.retain(|p| !(&p.subject == capture.subject() && &p.instrument == capture.instrument()));
+        all.push(Progress { subject: capture.subject().clone(), instrument: *capture.instrument(), step: capture.step() as u64 });
         self.write_progress(&all)?;
         Ok(seq)
     }
@@ -297,7 +332,8 @@ impl Runtime<'_> {
         let session = self.session.as_ref().ok_or(CollectionError::Locked)?;
         let held = session.held.as_ref().ok_or(CollectionError::NoBundle)?;
         let capture = self.capture.as_ref().ok_or(CollectionError::NoCapture)?;
-        let content = match capture.readiness(&held.instrument, pause) {
+        let survey = held.instrument(capture.instrument()).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))?;
+        let content = match capture.readiness(&survey.instrument, pause) {
             Ok(c) => c,
             Err(SealBlock::Hard(h)) => return Err(CollectionError::HardVerdict(h.join(", "))),
             Err(SealBlock::Soft(s)) => return Err(CollectionError::SoftVerdict(s.join(", "))),
@@ -306,7 +342,7 @@ impl Runtime<'_> {
         };
         let items = ItemsPayload {
             tick: fieldseal_kernel::payload::Tick { anchor: Digest::from([0; 32]), slot: 0, boot: 0, wall: None },
-            instrument: held.fingerprint,
+            instrument: survey.fingerprint,
             layout: capture.layout(),
             lang: capture.languages().to_vec(),
             subject: subject_bytes(capture.subject()),
@@ -334,14 +370,16 @@ impl Runtime<'_> {
 
     /// `RecordStatus` (COL-030): seals a status record. Refused for a subject whose roster
     /// consent is `refused`: nothing at all may be recorded about them.
-    pub fn record_status(&mut self, subject: &SubjectId, outcome: StatusOutcome) -> Result<Seq, CollectionError> {
+    pub fn record_status(&mut self, subject: &SubjectId, instrument: &Fingerprint, outcome: StatusOutcome) -> Result<Seq, CollectionError> {
         self.require_collection()?;
         let held = self.held().ok_or(CollectionError::NoBundle)?;
-        let (_, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
+        let survey = held.instrument(instrument).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))?;
+        let instrument = survey.fingerprint;
+        let (roster, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
+        not_assigned(held, survey, roster)?;
         if entry.consent == ConsentState::Refused {
             return Err(CollectionError::ConsentRefused);
         }
-        let instrument = held.fingerprint;
         let status = match outcome {
             StatusOutcome::Absent => StatusCode::Absent,
             StatusOutcome::Declines => StatusCode::Declined,
@@ -359,11 +397,13 @@ impl Runtime<'_> {
     pub fn record_consent(&mut self, subject: &SubjectId, input: &ConsentInput) -> Result<Seq, CollectionError> {
         self.require_collection()?;
         let held = self.held().ok_or(CollectionError::NoBundle)?;
-        let (_, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
+        let (roster, entry) = held.subject(subject).ok_or(CollectionError::NotInRoster)?;
+        let survey = held.instrument(&input.instrument).ok_or_else(|| CollectionError::NotAllowed("the bundle holds no such survey".into()))?;
+        not_assigned(held, survey, roster)?;
         if entry.consent == ConsentState::Refused {
             return Err(CollectionError::ConsentRefused);
         }
-        let ConsentRequirement::Required { bases, statement, evidence } = &held.instrument.definition().consent else {
+        let ConsentRequirement::Required { bases, statement, evidence } = &survey.instrument.definition().consent else {
             return Err(CollectionError::NotAllowed("the instrument requires no consent (INS-062)".into()));
         };
         if !bases.iter().any(|b| b.code == input.basis) {
@@ -378,7 +418,7 @@ impl Runtime<'_> {
             _ => {}
         }
         let statement = statement_address(statement.version, &statement.text);
-        let instrument = held.fingerprint;
+        let instrument = survey.fingerprint;
         let max_edge = self.session.as_ref().map_or(2000, |s| s.policy.policy().max_image_edge);
         let mut refs = Vec::new();
         if input.capture_evidence {
@@ -417,9 +457,10 @@ impl Runtime<'_> {
         for v in items {
             let mut f = Fields::new(v)?;
             let subject = SubjectId::new(f.text("subject")?).map_err(|e| CollectionError::Failed(e.to_string()))?;
+            let instrument = Fingerprint::from(f.bytes_n::<32>("instrument")?);
             let step = f.uint("step")?;
             f.finish()?;
-            out.push(Progress { subject, step });
+            out.push(Progress { subject, instrument, step });
         }
         Ok(out)
     }
@@ -431,7 +472,13 @@ impl Runtime<'_> {
         }
         let value = Value::Array(
             all.iter()
-                .map(|p| cbor::map([("subject", Value::Text(p.subject.as_str().to_owned())), ("step", Value::Int(i128::from(p.step)))]))
+                .map(|p| {
+                    cbor::map([
+                        ("subject", Value::Text(p.subject.as_str().to_owned())),
+                        ("instrument", Value::Bytes(p.instrument.as_bytes().to_vec())),
+                        ("step", Value::Int(i128::from(p.step))),
+                    ])
+                })
                 .collect(),
         );
         let plain = zeroize::Zeroizing::new(cbor::encode(&value)?);
@@ -444,19 +491,19 @@ impl Runtime<'_> {
         self.save_meta()
     }
 
-    fn forget_progress(&mut self, subject: &SubjectId) -> Result<(), CollectionError> {
+    fn forget_progress(&mut self, subject: &SubjectId, instrument: &Fingerprint) -> Result<(), CollectionError> {
         let mut all = self.read_progress()?;
         let before = all.len();
-        all.retain(|p| &p.subject != subject);
+        all.retain(|p| !(&p.subject == subject && &p.instrument == instrument));
         if all.len() != before {
             self.write_progress(&all)?;
         }
         Ok(())
     }
 
-    /// Subjects with a paused capture.
-    pub fn paused(&mut self) -> Result<Vec<SubjectId>, CollectionError> {
+    /// Subjects with a paused capture, with the survey of each.
+    pub fn paused(&mut self) -> Result<Vec<(SubjectId, Fingerprint)>, CollectionError> {
         self.active()?;
-        Ok(self.read_progress()?.into_iter().map(|p| p.subject).collect())
+        Ok(self.read_progress()?.into_iter().map(|p| (p.subject, p.instrument)).collect())
     }
 }

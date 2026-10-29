@@ -228,9 +228,13 @@ pub enum IssueOutcome {
 /// named in the roster equal to `cohort`) before anything is written; the write is
 /// idempotent by content digest; a version is never changed or removed; a version lower than
 /// the latest stored is not accepted.
+///
+/// `assigned` names the surveys assigned to the cohort now, in any account. A roster that does
+/// not declare which surveys its `granted` consent covers covers these, fixed at issue; the same
+/// bytes sent again after a survey was assigned are still the roster already stored.
 pub trait RosterIssuer {
     /// Checks and stores the roster.
-    fn issue(&self, cohort: &CohortId, canonical_bytes: &[u8]) -> IssueOutcome;
+    fn issue(&self, cohort: &CohortId, canonical_bytes: &[u8], assigned: &[String]) -> IssueOutcome;
 }
 
 /// Whether a survey is published (REG-046). Contract: answers from the artefact registry

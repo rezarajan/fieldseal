@@ -287,7 +287,9 @@ fn subject(v: &Value) -> Result<SubjectId, String> {
     SubjectId::new(s).map_err(|e| e.to_string())
 }
 
-fn rosters(scenario: &Value) -> Result<Vec<HeldRoster>, String> {
+/// The rosters of a scenario. A roster's `granted` consent covers the surveys its
+/// `consent-covers` lists, or the scenario's own survey (`survey_name`) when it lists none.
+fn rosters(scenario: &Value, survey_name: &str) -> Result<Vec<HeldRoster>, String> {
     let mut out = Vec::new();
     for r in list(scenario, "rosters") {
         let cohort = text(r, "cohort").ok_or("roster needs `cohort`")?;
@@ -307,10 +309,17 @@ fn rosters(scenario: &Value) -> Result<Vec<HeldRoster>, String> {
             let attributes = field(s, "attributes").and_then(map).cloned().unwrap_or_default();
             subjects.push(RosterSubject { ordinal: i as u64 + 1, subject: subject(s)?, display, attributes, consent, prior_status: None });
         }
+        let mut consent_covers: Vec<String> = match field(r, "consent-covers") {
+            None => vec![survey_name.to_owned()],
+            Some(v) => v.as_array().unwrap_or(&[]).iter().filter_map(|n| n.as_text().map(str::to_owned)).collect(),
+        };
+        consent_covers.sort();
+        consent_covers.dedup();
         out.push(HeldRoster {
             cohort: CohortId::new(cohort).map_err(|e| e.to_string())?,
             version,
             generation: 1,
+            consent_covers,
             address: roster_address(cohort, version, &subjects),
             subjects,
         });
@@ -386,11 +395,17 @@ fn review_lines(r: &ReviewReport) -> Vec<String> {
     out
 }
 
+/// The fingerprint of the scenario's survey: a scenario's bundle carries that one instrument.
+fn scenario_survey(rt: &Runtime<'_>) -> Result<fieldseal_kernel::id::Fingerprint, CollectionError> {
+    rt.held().and_then(|h| h.instruments.first()).map(|i| i.fingerprint).ok_or(CollectionError::NoBundle)
+}
+
 /// The `capture` step: start a capture for a subject, set the values, seal.
 fn step_capture(rt: &mut Runtime<'_>, body: &Value) -> Result<String, CollectionError> {
             let s = subject(body).map_err(CollectionError::NotAllowed)?;
             let m = mode(text(body, "mode").unwrap_or("first")).map_err(CollectionError::NotAllowed)?;
-            rt.start_capture(&s, m)?;
+            let survey = scenario_survey(rt)?;
+            rt.start_capture(&s, &survey, m)?;
             // A map has no order: set what can be set, then what that made visible.
             let mut pending: Vec<(&String, &Value)> = field(body, "set").and_then(map).into_iter().flatten().collect();
             while !pending.is_empty() {
@@ -455,7 +470,7 @@ fn step_status(rt: &mut Runtime<'_>, body: &Value) -> Result<String, CollectionE
                 "not-them" => StatusOutcome::NotThem,
                 o => return Err(CollectionError::NotAllowed(format!("unknown outcome {o}"))),
             };
-            let seq = rt.record_status(&s, outcome)?;
+            let seq = rt.record_status(&s, &scenario_survey(rt)?, outcome)?;
             Ok(format!("status {} sealed seq {}", s.as_str(), seq.0))
 }
 
@@ -463,6 +478,7 @@ fn step_status(rt: &mut Runtime<'_>, body: &Value) -> Result<String, CollectionE
 fn step_consent(rt: &mut Runtime<'_>, body: &Value) -> Result<String, CollectionError> {
             let s = subject(body).map_err(CollectionError::NotAllowed)?;
             let input = ConsentInput {
+                instrument: scenario_survey(rt)?,
                 basis: text(body, "basis").unwrap_or_default().to_owned(),
                 statement_version: int(body, "statement").unwrap_or(1) as u32,
                 capture_evidence: field(body, "evidence") == Some(&Value::Bool(true)),
@@ -546,8 +562,9 @@ fn validate_scenario(scenario: &Value, extra_steps: &[Value]) -> Result<(), Stri
         Some(Value::Array(rosters)) => {
             for (i, r) in rosters.iter().enumerate() {
                 let what = format!("roster {}", i + 1);
-                let r = obj(r, &what, &["cohort", "version", "subjects"])?;
+                let r = obj(r, &what, &["cohort", "version", "subjects", "consent-covers"])?;
                 want_text(r, "cohort", &what, true)?;
+                want_texts(r, "consent-covers", &what)?;
                 want_uint(r, "version", &what, false, u64::MAX)?;
                 match r.get("subjects") {
                     None => {}
@@ -674,7 +691,8 @@ fn simulate(source: &Source, show_review: bool, extra_steps: &[Value]) -> Result
     let pin_text = text(&scenario, "pin").ok_or("scenario needs `pin`")?.to_owned();
     let windows: Vec<&str> = list(&scenario, "layouts").iter().filter_map(Value::as_text).collect();
     let (instrument, layouts) = source.load(text(&scenario, "survey").ok_or("scenario needs `survey`")?, &windows)?;
-    let rosters = rosters(&scenario)?;
+    let survey_name = instrument.as_map().and_then(|m| m.get("metadata")).and_then(Value::as_map).and_then(|m| m.get("name")).and_then(Value::as_text).ok_or("the survey has no metadata.name")?.to_owned();
+    let rosters = rosters(&scenario, &survey_name)?;
     let seed = int(&scenario, "seed").unwrap_or(1);
 
     // The simulated authority publishes; the practice authority's keys receive, so what the

@@ -212,23 +212,24 @@ impl Device {
         self.inner.fetch_bundle(factory_url, held).map(|f| f.to_json()).map_err(js)
     }
 
-    /// The held instrument, subjects and consent bases as JSON.
+    /// The held bundle as JSON: the surveys assigned to the account (each with its instrument's
+    /// titles by language, its cohort and its consent bases) and the rosters' subjects.
     pub fn held(&self) -> Result<String, JsValue> {
         self.inner.held_json().map_err(js)
     }
 
-    /// Draws the held instrument (same render as `instrument preview`).
-    pub fn render(&mut self, options_json: &str, values: &str, roster: &str) -> Result<String, JsValue> {
+    /// Draws the held instrument with this fingerprint, in hex (same render as `instrument preview`).
+    pub fn render(&mut self, fingerprint: &str, options_json: &str, values: &str, roster: &str) -> Result<String, JsValue> {
         let v = if values.trim().is_empty() { None } else { Some(parse_map(values).map_err(js)?) };
         let r = if roster.trim().is_empty() { None } else { Some(parse_map(roster).map_err(js)?) };
-        self.inner.render(&options(options_json)?, v.as_ref(), r.as_ref()).map_err(js)
+        self.inner.render(fingerprint, &options(options_json)?, v.as_ref(), r.as_ref()).map_err(js)
     }
 
-    /// Evaluates the held instrument's rules live.
-    pub fn evaluate(&mut self, options_json: &str, values: &str, roster: &str) -> Result<String, JsValue> {
+    /// Evaluates the rules of the instrument with this fingerprint live.
+    pub fn evaluate(&mut self, fingerprint: &str, options_json: &str, values: &str, roster: &str) -> Result<String, JsValue> {
         let v = if values.trim().is_empty() { Default::default() } else { parse_map(values).map_err(js)? };
         let r = if roster.trim().is_empty() { Default::default() } else { parse_map(roster).map_err(js)? };
-        self.inner.evaluate(&options(options_json)?, &v, &r).map_err(js)
+        self.inner.evaluate(fingerprint, &options(options_json)?, &v, &r).map_err(js)
     }
 
     /// The roster fields of a subject, as JSON.
@@ -238,22 +239,22 @@ impl Device {
         Ok(fieldseal_adapters_web::workbench::map_json(&m))
     }
 
-    /// Records consent.
+    /// Records consent for the survey with this fingerprint.
     #[wasm_bindgen(js_name = recordConsent)]
-    pub fn record_consent(&mut self, subject: &str, basis: &str, statement_version: u32) -> Result<String, JsValue> {
-        self.inner.record_consent(subject, basis, statement_version).map_err(js)
+    pub fn record_consent(&mut self, subject: &str, fingerprint: &str, basis: &str, statement_version: u32) -> Result<String, JsValue> {
+        self.inner.record_consent(subject, fingerprint, basis, statement_version).map_err(js)
     }
 
     /// Records absent, declines or not-them.
     #[wasm_bindgen(js_name = recordStatus)]
-    pub fn record_status(&mut self, subject: &str, outcome: &str) -> Result<String, JsValue> {
-        self.inner.record_status(subject, outcome).map_err(js)
+    pub fn record_status(&mut self, subject: &str, fingerprint: &str, outcome: &str) -> Result<String, JsValue> {
+        self.inner.record_status(subject, fingerprint, outcome).map_err(js)
     }
 
-    /// Starts a capture; throws `consent_needed` when consent comes first.
+    /// Starts a capture about a subject for the survey with this fingerprint; throws `consent_needed` when consent comes first.
     #[wasm_bindgen(js_name = startCapture)]
-    pub fn start_capture(&mut self, subject: &str, mode: &str) -> Result<String, JsValue> {
-        self.inner.start_capture(subject, mode).map_err(js)
+    pub fn start_capture(&mut self, subject: &str, fingerprint: &str, mode: &str) -> Result<String, JsValue> {
+        self.inner.start_capture(subject, fingerprint, mode).map_err(js)
     }
 
     /// Sets answers (JSON object of path to value) and returns the core's verdicts.

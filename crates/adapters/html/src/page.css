@@ -444,3 +444,29 @@ body.wc-compact .segments { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /* The way back from a full page opened from the web app */
 .bar-back { flex: none; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; border: 1px solid var(--border); border-radius: 9999px; color: var(--ink); font-weight: 700; text-decoration: none; }
 .bar-back:hover { background: var(--surface-2); }
+
+/* A compact window is a phone: tighter spacing and smaller targets, so a step of a few questions
+   fits the screen without scrolling (INS-210). A "don't know" sits beside its label instead of
+   under the control, and a long list of options takes two columns. */
+body.wc-compact { --gutter: 1rem; --gap: 0.875rem; --target: 2.75rem; }
+.wc-compact main { padding-top: 0.25rem; }
+.wc-compact .step-head { gap: 0; }
+.wc-compact .step-title { font-size: 1.25rem; line-height: 1.625rem; }
+.wc-compact .step-count { display: inline; margin-inline-end: 0.5rem; }
+.wc-compact .q { gap: 0.375rem; }
+.wc-compact .q > legend { margin-block-end: 0.25rem; }
+.wc-compact .q-label, .wc-compact .q > legend { font-size: 1rem; line-height: 1.375rem; }
+.wc-compact .step-nav { padding-block: 0.375rem; }
+.wc-compact .btn.primary { min-height: 2.75rem; }
+.wc-compact .segment { min-height: 2.25rem; padding-block-end: 0.5rem; }
+.wc-compact .num-stepper { min-height: 2.75rem; }
+.wc-compact .guidance { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
+.wc-compact .q:has(> .nr) { grid-template-columns: minmax(0, 1fr) auto; column-gap: 0.5rem; }
+.wc-compact .q:has(> .nr) > * { grid-column: 1 / -1; }
+.wc-compact .q:has(> .nr) > legend, .wc-compact .q:has(> .nr) > .q-label { grid-column: 1; grid-row: 1; }
+.wc-compact .q:has(> .nr) > .nr { grid-column: 2; grid-row: 1; align-self: start; }
+.wc-compact .nr-btn { min-height: 2rem; padding-inline: 0.75rem; font-size: 0.8125rem; }
+.wc-compact .options:has(> .opt:nth-child(5)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wc-compact .opt { min-height: 2.5rem; padding-block: 0.25rem; }
+.wc-compact .q.readonly { gap: 0.125rem; }
+.wc-compact .readonly output { min-height: 2.25rem; padding-block: 0.25rem; }

@@ -3,6 +3,8 @@
 # class 3A). The names and ids are invented.
 cohort: cohort-a
 version: 2
+# Same coverage as the version it follows: its `granted` consent covers school-meals-baseline.
+consent-covers: [school-meals-baseline]
 subjects:
   - subject: p-0001
     display: Participant 1

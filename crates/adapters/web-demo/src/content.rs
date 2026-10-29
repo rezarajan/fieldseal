@@ -136,7 +136,8 @@ impl Content {
     }
 }
 
-/// A roster from the examples' roster file format: `cohort`, `version` and `subjects`.
+/// A roster from the examples' roster file format: `cohort`, `version`, `subjects` and the
+/// surveys its consent covers (`consent-covers`).
 pub(crate) fn roster(doc: &Value) -> Result<Roster, String> {
     let map = doc.as_map().ok_or("a roster is a map")?;
     let cohort = map.get("cohort").and_then(Value::as_text).ok_or("a roster needs `cohort`")?;
@@ -168,5 +169,12 @@ pub(crate) fn roster(doc: &Value) -> Result<Roster, String> {
             prior_status: s.get("prior_status").and_then(Value::as_text).map(str::to_owned),
         });
     }
-    Ok(Roster { cohort: CohortId::new(cohort).map_err(|e| e.to_string())?, version, generation: Generation(1), entries })
+    let mut consent_covers: Vec<String> = match map.get("consent-covers") {
+        None => Vec::new(),
+        Some(Value::Array(a)) => a.iter().map(|v| v.as_text().map(str::to_owned).ok_or("consent-covers names surveys as text")).collect::<Result<_, _>>()?,
+        Some(_) => return Err("consent-covers is a list of survey names".into()),
+    };
+    consent_covers.sort();
+    consent_covers.dedup();
+    Ok(Roster { cohort: CohortId::new(cohort).map_err(|e| e.to_string())?, version, generation: Generation(1), entries, consent_covers })
 }

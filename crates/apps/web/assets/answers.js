@@ -80,11 +80,14 @@ export function applyVisibility(doc, visibility) {
     const targets = [el, ...el.querySelectorAll(CONTROLS)];
     for (const c of targets) {
       if (!(c.matches(CONTROLS) || c.tagName === "FIELDSET")) continue;
+      // A step that holds only a question the rules make not applicable is protected as a whole,
+      // but its Back and Next stay usable: the collector has to be able to move on.
+      if (c.closest(".step-nav")) continue;
       if (v === "protected") {
         if (!c.disabled) { c.disabled = true; c.dataset.liveDisabled = "1"; }
-      } else if (c.dataset.liveDisabled || (c.disabled && !c.closest(".step-nav"))) {
+      } else if (c.dataset.liveDisabled || c.disabled) {
         // Controls drawn disabled (their question was not applicable when the page was drawn)
-        // are enabled once the rules make it applicable; the form's own Back button is not one.
+        // are enabled once the rules make it applicable.
         c.disabled = false;
         delete c.dataset.liveDisabled;
       }

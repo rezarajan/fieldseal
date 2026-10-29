@@ -59,7 +59,7 @@ fn dis_030_dis_042_a_bundle_for_another_tenancy_or_damaged_in_transit_is_refused
     let (opener_a, opener_b) = (Opener::new(&site, &phone_a.device), Opener::new(&site, &phone_b.device));
     let mut rt_a = site.enrol(&phone_a, &opener_a, "alice", "a", vec![village_a()]);
     let rt_b = site.enrol(&phone_b, &opener_b, "alice", "b", vec![village_a()]);
-    let held = rt_a.held().expect("held").fingerprint;
+    let held = rt_a.held().expect("held").instruments[0].fingerprint;
     let (a, b) = (rt_a.tenancy().expect("a"), rt_b.tenancy().expect("b"));
 
     let for_b = site.build_bundle(b).expect("b's bundle");
@@ -77,7 +77,7 @@ fn dis_030_dis_042_a_bundle_for_another_tenancy_or_damaged_in_transit_is_refused
     for (name, bad) in [("bit-flipped", flipped), ("truncated", truncated), ("empty", Vec::new())] {
         assert!(matches!(rt_a.import_bundle(&bad), Err(CollectionError::BundleRejected(_))), "{name}");
     }
-    assert_eq!(rt_a.held().expect("still held").fingerprint, held, "DIS-031: what was held is still held");
+    assert_eq!(rt_a.held().expect("still held").instruments[0].fingerprint, held, "DIS-031: what was held is still held");
     assert_eq!(rt_a.state(), Some(TenancyState::Registered));
     capture_household(&mut rt_a, "h-002", 3);
     // And the undamaged file imports, so the refusals above left nothing behind.
@@ -89,7 +89,7 @@ fn pub_080_dis_011_an_artefact_withdrawn_after_the_bundle_was_built_does_not_rea
     device!(103 => site, phone, opener, rt);
     capture_household(&mut rt, "h-002", 3);
     let tenancy = rt.tenancy().expect("tenancy");
-    let held = rt.held().expect("held").fingerprint;
+    let held = rt.held().expect("held").instruments[0].fingerprint;
     // A bundle is built while the instrument is good...
     let built_before = site.build_bundle(tenancy).expect("built before the withdrawal");
     // ...then the publishers withdraw it.
@@ -110,7 +110,43 @@ fn pub_080_dis_011_an_artefact_withdrawn_after_the_bundle_was_built_does_not_rea
         Err(CollectionError::BundleRejected(why)) => assert!(why.to_lowercase().contains("withdrawn"), "{why}"),
         other => panic!("a bundle for a withdrawn instrument must be refused, got {other:?}"),
     }
-    assert_eq!(rt.held().expect("held").fingerprint, held, "the previously held bundle is untouched (DIS-031)");
+    assert_eq!(rt.held().expect("held").instruments[0].fingerprint, held, "the previously held bundle is untouched (DIS-031)");
+}
+
+#[test]
+fn dis_018_a_bundle_carries_one_version_of_a_survey() {
+    device!(104 => site, phone, opener, rt);
+    let tenancy = rt.tenancy().expect("tenancy");
+    // A second version of the sample survey is published under the same name.
+    let mut doc = fieldseal_e2e::sample_instrument_document();
+    if let fieldseal_kernel::Value::Map(root) = &mut doc
+        && let Some(fieldseal_kernel::Value::Map(meta)) = root.get_mut("metadata")
+    {
+        meta.insert("version".into(), fieldseal_kernel::Value::Text("1.1.0".into()));
+    }
+    let name = fieldseal_e2e::SAMPLE_SURVEY;
+    let newer = site
+        .world
+        .publish(
+            fieldseal_publishing::domain::ArtefactKind::Instrument,
+            name,
+            "1.1.0",
+            fieldseal_kernel::cbor::encode(&doc).expect("encodes"),
+            Some(fieldseal_adapters_memory::demo::DemoWorld::salt_for(name)),
+        )
+        .expect("publishes");
+    let mut request = site.bundle_request(tenancy);
+    request.instruments.push(*newer.address());
+    request.layouts.clear();
+    let service = fieldseal_policy::application::PolicyService::new(
+        fieldseal_adapters_memory::policy::MemoryPolicySource::new(vec![site.release.clone()]),
+        fieldseal_adapters_memory::policy::BuiltInPolicyEngine,
+        fieldseal_adapters_memory::policy::MemoryDecisionLog::new(),
+    );
+    match site.world.build(&service, &request) {
+        Err(DistributionError::Wire(e)) => assert!(e.to_string().contains("same survey name"), "{e}"),
+        other => panic!("two versions of one survey must not share a bundle: {:?}", other.map(|b| b.sealed.bytes.len())),
+    }
 }
 
 fn tampered(checkpoint: &SignedCheckpoint, edit: impl Fn(&str) -> String) -> SignedCheckpoint {
@@ -158,13 +194,13 @@ fn pub_106_a_tampered_transparency_log_checkpoint_fails_verification_everywhere(
 
     // The device verifies the same way when a bundle arrives: a tampered publication inside an
     // otherwise valid bundle is refused, and the runtime keeps what it holds.
-    let held = rt.held().expect("held").fingerprint;
+    let held = rt.held().expect("held").instruments[0].fingerprint;
     let tenancy = rt.tenancy().expect("tenancy");
     let bundle = site.build_bundle(tenancy).expect("a newer bundle");
     let bad = tampered(&genuine, |n| size(n));
-    *opener.tamper.borrow_mut() = Some(Box::new(move |b| b.instrument.checkpoint = bad.clone()));
+    *opener.tamper.borrow_mut() = Some(Box::new(move |b| b.instruments[0].checkpoint = bad.clone()));
     assert!(matches!(rt.import_bundle(&bundle), Err(CollectionError::BundleRejected(_))));
-    assert_eq!(rt.held().expect("held").fingerprint, held);
+    assert_eq!(rt.held().expect("held").instruments[0].fingerprint, held);
     *opener.tamper.borrow_mut() = None;
     rt.import_bundle(&bundle).expect("untampered, the same bundle imports");
 }

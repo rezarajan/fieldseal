@@ -58,9 +58,8 @@
 //!   without a restart, and a tenancy that changes later is seen as changed.
 //! - **Runtime builds.** The factory's software attestation verifier accepts builds whose
 //!   identity begins `fieldseal-simulator` or `fieldseal-web`.
-//! - **One instrument per bundle for the simulated runtime.** [`Demo::build_bundle`]
-//!   includes every published instrument, as asked; the simulated runtime's opener
-//!   (`FileBundleOpener`) imports exactly one. Use [`Demo::build_bundle_for`] to name one.
+//! - **Instruments in a bundle.** [`Demo::build_bundle`] includes every published instrument;
+//!   [`Demo::build_bundle_for`] names the ones to include. The runtime holds all of them.
 //!   Every bundle carries the rosters of every certified cohort, because the builder
 //!   refuses to omit the roster of an assigned cohort.
 
@@ -80,7 +79,7 @@ use fieldseal_adapters_memory::registration::{MemoryIdentityProvider, MemoryRece
 use fieldseal_adapters_memory::trust::SoftwareAttestationVerifier;
 use fieldseal_adapters_upload_http::{ServerConfig, UploadHttp};
 use fieldseal_distribution::application::BuildRequest;
-use fieldseal_distribution::domain::{Roster, RuntimeProfile, artefacts_of, check_composition};
+use fieldseal_distribution::domain::{BundleAssignment, Roster, RuntimeProfile, artefacts_of, check_composition};
 use fieldseal_intake::domain::{IssuedConsent, IssuedRoster};
 use fieldseal_kernel::base64url::base64url_encode;
 use fieldseal_kernel::digest::lower_hex;
@@ -509,6 +508,15 @@ impl Demo {
 
         let mut request = BuildRequest::new(tenancy, addresses);
         request.layouts = layouts.iter().map(|l| *l.publication.address()).collect();
+        // Each survey is assigned to the cohort whose roster it uses, as the factory's journal would say.
+        request.assignments = chosen
+            .iter()
+            .filter_map(|i| {
+                let (_, roster) = self.content.rosters.iter().find(|(stem, _)| *stem == i.stem)?;
+                let held = record.cohorts.iter().find(|c| c.cohort == roster.cohort)?;
+                Some(BundleAssignment { survey: i.name.clone(), instrument: *i.publication.address(), cohort: roster.cohort.clone(), generation: held.generation })
+            })
+            .collect();
         let service = PolicyService::new(MemoryPolicySource::new(vec![self.release.clone()]), BuiltInPolicyEngine, MemoryDecisionLog::new());
         let built = self.world.build_with(&service, &request, unattested).map_err(err)?;
 
@@ -542,6 +550,7 @@ impl Demo {
                             (intake_subject(e.subject.as_str()), consent)
                         })
                         .collect(),
+                    covers: sent.consent_covers.iter().cloned().collect(),
                 },
             );
         }

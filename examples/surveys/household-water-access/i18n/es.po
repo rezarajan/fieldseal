@@ -216,29 +216,29 @@ msgctxt "layout/compact/household"
 msgid "The household"
 msgstr "El hogar"
 
-msgctxt "layout/compact/who-lives-here"
-msgid "Who lives here"
-msgstr "Quién vive aquí"
-
-msgctxt "layout/compact/water"
-msgid "Water"
-msgstr "Agua"
-
 msgctxt "layout/compact/the-source"
 msgid "The source"
 msgstr "La fuente"
 
-msgctxt "layout/compact/use-and-treatment"
-msgid "Use and treatment"
-msgstr "Uso y tratamiento"
+msgctxt "layout/compact/the-trip"
+msgid "The trip"
+msgstr "El recorrido"
+
+msgctxt "layout/compact/treatment"
+msgid "Treatment"
+msgstr "Tratamiento"
+
+msgctxt "layout/compact/sharing"
+msgid "Sharing"
+msgstr "Uso compartido"
+
+msgctxt "layout/compact/notes"
+msgid "Notes"
+msgstr "Notas"
 
 msgctxt "layout/compact/cost"
 msgid "Cost"
 msgstr "Costo"
-
-msgctxt "layout/compact/sanitation-and-hygiene"
-msgid "Sanitation and hygiene"
-msgstr "Saneamiento e higiene"
 
 msgctxt "layout/compact/the-toilet"
 msgid "The toilet"

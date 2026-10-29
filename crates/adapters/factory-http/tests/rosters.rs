@@ -43,7 +43,7 @@ struct Rig {
 fn rig() -> Rig {
     let dir = Scratch::new();
     let issuer = FileRosterIssuer::new(RosterStore::open(&dir.0).expect("store"));
-    let f = Fixture::new(&["survey-a"], &["cohort-a"], Box::new(issuer));
+    let f = Fixture::new(&["survey-a", "survey-b"], &["cohort-a"], Box::new(issuer));
     Rig { f, store: RosterStore::open(&dir.0).expect("store"), _dir: dir }
 }
 
@@ -148,7 +148,7 @@ fn reg_047_a_stop_between_the_store_write_and_the_record_heals_on_the_next_issue
     // The store write happened and the process stopped before the journal record.
     let stored = FileRosterIssuer::new(RosterStore::open(&r._dir.0).expect("store"));
     assert!(matches!(
-        fieldseal_registration::ports::RosterIssuer::issue(&stored, &cohort(), &roster("cohort-a", 1, "Bo Lindqvist")),
+        fieldseal_registration::ports::RosterIssuer::issue(&stored, &cohort(), &roster("cohort-a", 1, "Bo Lindqvist"), &[]),
         fieldseal_registration::ports::IssueOutcome::Issued { .. }
     ));
     assert_eq!(r.f.world.store.roster_issues(), Ok(vec![]));
@@ -196,4 +196,36 @@ fn reg_047_an_issue_notifies_the_reconciler() {
     r.f.notified.lock().expect("lock").clear();
     assert_eq!(issue(&r, Some(OPERATOR_TOKEN), roster("cohort-a", 1, "Bo Lindqvist")).status, 200);
     assert!(r.f.notified.lock().expect("lock").is_empty());
+}
+
+/// The roster body of `roster`, naming the surveys its consent covers.
+fn roster_covering(cohort: &str, version: i128, covers: &[&str]) -> Vec<u8> {
+    let Value::Map(mut m) = cbor::decode(&roster(cohort, version, "Bo Lindqvist")).expect("decodes") else { unreachable!("a roster is a map") };
+    m.insert("consent-covers".into(), Value::Array(covers.iter().map(|c| Value::Text((*c).into())).collect()));
+    cbor::encode(&Value::Map(m)).expect("encodable")
+}
+
+#[test]
+fn reg_047_col_031_a_roster_that_declares_nothing_covers_the_surveys_assigned_to_its_cohort_now() {
+    let r = rig();
+    let assign = |survey: &str| {
+        let done = r.f.call(&request("POST", "/v1/assignments", Some(OPERATOR_TOKEN), assignment_body("sub-alice", survey, "cohort-a")));
+        assert_eq!(done.status, 200, "{}", String::from_utf8_lossy(&done.body));
+    };
+    assign("survey-a");
+    assert_eq!(issue(&r, Some(OPERATOR_TOKEN), roster("cohort-a", 1, "Bo Lindqvist")).status, 200);
+    assert_eq!(r.store.get(&cohort(), 1).expect("get").expect("stored").consent_covers, ["survey-a"], "the coverage is fixed at issue");
+
+    // A survey assigned afterwards does not change the roster already issued, and the same bytes
+    // are still that roster.
+    assign("survey-b");
+    let again = issue(&r, Some(OPERATOR_TOKEN), roster("cohort-a", 1, "Bo Lindqvist"));
+    assert_eq!((again.status, json(&again)["status"].as_str().map(str::to_owned)), (200, Some("unchanged".into())));
+    assert_eq!(r.store.get(&cohort(), 1).expect("get").expect("stored").consent_covers, ["survey-a"]);
+    // The next version takes the surveys assigned by then.
+    assert_eq!(issue(&r, Some(OPERATOR_TOKEN), roster("cohort-a", 2, "Bo Lindqvist")).status, 200);
+    assert_eq!(r.store.get(&cohort(), 2).expect("get").expect("stored").consent_covers, ["survey-a", "survey-b"]);
+    // A roster that names its surveys keeps them whatever is assigned.
+    assert_eq!(issue(&r, Some(OPERATOR_TOKEN), roster_covering("cohort-a", 3, &["survey-b"])).status, 200);
+    assert_eq!(r.store.get(&cohort(), 3).expect("get").expect("stored").consent_covers, ["survey-b"]);
 }

@@ -79,7 +79,7 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
         [id, "render"] => with_entry(state, id, |e| render(e, req)),
         [id, "plan"] => with_entry(state, id, |e| plan(e, req)),
         [id, "source"] => with_entry(state, id, |e| Response::text(200, String::from_utf8_lossy(&e.source).into_owned())),
-        [id, "roster"] => with_entry(state, id, roster),
+        [id, "roster"] => with_entry(state, id, |_| roster(state, req)),
         [id, "layout", i, "source"] => with_entry(state, id, |e| match i.parse::<usize>().ok().and_then(|i| e.layouts.get(i)) {
             Some(l) => Response::text(200, String::from_utf8_lossy(&l.source).into_owned()),
             None => ui::error_page(404, "There is no such layout."),
@@ -193,18 +193,14 @@ fn plan_value(plan: &RenderPlan) -> Value {
     v
 }
 
-/// The roster as JSON, `{}` when the instrument has none.
-fn roster(entry: &Entry) -> Response {
-    match &entry.stored_roster {
-        Some(Ok(json)) => return Response::json(200, json),
-        Some(Err(e)) => return ui::error_page(422, &format!("The roster store could not be read: {e}")),
-        None => {}
-    }
-    let Some(path) = &entry.roster else { return Response::json(200, "{}") };
-    let parsed = fieldseal_adapters_authoring::decode_path(path).map_err(|e| e.message);
-    match parsed {
-        Ok(v) => Response::json(200, to_json(&v)),
+/// The counts of the roster of the cohort the request names (`?cohort=`, the cohort of the survey's
+/// assignment in the device's bundle) as JSON, never a name, `{}` when none is named or the cohort
+/// has no roster.
+fn roster(state: &AppState, req: &Request) -> Response {
+    match catalogue::roster_page(state, req.param("cohort")) {
         Err(e) => ui::error_page(422, &format!("The roster could not be read: {e}")),
+        Ok(catalogue::RosterPage::Empty) => Response::json(200, "{}"),
+        Ok(catalogue::RosterPage::Counts(json)) => Response::json(200, json),
     }
 }
 

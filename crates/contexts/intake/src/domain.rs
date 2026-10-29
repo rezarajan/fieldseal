@@ -354,6 +354,9 @@ pub struct IssuedRoster {
     pub issued_at: AuthorityTime,
     /// Each subject's consent state in this version.
     pub consent: BTreeMap<SubjectId, IssuedConsent>,
+    /// The surveys, by instrument name, that a `granted` state covers. For any other survey the
+    /// roster grants nothing (INT-031).
+    pub covers: std::collections::BTreeSet<String>,
 }
 
 /// A consent decision (ADR 0022).

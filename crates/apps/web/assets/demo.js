@@ -130,7 +130,7 @@ function step5() {
   fact("dropped", "Roster fields", "fields the instrument does not read are dropped before sealing (DIS-013)", DEVICE);
   say(all.length > 1
     ? `The device holds bundle ${b.sequence}, built after the roster was issued; it replaced bundle ${all[all.length - 2].sequence}.`
-    : "The device still holds its first bundle. After roster issue, press Check for a newer bundle on the Device page.");
+    : "The device still holds its first bundle. After roster issue, press Check for new surveys on the Device page.");
 }
 
 // Step 6: the device's journal.

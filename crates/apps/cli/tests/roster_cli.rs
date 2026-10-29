@@ -48,6 +48,7 @@ fn roster(path: &str) -> Roster {
         version: u64::try_from(m["version"].as_int().unwrap()).unwrap(),
         generation: Generation(1),
         entries,
+        consent_covers: m.get("consent-covers").and_then(Value::as_array).map(|a| a.iter().filter_map(|v| v.as_text().map(str::to_owned)).collect()).unwrap_or_default(),
     }
 }
 
@@ -230,4 +231,32 @@ fn dis_081_a_diff_is_computable_without_exposing_a_subject() {
     for s in ["p-000", "Participant", "Hill School", "3A"] {
         assert!(!out.contains(s) && !err.contains(s), "`{s}` leaked:\n{out}\n{err}");
     }
+}
+
+#[test]
+fn cli_050_check_fails_on_a_covered_survey_no_instrument_carries() {
+    let sb = Sandbox::new("roster-check-covers");
+    let water = survey("household-water-access");
+    let ok = sb.ok(&["roster", "check", &example("rosters/village-a.yaml"), "--instrument", &water], &[]);
+    assert_eq!(field(&ok, "consentCovers").as_array().map(|a| a.len()), Some(1));
+    assert_eq!(field(&ok, "consentCoversDeclared").as_bool(), Some(true));
+    let typo = sb.write("typo.yaml", "cohort: village-a\nversion: 1\nconsent-covers: [household-water-acces]\nsubjects:\n  - {subject: hh-0001, display: One, fields: {head_name: A}}\n");
+    let (code, doc) = sb.json(&["roster", "check", &typo, "--instrument", &water]);
+    assert_eq!(code, 1, "{doc:?}");
+    assert_eq!(finding_ids(&doc), ["DIS-063"]);
+    // A file that names nothing is fine: the factory records the assigned surveys when it issues the roster.
+    let none = sb.write("none.yaml", "cohort: village-a\nversion: 1\nsubjects:\n  - {subject: hh-0001, display: One, fields: {head_name: A}}\n");
+    let doc = sb.ok(&["roster", "check", &none, "--instrument", &water], &[]);
+    assert_eq!(field(&doc, "consentCoversDeclared").as_bool(), Some(false));
+}
+
+#[test]
+fn dis_081_a_diff_reports_a_change_in_the_surveys_the_consent_covers() {
+    let sb = Sandbox::new("roster-diff-covers");
+    let wider = sb.write("wider.yaml", "cohort: village-a\nversion: 4\nconsent-covers: [household-water-access, school-meals-baseline]\nsubjects:\n  - {subject: hh-0001, display: One, fields: {head_name: A}}\n");
+    let (code, out, err) = output(&sb, &["roster", "diff", &example("rosters/village-a.yaml"), &wider]);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.contains("consent coverage: household-water-access -> household-water-access, school-meals-baseline"), "{out}");
+    let (_, same, _) = output(&sb, &["roster", "diff", &example("rosters/village-a.yaml"), &example("rosters/next/village-a.yaml")]);
+    assert!(same.contains("consent coverage: unchanged"), "{same}");
 }

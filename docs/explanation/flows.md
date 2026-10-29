@@ -79,7 +79,7 @@ sequenceDiagram
     Fac-->>Dev: Bundle sealed to the device's agreement key and signed
     Dev->>Dev: Verify in order: signature, publisher threshold, log inclusion and time token, roster generation, then decrypt
     opt A newer bundle
-    Col->>Dev: Check for a newer bundle, the same flow
+    Col->>Dev: Check for new surveys, the same flow
     end
     end
 

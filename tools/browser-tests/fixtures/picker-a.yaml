@@ -1,0 +1,17 @@
+# The roster of the survey picker test (tools/browser-tests/picker.sh): one cohort that both example
+# surveys are assigned to. It carries the fields both read (`head_name` for the water survey, `name`,
+# `school`, `class` and `age` for the school-meals survey). Its consent covers the water survey
+# only, so the meals survey needs each person's consent on the device even for the one who is `granted`.
+# The names and ids are invented.
+cohort: picker-a
+version: 1
+consent-covers: [household-water-access]
+subjects:
+  - subject: pk-0001
+    display: Person 1
+    consent: granted
+    fields: { head_name: Amina, name: Person 1, school: Hill School, class: 2B, age: 12 }
+  - subject: pk-0002
+    display: Person 2
+    consent: unknown
+    fields: { head_name: Tomas, name: Person 2, school: Hill School, class: 2B, age: 13 }

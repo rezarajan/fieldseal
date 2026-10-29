@@ -1025,7 +1025,11 @@ impl<'a> Factory<'a> {
         canonical_bytes: &[u8],
     ) -> Result<IssueRosterOutcome, RegistrationError> {
         self.authorise_operator(operator)?;
-        let (version, digest, stored_now) = match self.operator_ports()?.rosters.issue(cohort, canonical_bytes) {
+        // The surveys assigned to the cohort now, in any account: what a roster that declares no
+        // coverage covers, fixed here (COL-031).
+        let assigned: BTreeSet<String> = self.ports.store.assignments()?.into_iter().filter(|a| &a.cohort == cohort).map(|a| a.survey).collect();
+        let assigned: Vec<String> = assigned.into_iter().collect();
+        let (version, digest, stored_now) = match self.operator_ports()?.rosters.issue(cohort, canonical_bytes, &assigned) {
             IssueOutcome::Issued { version, digest } => (version, digest, true),
             IssueOutcome::AlreadyIssued { version, digest } => (version, digest, false),
             IssueOutcome::VersionTaken => return Err(RegistrationError::VersionTaken),

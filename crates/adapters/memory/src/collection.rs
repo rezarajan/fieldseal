@@ -1023,10 +1023,11 @@ impl SimulatedAuthority {
             issued,
             registration: spec.register.then(|| self.grant(1)),
             time_tokens: vec![TimeAnchor { kind: AnchorKind::TimeToken, address: token, authority_time: AuthorityTime(issued.0 + 60_000) }],
-            instrument,
+            instruments: vec![instrument],
             layouts,
             policy: vec![],
             rosters: spec.rosters,
+            assignments: vec![],
             withdrawals: vec![],
         })
     }

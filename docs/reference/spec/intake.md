@@ -128,8 +128,8 @@ stateDiagram-v2
 ### Consent
 
 - **INT-030** Every record about a subject MUST reference a consent basis that precedes it in the chain.
-- **INT-031** A roster basis MUST name a roster version issued to this tenancy, with consent `granted` for the subject, and no later version marking the subject `refused` issued before the tenancy imported it (from the import records in the chain).
-- **INT-032** An attestation basis MUST be accepted only where the roster version held by the tenancy had the subject as `unknown`.
+- **INT-031** A roster basis MUST name a roster version issued to this tenancy, with consent `granted` for the subject, that covers the survey the record is about (the surveys the issued roster version lists as covered, COL-031), and no later version marking the subject `refused` issued before the tenancy imported it (from the import records in the chain). A roster version that does not cover the survey grants nothing for it: a record that claims it as its basis is held, and an attestation for the survey is accepted where the roster has the subject as `granted` but does not cover the survey, as where it has `unknown` (INT-032).
+- **INT-032** An attestation basis MUST be accepted only where the roster version held by the tenancy had no consent for the subject and the survey: the subject as `unknown`, or as `granted` on a roster version that does not cover the survey (INT-031).
 - **INT-033** Evidence referenced by a consent attestation MUST be present in the submission or an earlier one, and its hash MUST match.
 - **INT-034** A record about a subject whose roster consent is `refused` MUST be quarantined.
 - **INT-035** Intake policy MUST decide each attestation: `auto_accepted` when every rule passes and evidence is present and auto-acceptance is enabled; otherwise `pending`.

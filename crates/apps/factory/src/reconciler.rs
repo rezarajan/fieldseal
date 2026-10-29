@@ -763,7 +763,7 @@ impl<'a> Reconciler<'a> {
                     )
                 })
                 .collect();
-            record_issued(dir, &inputs.tenancy, &IssuedRoster { cohort: held.cohort.clone(), version: held.version, address, issued_at: now, consent })?;
+            record_issued(dir, &inputs.tenancy, &IssuedRoster { cohort: held.cohort.clone(), version: held.version, address, issued_at: now, consent, covers: held.consent_covers.iter().cloned().collect() })?;
         }
         Ok(())
     }

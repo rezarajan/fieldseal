@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use fieldseal_distribution::domain::{AnchorKind, ConsentState};
+use fieldseal_distribution::domain::{AnchorKind, BundleAssignment, ConsentState};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::id::{CohortId, Digest, KeyId, Seq, SubjectId, TenancyHandle, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
@@ -100,6 +100,15 @@ pub struct HeldRoster {
     pub address: Digest,
     /// The subjects.
     pub subjects: Vec<RosterSubject>,
+    /// The surveys, by name, that a `granted` consent on this roster covers (WIRE-095).
+    pub consent_covers: Vec<String>,
+}
+
+impl HeldRoster {
+    /// Whether a `granted` consent on this roster covers the survey named `survey`.
+    pub fn covers(&self, survey: &str) -> bool {
+        self.consent_covers.iter().any(|c| c == survey)
+    }
 }
 
 /// A bundle's contents after Distribution verified its envelope and opened its seal
@@ -118,15 +127,18 @@ pub struct OpenedBundle {
     pub registration: Option<RegistrationGrant>,
     /// Time tokens carried (anchored when first seen, COL-082).
     pub time_tokens: Vec<TimeAnchor>,
-    /// The instrument.
-    pub instrument: Publication,
-    /// Layouts for the instrument (DIS-016).
+    /// The instruments, one for each survey the bundle carries.
+    pub instruments: Vec<Publication>,
+    /// Layouts for the instruments, each bound to one of them (DIS-016).
     pub layouts: Vec<Publication>,
     /// The runtime policy, one publication per contributing layer, outermost first
     /// (POL-050); empty means the policy defaults apply.
     pub policy: Vec<Publication>,
     /// Rosters; a bundle without rosters is a practice bundle (COL-003).
     pub rosters: Vec<HeldRoster>,
+    /// The surveys the factory assigned to this account, each linking the instrument to a
+    /// cohort (WIRE-094); empty when the bundle carries none.
+    pub assignments: Vec<BundleAssignment>,
     /// Withdrawals to check the publications against.
     pub withdrawals: Vec<Withdrawal>,
 }

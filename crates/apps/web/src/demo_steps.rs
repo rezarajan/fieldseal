@@ -194,7 +194,7 @@ fn step(state: &AppState, n: usize) -> Response {
             live_panel(n)
         }
         4 => {
-            how.push_str("<p>No operator step. When the device is registered, the Device page asks the factory for the bundle by itself; press <strong>Get my bundle</strong> to ask again.</p>\n");
+            how.push_str("<p>No operator step. When the device is registered, the Device page asks the factory for the bundle by itself (it holds the surveys assigned to the account); press <strong>Load my surveys</strong> to ask again.</p>\n");
             how.push_str(&link("Open the Device page", "/device", false));
             checks.push_str(&check("Each publication in the bundle appears in step 2", "/demo/2"));
             checks.push_str(&check("The factory's own record of the build, on the factory's output", "/demo/4#build-log"));
@@ -209,9 +209,9 @@ fn step(state: &AppState, n: usize) -> Response {
                 "export FIELDSEAL_OIDC_ISSUER=http://localhost:8180/realms/fieldseal FIELDSEAL_OIDC_CLIENT_ID=fieldseal-cli\nfieldseal roster check examples/rosters/next/village-a.yaml --instrument examples/surveys/household-water-access\nfieldseal roster diff village-a@3 examples/rosters/next/village-a.yaml --store {store}\nfieldseal roster issue --factory-url {} --browser none --login presenter examples/rosters/next/village-a.yaml\nfieldseal roster list --store {store}",
                 if factory.is_empty() { "http://localhost:8080" } else { &factory }
             )));
-            how.push_str("<p class=\"note\">The file is version 4, one above the stored version 3. Then press <strong>Check for a newer bundle</strong> on the Device page and <strong>Get my bundle</strong>. The roster counts below never show a subject.</p>\n");
+            how.push_str("<p class=\"note\">The file is version 4, one above the stored version 3. Then press <strong>Check for new surveys</strong> on the Device page, in the list of your surveys. The roster counts below never show a subject.</p>\n");
             how.push_str(&link("Open the Device page", "/device", false));
-            checks.push_str(&check("The roster page shows counts only", "/instruments/household-water-access/roster"));
+            checks.push_str(&check("The roster page shows counts only", "/instruments/household-water-access/roster?cohort=village-a"));
             checks.push_str(&check("The factory's build event for the new sequence", "/demo/4#build-log"));
             live_panel(n)
         }

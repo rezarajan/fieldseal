@@ -65,8 +65,9 @@ fn check_documents(args: &Args, out: &mut Outcome, dir: &str, survey: &SurveyRef
     let ctx = Ctx { tools: AuthoringTools, log_format: LogFormat::Text };
     let file = |p: &Path| format!("{dir}/{}", p.strip_prefix(&survey.dir).unwrap_or(p).display());
     let instrument_file = file(&survey.instrument);
-    // Lint findings are advice whose limits a policy sets (INS-210), so `--strict` leaves them as
-    // they are; it makes errors of what validation, the resolver and the translation report warn about.
+    // Lint findings carry their own severity (INS-210 is an error for a compact layout and a warning
+    // for the others) and a policy sets their limits, so `--strict` leaves them as they are; it makes
+    // errors of what validation, the resolver and the translation report warn about.
     let strict = out.strict;
     if let Ok(Some(ins)) = load_instrument(&ctx, &instrument_file, out, true) {
         out.strict = false;

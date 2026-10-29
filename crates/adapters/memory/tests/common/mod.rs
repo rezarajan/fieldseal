@@ -143,6 +143,7 @@ impl World {
                         (sid(S_UNKNOWN), IssuedConsent::Unknown),
                         (sid(S_REFUSED), IssuedConsent::Refused),
                     ]),
+                    covers: ["household-water-access".to_owned(), "school-meals-baseline".to_owned()].into_iter().collect(),
                 },
             );
         }

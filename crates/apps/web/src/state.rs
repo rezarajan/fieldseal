@@ -16,12 +16,9 @@ pub struct AppState {
     /// The last version of each survey that loaded, by survey name. A load that fails leaves it
     /// alone; the pages show it beside the error. It lives in memory only.
     pub last_good: Arc<Mutex<BTreeMap<String, Entry>>>,
-    /// Which cohort's roster each survey's pages use, by survey name
-    /// (`FIELDSEAL_WEB_SURVEY_COHORTS`). A survey with no entry has no roster.
-    pub survey_cohorts: BTreeMap<String, String>,
     /// The factory's roster store (`FIELDSEAL_WEB_ROSTER_DIR`), read only. When set, the roster
-    /// page takes the survey's cohort from `survey_cohorts` and reads that cohort's latest stored
-    /// version here; when unset it reads `rosters/` of `examples_dir`.
+    /// page reads the latest stored version of the cohort it is asked for here; when unset it
+    /// reads `rosters/` of `examples_dir`.
     pub roster_dir: Option<PathBuf>,
     /// The directory with `fieldseal_wasm.js` and `fieldseal_wasm_bg.wasm`, if configured.
     pub wasm_dir: Option<PathBuf>,

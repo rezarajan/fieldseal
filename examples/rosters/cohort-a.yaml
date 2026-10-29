@@ -4,6 +4,10 @@
 # (read-only items); `guardian_phone` is not referenced, so the builder drops it (DIS-013).
 cohort: cohort-a
 version: 1
+# `consent-covers` names the surveys a `granted` consent on this roster covers. A survey not named
+# needs the collector to record the person's consent on the device, as for `unknown`. Leave it out
+# and the factory records the surveys assigned to the cohort when the roster is issued.
+consent-covers: [school-meals-baseline]
 subjects:
   - subject: p-0001
     display: Participant 1

@@ -1,6 +1,8 @@
 // The Device page. The device itself (the Rust core compiled to WebAssembly) runs in a worker;
 // this script is the plain user interface around it: one step at a time (Session, Capture,
-// Review and seal, Export), one screen of it, one primary action on each. Every security result
+// Review and seal, Export), one screen of it, one primary action on each, and each screen fits a
+// phone without scrolling (the status, the log and the device's details are behind "Details").
+// Every security result
 // shown here is reported by the core, not decided here.
 import { readAnswerEntries, readAnswers, applyVisibility } from "/assets/answers.js";
 
@@ -21,6 +23,7 @@ let phase = "session"; // session | about | review | export
 let reviewScreen = "review";
 let exportScreen = "ready";
 let consentSubject = null;
+let consentSurvey = null;
 let lastExportName = null;
 let uploadUrl = null;
 let aboutLabel = "Capture";
@@ -104,6 +107,7 @@ function setLatest(text, bad) {
   const line = $("latest");
   line.textContent = text.length > 220 ? text.slice(0, 217) + "..." : text;
   line.classList.toggle("bad", !!bad);
+  $("details-summary").classList.toggle("flagged", !!bad);
 }
 
 // `brief` is the short line shown beside the primary action; the full text goes to the log.
@@ -139,8 +143,8 @@ function kv(box, rows) {
 
 // ---- which screen ---------------------------------------------------------------------------
 
-// Set by "Check for a newer bundle": the session shows the bundle screen again.
-let choosingSurvey = false;
+// True while the collector is choosing a survey group: after unlocking, and after "Switch survey".
+let listing = true;
 // Set when the factory does not know this device's tenancy (it was reset): register again.
 let factoryForgot = false;
 function forgotten() {
@@ -160,9 +164,8 @@ function sessionScreen() {
   if (!device.unlocked) return "unlock";
   if (factoryForgot) return "register";
   if (!device.bundle) return registered ? "bundle" : "register";
-  if (choosingSurvey) return "bundle";
   if (consentSubject) return "consent";
-  return "roster";
+  return listing || !activeGroup() ? "surveys" : "roster";
 }
 
 function paint() {
@@ -219,7 +222,7 @@ async function refresh() {
   $("posture").textContent = device.posture.length ? `${device.posture.length} restriction(s) not in force or unreadable: a browser cannot lock a device down (PLAT-043; findings never block).` : "";
   $("tenancy-info").textContent = device.tenancy ? "Tenancy " + device.tenancy : "";
 
-  if (device.tenancy && device.unlocked && (!device.bundle || choosingSurvey)) {
+  if (device.tenancy && device.unlocked && !device.bundle) {
     if (!root.dataset.factory) registered = true;
     else if (regChecked !== device.tenancy) {
       regChecked = device.tenancy;
@@ -232,8 +235,11 @@ async function refresh() {
   }
   if (!device.bundle) held = null;
   if (ready() && !held) held = JSON.parse(await call("held"));
-  if (ready() && phase === "session" && !capture) await renderRoster();
-  saveView({ tenancy: device.tenancy, state: device.state || null, held: !!device.bundle });
+  if (ready() && phase === "session" && !capture) {
+    renderSurveys();
+    if (activeGroup()) await renderRoster();
+  }
+  saveView({ tenancy: device.tenancy, state: device.state || null, held: !!device.bundle, surveys: held ? held.surveys.map((s) => ({ survey: s.survey, cohort: s.cohort })) : [] });
   paint();
   askForBundle();
 }
@@ -333,6 +339,7 @@ $("form-unlock").addEventListener("submit", async (e) => {
   try {
     await call("unlock", $("pin").value);
     pins.unlock.reset();
+    listing = true;
     log(true, "session opened with the PIN; the held bundle was re-verified (COL-022)", "unlocked; the held bundle was verified again");
     await refresh();
   } catch (x) { pins.unlock.reset(); err.textContent = fail("unlock", x); }
@@ -344,6 +351,7 @@ $("lock").addEventListener("click", async () => {
   await call("lock");
   log(true, "session locked", "locked");
   phase = "session";
+  listing = true;
   await refresh();
 });
 
@@ -410,7 +418,7 @@ function showBundle(report) {
 }
 
 async function importBundle(bytes) {
-  $("bundle-error").textContent = "";
+  bundleError("");
   try {
     const report = JSON.parse(await call("importBundle", bytes));
     showBundle(report);
@@ -418,11 +426,10 @@ async function importBundle(bytes) {
     const first = report.publications[0];
     log(true, `bundle verified: ${first ? first.signatures + "-of-" + first.threshold + " publisher signatures" : "no publications"}, ${n} publication(s), log inclusion ok`);
     registered = true;
-    choosingSurvey = false;
     await refresh();
   } catch (x) {
     $("bundle-steps").replaceChildren(el("li", "fail", "FAILED: " + fail("bundle", x)));
-    $("bundle-error").textContent = "The bundle was not accepted: " + (x && x.message ? x.message : x);
+    bundleError("The bundle was not accepted: " + (x && x.message ? x.message : x));
   }
 }
 
@@ -441,15 +448,19 @@ function heldSequence() {
   } catch { return -1; }
 }
 
-function bundleStatus(text) { $("bundle-status").textContent = text; }
+// The fetch reports on whichever screen it was started from: the bundle screen, or the list of surveys.
+function bundleStatus(text) { $("bundle-status").textContent = text; $("surveys-status").textContent = text; }
+function bundleError(text) { $("bundle-error").textContent = text; $("surveys-error").textContent = text; }
 
 async function getBundle() {
   if (bundleBusy) return;
   bundleBusy = true;
+  const wasHeld = !!device.bundle;
   clearTimeout(bundleTimer);
-  $("bundle-error").textContent = "";
+  bundleError("");
   $("fetch-bundle").disabled = true;
-  bundleStatus("Asking the factory for your bundle...");
+  $("check-surveys").disabled = true;
+  bundleStatus("Asking the factory for your surveys...");
   let again = false;
   try {
     const r = JSON.parse(await call("fetchBundle", factoryUrl || root.dataset.factory, device.bundle ? heldSequence() : -1));
@@ -460,32 +471,31 @@ async function getBundle() {
       const n = r.report.publications.length;
       const first = r.report.publications[0];
       log(true, `bundle ${r.sequence} fetched from the factory and verified: ${first ? first.signatures + "-of-" + first.threshold + " publisher signatures" : "no publications"}, ${n} publication(s), log inclusion ok`);
-      bundleStatus("");
       registered = true;
-      choosingSurvey = false;
-      held = null; // a newer bundle brings its own rosters
+      held = null; // a newer bundle brings its own surveys and rosters
       await refresh();
+      bundleStatus(wasHeld ? "Your surveys were updated." : "");
       recordBundle(r.sequence, got && got.file, r.report.publications);
     } else if (r.status === "current") {
-      bundleStatus("You already have the latest bundle.");
+      bundleStatus("Your surveys are up to date: the factory has nothing newer.");
       log(true, "the factory says the bundle this device holds is the latest");
-      choosingSurvey = false;
       await refresh();
     } else if (r.status === "preparing") {
-      bundleStatus("The factory is still preparing your bundle. This page asks again in a few seconds.");
+      bundleStatus("The factory is still preparing your surveys. This page asks again in a few seconds.");
       again = true;
     } else {
       bundleStatus("");
       if (r.code === "not-registered") { forgotten(); paint(); }
-      else $("bundle-error").textContent = fail("fetch bundle", `the factory held the bundle back (${r.code || r.http}${r.reasons.length ? ": " + r.reasons.join("; ") : ""})`);
+      else bundleError(fail("fetch bundle", `the factory held the surveys back (${r.code || r.http}${r.reasons.length ? ": " + r.reasons.join("; ") : ""})`));
     }
   } catch (x) {
     bundleStatus("");
-    $("bundle-error").textContent = fail("fetch bundle", x);
+    bundleError(fail("fetch bundle", x));
   }
   bundleBusy = false;
   $("fetch-bundle").disabled = false;
-  if (again) bundleTimer = setTimeout(() => { if (sessionScreen() === "bundle") getBundle(); }, 3000);
+  $("check-surveys").disabled = false;
+  if (again) bundleTimer = setTimeout(() => { if (["bundle", "surveys"].includes(sessionScreen())) getBundle(); }, 3000);
 }
 
 // A registered device with no bundle asks once on its own when the page gets there.
@@ -499,6 +509,7 @@ function setupBundleScreen() {
   // Without a factory (a provisioning file for another authority) a bundle file is the only way.
   const withFactory = !!root.dataset.factory;
   $("fetch-bundle").hidden = !withFactory;
+  $("check-surveys").hidden = !withFactory;
   if (!withFactory) {
     const open = $("open-bundle");
     open.className = "btn btn-primary";
@@ -507,6 +518,7 @@ function setupBundleScreen() {
 }
 
 $("fetch-bundle").addEventListener("click", () => getBundle());
+$("check-surveys").addEventListener("click", () => getBundle());
 
 $("bundle-file").addEventListener("change", async (e) => {
   const f = e.target.files[0];
@@ -514,12 +526,140 @@ $("bundle-file").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 
+// Escape closes the details.
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("details-box").open = false; });
+
 $("keys-link").addEventListener("click", async () => {
   $("keys-out").textContent = await call("publicKeys");
   $("keys-out").hidden = false;
 });
 
 $("retry").addEventListener("click", () => location.reload());
+
+// ---- the surveys: the groups the factory assigned ------------------------------------------
+
+// A survey group is the surveys assigned to one cohort, which the collector works through
+// together. The factory sends the assignments in the bundle; the device shows what it was sent.
+const ACTIVE_KEY = () => "fs-active-group-" + device.tenancy;
+// A list this short needs no search box.
+const FILTER_ABOVE = 4;
+
+function titleOf(survey) {
+  const own = survey.title[navigator.language.split("-")[0]];
+  return own || Object.values(survey.title)[0] || survey.survey;
+}
+
+function groupTitle(g) { return g.surveys.map(titleOf).join(" and "); }
+
+function groups() {
+  if (!held) return [];
+  const found = new Map();
+  for (const s of held.surveys) {
+    const roster = held.rosters.find((r) => r.cohort === s.cohort);
+    if (!roster) continue;
+    const key = `${s.cohort}@${s.generation}`;
+    if (!found.has(key)) found.set(key, { key, cohort: s.cohort, roster, surveys: [] });
+    found.get(key).surveys.push(s);
+  }
+  return [...found.values()];
+}
+
+// The group the collector chose, kept in this browser across sessions; none when it is no longer
+// in the bundle.
+function activeGroup() {
+  let key = null;
+  try { key = localStorage.getItem(ACTIVE_KEY()); } catch { /* private window */ }
+  return groups().find((g) => g.key === key) || null;
+}
+
+function chooseGroup(g) {
+  try { localStorage.setItem(ACTIVE_KEY(), g.key); } catch { /* private window */ }
+  listing = false;
+  log(true, `survey chosen: ${groupTitle(g)}, visiting ${g.cohort}`, `working on ${groupTitle(g)}`);
+  return toRoster();
+}
+
+// The survey the collector is conducting within the chosen group, kept in this browser for each
+// group. A group with one survey has no choice to make.
+const SURVEY_KEY = (g) => `fs-active-survey-${device.tenancy}-${g.key}`;
+
+function activeSurvey() {
+  const g = activeGroup();
+  if (!g) return null;
+  let fingerprint = null;
+  try { fingerprint = localStorage.getItem(SURVEY_KEY(g)); } catch { /* private window */ }
+  return g.surveys.find((s) => s.fingerprint === fingerprint) || g.surveys[0];
+}
+
+function chooseSurvey(s) {
+  const g = activeGroup();
+  if (g) {
+    try { localStorage.setItem(SURVEY_KEY(g), s.fingerprint); } catch { /* private window */ }
+  }
+  $("capture-error").textContent = "";
+  return renderRoster();
+}
+
+// The entry of `held` for a survey of a cohort, if the bundle still lists it. A survey is known by
+// its fingerprint: the name is the same in every version of it.
+function stillHeld(survey) {
+  return !!survey && !!held && held.surveys.some((s) => s.fingerprint === survey.fingerprint && s.cohort === survey.cohort);
+}
+
+// The survey a screen was about is not in the bundle any more (a refresh replaced it). Say so where
+// the collector is, and leave the way back to "Your surveys" open.
+function surveyGone() {
+  const text = "That survey is no longer in the bundle. Go back to Your surveys and choose it again.";
+  consentSubject = null;
+  listing = true;
+  $("capture-error").textContent = text;
+  $("surveys-error").textContent = text;
+  log(false, "survey: " + text);
+  paint();
+}
+
+function peopleText(n) { return n === 1 ? "1 person" : `${n} people`; }
+
+function renderSurveys() {
+  const all = groups();
+  const filter = $("survey-filter");
+  filter.hidden = all.length <= FILTER_ABOVE;
+  const words = filter.hidden ? "" : filter.value.trim().toLowerCase();
+  const shown = all.filter((g) => !words || `${groupTitle(g)} ${g.cohort}`.toLowerCase().includes(words));
+  const current = activeGroup();
+  const box = $("survey-list");
+  box.replaceChildren();
+  for (const g of shown) {
+    const b = el("button", "subject" + (current && current.key === g.key ? " current" : ""));
+    b.type = "button";
+    b.dataset.group = g.key;
+    const who = el("span", "who");
+    who.append(el("b", "", groupTitle(g)), el("small", "", `Who to visit: ${g.cohort}, ${peopleText(g.roster.subjects.length)}`));
+    b.append(el("span", "seat", groupTitle(g).trim().slice(0, 1).toUpperCase() || "?"), who, el("span", "go", current && current.key === g.key ? "Continue" : "Open"));
+    b.addEventListener("click", () => chooseGroup(g));
+    box.append(b);
+  }
+  const empty = $("surveys-empty");
+  empty.hidden = shown.length > 0;
+  empty.textContent = all.length
+    ? "No survey matches that search."
+    : device.bundle && device.bundle.practice
+      ? "This bundle is for practice: it lists no surveys and no people."
+      : "No survey is assigned to this account yet. An operator assigns surveys in the factory portal; then check for new surveys.";
+  // The recommended choice is the one primary action; with nothing to choose, checking is.
+  const pick = shown.find((g) => current && current.key === g.key) || shown[0];
+  const open = $("open-survey");
+  open.hidden = !pick;
+  if (pick) {
+    open.textContent = (current && current.key === pick.key ? "Continue " : "Open ") + groupTitle(pick);
+    open.onclick = () => chooseGroup(pick);
+  }
+  const check = $("check-surveys");
+  check.classList.toggle("btn-primary", !pick);
+  check.classList.toggle("btn-secondary", !!pick);
+}
+
+$("survey-filter").addEventListener("input", () => renderSurveys());
 
 // ---- the session: the roster ----------------------------------------------------------------
 
@@ -530,10 +670,11 @@ function subjectName(s) {
 async function loadSummary() {
   try {
     const r = JSON.parse(await call("review"));
+    // A person is sealed for a survey: the key is the survey's fingerprint and the person.
     const sealed = new Set();
     let records = 0, undelivered = 0, from = null, through = null;
     for (const s of r.subjects) {
-      if (s.records.length) sealed.add(s.subject);
+      if (s.records.length) sealed.add(`${s.instrument}|${s.subject}`);
       for (const x of s.records) {
         records++;
         if (!/^(delivered|received|cleared)/i.test(x.delivery)) undelivered++;
@@ -546,34 +687,38 @@ async function loadSummary() {
   } catch (x) { fail("review", x); }
 }
 
+// The people of the chosen survey group, titled by the survey and not by the cohort.
 async function renderRoster() {
-  if (!held) return;
+  const group = activeGroup();
+  if (!group) return;
   await loadSummary();
   const box = $("subjects");
   box.replaceChildren();
-  let total = 0;
   let next = null;
   let nextRow = null;
-  for (const r of held.rosters) {
-    box.append(el("div", "cohort", `${r.cohort} (version ${r.version})`));
-    for (const s of r.subjects) {
-      total++;
-      const sealed = summary.sealed.has(s.subject);
-      const name = subjectName(s);
-      const b = el("button", "subject");
-      b.type = "button";
-      b.dataset.subject = s.subject;
-      const who = el("span", "who");
-      who.append(el("b", "", name), el("small", "", name === s.subject ? r.cohort : s.subject));
-      b.append(el("span", "seat", name.trim().slice(0, 1).toUpperCase() || "?"), who);
-      if (sealed) b.append(el("span", "tag sealed", "Sealed"));
-      else if (held.consent.required) b.append(el("span", "tag " + (s.consent === "granted" ? "given" : s.consent === "refused" ? "refused" : ""), "Consent: " + s.consent));
-      if (held.consent.required && s.consent === "refused") { b.disabled = true; }
-      if (!b.disabled) b.append(el("span", "go", sealed ? "Resurvey" : "Start"));
-      b.addEventListener("click", () => begin(s.subject, sealed ? "resurvey" : "first"));
-      box.append(b);
-      if (!next && !sealed && !b.disabled) { next = s; nextRow = b; }
-    }
+  const r = group.roster;
+  const survey = activeSurvey();
+  const consent = survey.consent;
+  const isSealed = (s) => summary.sealed.has(`${survey.fingerprint}|${s.subject}`);
+  renderSurveyPick(group, survey);
+  for (const s of r.subjects) {
+    const sealed = isSealed(s);
+    const name = subjectName(s);
+    const b = el("button", "subject");
+    b.type = "button";
+    b.dataset.subject = s.subject;
+    const who = el("span", "who");
+    who.append(el("b", "", name), el("small", "", name === s.subject ? r.cohort : s.subject));
+    b.append(el("span", "seat", name.trim().slice(0, 1).toUpperCase() || "?"), who);
+    // A roster's "granted" covers only the surveys its version names; for any other it is as unknown.
+    const state = s.consent === "granted" && !survey.covered ? "unknown" : s.consent;
+    if (sealed) b.append(el("span", "tag sealed", "Sealed"));
+    else if (consent.required) b.append(el("span", "tag " + (state === "granted" ? "given" : state === "refused" ? "refused" : ""), "Consent: " + state));
+    if (consent.required && s.consent === "refused") { b.disabled = true; }
+    if (!b.disabled) b.append(el("span", "go", sealed ? "Resurvey" : "Start"));
+    b.addEventListener("click", () => begin(s.subject, sealed ? "resurvey" : "first"));
+    box.append(b);
+    if (!next && !sealed && !b.disabled) { next = s; nextRow = b; }
   }
   const start = $("start-next");
   if (next) {
@@ -584,16 +729,31 @@ async function renderRoster() {
   } else {
     start.hidden = true;
   }
-  const one = held.rosters.length === 1 ? held.rosters[0] : null;
-  $("roster-title").textContent = one ? one.cohort : "Session";
-  $("roster-sub").textContent = one ? `List version ${one.version}` : `${held.rosters.length} lists`;
-  const done = summary.sealed.size;
-  $("roster-count").textContent = total ? `${done} of ${total} sealed` : "Nobody is listed for this session.";
+  const total = r.subjects.length;
+  $("roster-title").textContent = group.surveys.length > 1 ? "Who to visit" : groupTitle(group);
+  $("roster-sub").textContent = `Who to visit: ${r.cohort}, list version ${r.version}`;
+  const done = r.subjects.filter(isSealed).length;
+  $("roster-count").textContent = total ? `${done} of ${total} sealed` : "Nobody is listed for this survey.";
   $("roster-bar").style.width = total ? Math.round((100 * done) / total) + "%" : "0";
 }
 
+// With several surveys in the group, the collector chooses which one to conduct for the people below.
+function renderSurveyPick(group, current) {
+  const box = $("survey-pick");
+  box.hidden = group.surveys.length < 2;
+  box.replaceChildren();
+  for (const s of group.surveys) {
+    const b = el("button", "pick", titleOf(s));
+    b.type = "button";
+    b.dataset.survey = s.survey;
+    b.setAttribute("aria-pressed", s.survey === current.survey ? "true" : "false");
+    b.addEventListener("click", () => chooseSurvey(s));
+    box.append(b);
+  }
+}
+
 $("to-export").addEventListener("click", () => toExport());
-$("another-survey").addEventListener("click", () => { choosingSurvey = true; paint(); });
+$("switch-survey").addEventListener("click", () => { listing = true; paint(); });
 $("sealed-export").addEventListener("click", () => toExport());
 
 async function toRoster() {
@@ -604,19 +764,22 @@ async function toRoster() {
 
 // ---- consent, then capture ------------------------------------------------------------------
 
-async function begin(subject, mode = "first") {
+async function begin(subject, mode = "first", chosen = null) {
   $("capture-error").textContent = "";
+  const survey = chosen || activeSurvey();
+  if (!stillHeld(survey)) { surveyGone(); return; }
   try {
-    const view = JSON.parse(await call("startCapture", subject, mode));
+    const view = JSON.parse(await call("startCapture", subject, survey.fingerprint, mode));
     consentSubject = null;
-    await open(subject, view);
+    await open(subject, survey, view);
   } catch (err) {
-    if (String(err.message).includes("consent_needed") && held.consent.required) {
+    if (String(err.message).includes("consent_needed") && survey.consent.required) {
       consentSubject = subject;
-      $("consent-text").textContent = `Consent is required before capturing about ${subject} (COL-031). Record the basis on which it was given.`;
+      consentSurvey = survey;
+      $("consent-text").textContent = `Consent is required before capturing about ${subject}${held && held.surveys.length > 1 ? ` for ${titleOf(survey)}` : ""} (COL-031). Record the basis on which it was given.`;
       const box = $("consent-basis");
       box.replaceChildren();
-      for (const b of held.consent.bases) {
+      for (const b of survey.consent.bases) {
         const label = el("label");
         const input = document.createElement("input");
         input.type = "radio"; input.name = "basis"; input.value = b;
@@ -636,9 +799,9 @@ $("form-consent").addEventListener("submit", async (e) => {
   const basis = $("consent-basis").querySelector("input:checked");
   if (!basis) { $("consent-error").textContent = "Choose the basis on which consent was given."; return; }
   try {
-    await call("recordConsent", consentSubject, basis.value, held.consent.statementVersion);
+    await call("recordConsent", consentSubject, consentSurvey.fingerprint, basis.value, consentSurvey.consent.statementVersion);
     log(true, "consent recorded and sealed for " + consentSubject, "consent recorded");
-    await begin(consentSubject, "first");
+    await begin(consentSubject, "first", consentSurvey);
   } catch (x) { $("consent-error").textContent = fail("consent", x); }
 });
 
@@ -663,14 +826,18 @@ function wire(doc) {
     if (h) $("capture-title").textContent = h.textContent.trim();
     top.style.display = "none";
   }
+  // On a phone the frame is the screen: the form's own bar (the name and the step pills) gives its
+  // height to the questions, and "Step n of N" above each step says where the collector is.
+  const bar = doc.querySelector(".bar");
+  if (bar && windowClass() === "compact") bar.style.display = "none";
 }
 
-async function open(subject, view) {
+async function open(subject, survey, view) {
   const roster = await call("rosterFields", subject);
   const s = held.rosters.flatMap((r) => r.subjects).find((x) => x.subject === subject);
   phase = "about";
   aboutLabel = "Capture";
-  capture = { subject, name: s ? subjectName(s) : subject, window: null, options: null, roster, sent: new Map(), view, problems: new Map(), ev: null };
+  capture = { subject, fingerprint: survey.fingerprint, name: s ? subjectName(s) : subject, window: null, options: null, roster, sent: new Map(), view, problems: new Map(), ev: null };
   $("capture-subject").textContent = capture.name;
   $("verdicts").replaceChildren();
   $("close-confirm").hidden = true;
@@ -680,7 +847,7 @@ async function open(subject, view) {
   await new Promise((r) => requestAnimationFrame(r));
   capture.window = windowClass();
   capture.options = optionsFor(capture.window);
-  const html = await call("render", capture.options, "", roster);
+  const html = await call("render", capture.fingerprint, capture.options, "", roster);
   const doc = $("frame").contentDocument;
   doc.open();
   doc.write(html);
@@ -725,7 +892,8 @@ function splitProblem(text) {
 function stepLabel(doc) {
   const cur = doc.querySelector(".stepper a[aria-current=step]") || doc.querySelector(".stepper a");
   const t = cur ? cur.textContent.trim() : "";
-  if (t && t !== aboutLabel) {
+  // On a phone the form says "Step n of N" itself, and the bar stays one line tall.
+  if (t && t !== aboutLabel && windowClass() !== "compact") {
     aboutLabel = t;
     const li = root.querySelector('#pills li[data-pill="about"]');
     if (li) li.textContent = t;
@@ -750,7 +918,7 @@ async function sync() {
       capture.problems.set(p || text, m);
     }
   }
-  const ev = JSON.parse(await call("evaluate", capture.options, readAnswers(doc), capture.roster));
+  const ev = JSON.parse(await call("evaluate", capture.fingerprint, capture.options, readAnswers(doc), capture.roster));
   capture.ev = ev;
   applyVisibility(doc, ev.visibility);
   // Answers the rules clear (their question is no longer applicable) are cleared in the form too,
@@ -832,7 +1000,7 @@ addEventListener("resize", () => {
     const values = "{" + readAnswerEntries(frame.contentDocument).map(([p, v]) => JSON.stringify(p) + ":" + v).join(",") + "}";
     capture.window = windowClass();
     capture.options = optionsFor(capture.window);
-    const html = await call("render", capture.options, values, capture.roster);
+    const html = await call("render", capture.fingerprint, capture.options, values, capture.roster);
     const doc = frame.contentDocument;
     doc.open(); doc.write(html); doc.close();
     wire(doc);

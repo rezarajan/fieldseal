@@ -340,7 +340,7 @@ fn check_rosters(content: &BundleContent, referenced: &BTreeSet<String>, held: &
             });
         }
         if let Some(h) = held.rosters.iter().find(|h| h.cohort == roster.cohort) {
-            let held_roster = Roster { cohort: h.cohort.clone(), version: h.version, generation: h.generation, entries: vec![] };
+            let held_roster = Roster { cohort: h.cohort.clone(), version: h.version, generation: h.generation, entries: vec![], consent_covers: vec![] };
             held_roster
                 .may_be_followed_by(roster)
                 .map_err(|error| BundleRejection::Roster { cohort: roster.cohort.clone(), error })?;

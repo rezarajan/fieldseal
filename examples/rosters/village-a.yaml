@@ -9,6 +9,10 @@
 # never be recorded.
 cohort: village-a
 version: 3
+# `consent-covers` names the surveys a `granted` consent on this roster covers. A survey not named
+# needs the collector to record the person's consent on the device, as for `unknown`. Leave it out
+# and the factory records the surveys assigned to the cohort when the roster is issued.
+consent-covers: [household-water-access]
 subjects:
   - subject: hh-0001
     display: Household 1

@@ -85,7 +85,7 @@ This spec covers the Instrument bounded context: the model of what a deployment 
 | `EvaluateRules` | `Instrument`, a record's item values | Verdicts per rule: `pass`, `hard`, `soft`, plus skip states | `EvaluationLimitExceeded` |
 | `EvaluateFieldChecks` | `Instrument`, a set of records | Raised field checks with the records involved | `EvaluationLimitExceeded` |
 | `ValidateLayout` | `Layout`, the `Instrument` it is bound to | `Layout` with its content address, or findings | `FingerprintMismatch`, `UnplacedQuestion`, `DuplicatePlacement`, `OrderChanged`, `ContentOverride`, `UnsupportedPresentation` |
-| `LintLayout` | `Layout`, `Instrument`, lint thresholds | Advisory choice-load findings (INS-210–INS-213) | — |
+| `LintLayout` | `Layout`, `Instrument`, lint thresholds | Choice-load findings (INS-210–INS-213) | — |
 | `CompileRenderPlan` | `Instrument`, `Layout` (with its content address) or none, locale, window class | A `RenderPlan`; with no layout, the default layout (INS-206) | `LayoutMismatch` (the layout was validated against another instrument) |
 | `ResolveVisibility` | `RenderPlan`, its `Instrument`, current values and roster | Which nodes are visible, protected or hidden now | `EvaluationLimitExceeded` |
 
@@ -351,15 +351,15 @@ A layout arranges one instrument's elements for presentation. It is published as
 - **INS-214** A layout MUST partition, never permute: the questions it places, read in layout order (steps in order, then containers depth-first, tabs in order), MUST be in the instrument's tree order. Validation MUST fail with `OrderChanged` otherwise.
 - **INS-215** Each `tab` of a `tabs` container MUST hold exactly one group of the instrument (as a `{group}` or `{repeat}` leaf, or as containers that place only that group's elements), and the groups of one `tabs` container MUST be siblings, in tree order. Free navigation (INS-205) MUST NOT reach questions outside those groups.
 
-**Choice-load lints.** These apply Hick's law and the survey-methodology evidence on grids. They are advisory: `fieldseal layout lint` reports them, and publishing policy MAY make any of them blocking or change its threshold.
+**Choice-load lints.** These apply Hick's law and the survey-methodology evidence on grids. They are warnings, except INS-210 on a `compact` layout, which is an error: `fieldseal layout lint` reports them, and publishing policy MAY make any warning blocking or change a threshold.
 
-- **INS-210** SHOULD warn when a screen holds more than `maxDecisionsPerScreen` (default 7) questions. The count is exact and advisory:
+- **INS-210** MUST report a finding when a screen holds more than `maxDecisionsPerScreen` (default 7) questions: an error when the layout's window class is `compact`, so that a phone screen never needs scrolling to answer, and a warning for `medium`, `expanded` and a layout with no window class. The count is exact:
   - A *screen* is a `step`, or one `tab` of a `tabs` container. A tab is its own screen, and its questions do not count towards the step that holds the `tabs`.
   - A screen's count is the number of questions in its subtree of the render plan that have an input control. Read-only roster items, "other" text inputs and instance-name inputs are not counted.
   - A repeat group counts its questions once for each of its instances in the plan, whether it is drawn as a `list` or a `table`.
   - The count is taken from the plan alone: it counts questions placed, not questions a record leaves unanswered or hidden, so it is the same for every record.
 
-  Because every instance counts, per-instance counting is noisy for long repeats: a repeat of ten instances with two questions each counts twenty, though a `list` shows the collector one card at a time. The lint therefore stays advisory (a warning, never an error), and publishing policy MAY raise `maxDecisionsPerScreen` or leave the finding non-blocking.
+  Because every instance counts, per-instance counting is noisy for long repeats: a repeat of ten instances with two questions each counts twenty, though a `list` shows the collector one card at a time. A compact layout that splits a long repeat across steps avoids the noise; for the other window classes the finding stays a warning, and publishing policy MAY raise `maxDecisionsPerScreen` or leave the finding non-blocking.
 - **INS-211** SHOULD warn when a visible `choice` or `multi-choice` shows more than `maxVisibleOptions` (default 9) options without a code-list grouping or search presentation.
 - **INS-212** SHOULD warn when a `table` places a `scale` of 7 or more steps on a layout whose `windowClass` is `compact`, or that has none.
 - **INS-213** SHOULD warn when a question that a rule hides or protects is placed before the question it depends on.

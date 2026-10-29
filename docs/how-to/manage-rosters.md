@@ -1,6 +1,6 @@
 # Manage rosters
 
-A roster lists the subjects of one cohort: an ID, the name the collector sees, a consent state and the values a survey reads as `roster.<field>`. This guide covers the three commands that work on files and a copy of the roster store (`roster check`, `roster diff` and `roster list`) and the two operations of the factory (`roster issue` and `roster assign`).
+A roster lists the subjects of one cohort: an ID, the name the collector sees, a consent state and the values a survey reads as `roster.<field>`. A `granted` consent covers only the surveys the roster names in `consent-covers` (see below). This guide covers the three commands that work on files and a copy of the roster store (`roster check`, `roster diff` and `roster list`) and the two operations of the factory (`roster issue` and `roster assign`).
 
 ## Check a roster against its survey
 
@@ -14,8 +14,23 @@ The command checks the file first, then compares it with the survey.
 - The file must be a closed form: one cohort, a `version` of at least 1, unique subject IDs, a consent state of `granted`, `refused` or `unknown`, and no key that is not part of the format. A `generation` key is refused, because a generation belongs to a cohort on one tenancy. Every problem is reported, not only the first.
 - A field the survey reads that a subject lacks is an error. It names the field and the subject's position (for example `head_name` missing for subject 2), never the subject's ID.
 - A field in the roster that no survey reads is a note, because the bundle builder drops it before the roster is sealed.
+- A `consent-covers` name that none of the given surveys carries is an error. The output also says what the roster's consent covers, or that the factory will record the assigned surveys when it is issued.
 
 `--instrument` takes a survey folder, and may be given more than once. A roster field is a note only when none of the surveys reads it. The command writes nothing and exits `1` when there is an error.
+
+## Which surveys a consent covers
+
+Consent is given for a survey. A roster's `granted` counts only for the surveys the roster version covers; for any other survey the collector records the person's consent on the device first, exactly as for `unknown`. `refused` refuses every survey.
+
+```yaml
+cohort: village-a
+version: 3
+consent-covers: [household-water-access]
+subjects:
+  - { subject: hh-0002, display: Household 2, consent: granted, fields: { head_name: Tomas } }
+```
+
+`consent-covers` is optional. When the file names it, `roster check --instrument` reports a name that none of the given surveys carries, which is nearly always a typo. When the file leaves it out, the factory records the surveys assigned to the cohort at the moment it accepts the roster (in any account), and that list is fixed with the version: a survey assigned later is not covered by it, and its `granted` people are asked for consent on the device until you issue a newer version that names the survey. `roster diff` reports a change of coverage between two versions.
 
 ## Which fields reach a device
 
@@ -28,7 +43,7 @@ fieldseal roster diff examples/rosters/village-a.yaml examples/rosters/next/vill
 fieldseal roster diff village-a@3 examples/rosters/next/village-a.yaml --store ./rosters
 ```
 
-Each side is a file, or `<cohort>@<version>` read from `--store`, a read-only copy of the factory's roster store. The output is counts: subjects added, removed and kept, consent changes by from and to state, `prior_status` changes, and the names of the fields whose values changed. It shows no subject ID and no value.
+Each side is a file, or `<cohort>@<version>` read from `--store`, a read-only copy of the factory's roster store. The output is counts: subjects added, removed and kept, consent changes by from and to state, whether the consent coverage changed, `prior_status` changes, and the names of the fields whose values changed. It shows no subject ID and no value.
 
 `--reveal` adds the IDs and values and prints a warning on stderr. Use it only where the output is as private as the roster.
 

@@ -66,6 +66,7 @@ fn int_040_the_file_roster_history_satisfies_the_contract() {
             address: Digest::from([version as u8; 32]),
             issued_at: AuthorityTime(1_000),
             consent: [(SubjectId::new("s-1").expect("subject"), IssuedConsent::Granted)].into_iter().collect(),
+            covers: ["survey-a".to_owned()].into_iter().collect(),
         };
         record_issued(&issued, &tenancy, &roster).expect("recorded");
     }

@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::cbor;
 use fieldseal_kernel::error::WireError;
-use fieldseal_kernel::id::{RecordId, Seq};
+use fieldseal_kernel::id::{Fingerprint, RecordId, Seq};
 use fieldseal_kernel::payload::Mode;
 use fieldseal_kernel::structure::Fields;
 
@@ -87,14 +87,18 @@ fn retracted(v: &Value) -> bool {
     v.as_map().is_some_and(|m| m.len() == 1 && m.get("retracted") == Some(&Value::Bool(true)))
 }
 
-/// Folds local record entries into each subject's current state, by subject bytes.
-pub fn fold(entries: &[LocalEntryView]) -> BTreeMap<Vec<u8>, SubjectState> {
+/// Who a state is about: the subject, bytes as sealed, and the instrument. A person surveyed with
+/// two instruments has two states, since their item paths are not one namespace.
+pub type StateKey = (Vec<u8>, Fingerprint);
+
+/// Folds local record entries into the current state of each subject and instrument.
+pub fn fold(entries: &[LocalEntryView]) -> BTreeMap<StateKey, SubjectState> {
     let mut sorted: Vec<&LocalEntryView> = entries.iter().collect();
     sorted.sort_by_key(|e| e.seq);
-    let mut out: BTreeMap<Vec<u8>, SubjectState> = BTreeMap::new();
+    let mut out: BTreeMap<StateKey, SubjectState> = BTreeMap::new();
     for e in sorted {
-        let Some(subject) = e.payload.subject() else { continue };
-        let s = out.entry(subject.to_vec()).or_default();
+        let (Some(subject), Some(instrument)) = (e.payload.subject(), e.payload.instrument()) else { continue };
+        let s = out.entry((subject.to_vec(), *instrument)).or_default();
         s.records.push(e.seq);
         match &e.payload {
             Payload::Items(p) => {

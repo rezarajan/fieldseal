@@ -126,12 +126,41 @@ fn cli_045_strict_turns_warnings_into_errors() {
     assert_eq!(code, 1, "{doc:?}");
     assert_eq!(severities(&doc, "warning"), 0);
     assert!(severities(&doc, "error") > 0);
-    // The shipped examples pass --strict (their layout lints stay advice).
+    // The shipped examples pass --strict (their expanded layouts' lints stay warnings).
     for (survey, roster) in [("household-water-access", "village-a"), ("school-meals-baseline", "cohort-a")] {
         let r = repo();
         let o = sb.run(&["survey", "check", &r.join("examples/surveys").join(survey).to_string_lossy(), "--roster", &r.join("examples/rosters").join(format!("{roster}.yaml")).to_string_lossy(), "--strict"]);
         assert!(o.status.success(), "{survey}: {}", String::from_utf8_lossy(&o.stdout));
     }
+}
+
+#[test]
+fn ins_210_too_many_questions_on_a_screen_is_an_error_on_a_compact_layout_and_a_warning_otherwise() {
+    let sb = Sandbox::new("check-ins-210");
+    let source = repo().join("examples/surveys/school-meals-baseline");
+    let copy = sb.dir.join("surveys/school-meals-baseline");
+    std::fs::create_dir_all(sb.dir.join("surveys")).unwrap();
+    assert!(std::process::Command::new("cp").arg("-r").arg(&source).arg(&copy).status().unwrap().success());
+    let ins_210 = |doc: &Value, severity: &str| findings(doc).iter().filter(|f| f["id"].as_text() == Some("INS-210") && f["severity"].as_text() == Some(severity)).count();
+
+    // The expanded layout holds up to 24 questions on a screen: warnings, and the check passes.
+    let (code, doc) = sb.json(&["survey", "check", "surveys/school-meals-baseline"]);
+    assert_eq!((code, ins_210(&doc, "error")), (0, 0), "{doc:?}");
+    assert!(ins_210(&doc, "warning") > 0);
+
+    // The same layout declared for a compact window is an error, so the check fails. (The
+    // compact layout goes, and the expanded one's titles are translated as compact ones.)
+    std::fs::remove_file(copy.join("layouts/compact.yaml")).unwrap();
+    let layout = copy.join("layouts/expanded.yaml");
+    let text = std::fs::read_to_string(&layout).unwrap().replace("window: expanded", "window: compact");
+    std::fs::write(copy.join("layouts/compact.yaml"), text).unwrap();
+    std::fs::remove_file(&layout).unwrap();
+    let po = copy.join("i18n/es.po");
+    let kept: Vec<String> = std::fs::read_to_string(&po).unwrap().split("\n\n").filter(|b| !b.contains("\"layout/compact/")).map(|b| b.replace("layout/expanded/", "layout/compact/")).collect();
+    std::fs::write(&po, kept.join("\n\n")).unwrap();
+    let (code, doc) = sb.json(&["survey", "check", "surveys/school-meals-baseline"]);
+    assert_eq!(code, 1, "{doc:?}");
+    assert!(ins_210(&doc, "error") > 0, "{doc:?}");
 }
 
 #[test]

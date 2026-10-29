@@ -66,6 +66,21 @@ pub struct Roster {
     pub generation: Generation,
     /// The subjects.
     pub entries: Vec<RosterEntry>,
+    /// The surveys, by name, that a subject's `granted` consent on this roster covers. A survey
+    /// not listed needs the subject's consent on the device, as for `unknown`; `refused` covers
+    /// nothing and refuses every survey (WIRE-095, COL-031). Sorted, without repeats.
+    pub consent_covers: Vec<String>,
+}
+
+/// Whether `name` can be a survey name in a roster's coverage list: non-empty, without
+/// whitespace or control characters (the issued-roster file keeps one per line).
+pub fn is_survey_name(name: &str) -> bool {
+    !name.is_empty() && name.len() <= 128 && !name.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
+/// `names` sorted and without repeats, as a roster carries them.
+fn normalised(names: impl IntoIterator<Item = String>) -> Vec<String> {
+    names.into_iter().collect::<BTreeSet<_>>().into_iter().collect()
 }
 
 /// Why a roster can't follow the one a tenancy already holds.
@@ -108,6 +123,11 @@ impl Roster {
         Ok(())
     }
 
+    /// Whether a `granted` consent on this roster covers the survey named `survey`.
+    pub fn covers(&self, survey: &str) -> bool {
+        self.consent_covers.iter().any(|c| c == survey)
+    }
+
     /// The roster field names any entry carries.
     pub fn field_names(&self) -> BTreeSet<&str> {
         self.entries.iter().flat_map(|e| e.attributes.keys().map(String::as_str)).collect()
@@ -141,12 +161,16 @@ impl Roster {
                 cbor::map(fields)
             })
             .collect();
-        cbor::map([
+        let mut fields = vec![
             ("cohort", Value::Text(self.cohort.as_str().to_owned())),
             ("version", Value::Int(i128::from(self.version))),
             ("generation", Value::Int(i128::from(self.generation.0))),
             ("subjects", Value::Array(subjects)),
-        ])
+        ];
+        if !self.consent_covers.is_empty() {
+            fields.push(("consent_covers", Value::Array(self.consent_covers.iter().cloned().map(Value::Text).collect())));
+        }
+        cbor::map(fields)
     }
 
     /// Canonical CBOR of the roster.
@@ -189,8 +213,25 @@ impl Roster {
             }
             entries.push(RosterEntry { ordinal, subject, display, attributes, consent, prior_status });
         }
+        let consent_covers = match f.take_opt("consent_covers") {
+            None => Vec::new(),
+            Some(Value::Array(a)) if !a.is_empty() => {
+                let mut names = Vec::new();
+                for v in a {
+                    match v {
+                        Value::Text(t) if is_survey_name(&t) => names.push(t),
+                        _ => return Err(bad("consent_covers holds something that is not a survey name")),
+                    }
+                }
+                if !names.windows(2).all(|w| w[0] < w[1]) {
+                    return Err(bad("consent_covers is not sorted without repeats"));
+                }
+                names
+            }
+            Some(_) => return Err(bad("consent_covers is not a non-empty list")),
+        };
         f.finish()?;
-        Ok(Self { cohort, version, generation, entries })
+        Ok(Self { cohort, version, generation, entries, consent_covers })
     }
 }
 
@@ -215,11 +256,16 @@ pub struct RosterIssueForm {
     pub version: u64,
     /// The subjects, ordinals strictly increasing.
     pub entries: Vec<RosterEntry>,
+    /// The surveys a `granted` consent covers, when the file declares them (`consent-covers`).
+    /// When it doesn't, the factory records the surveys assigned to the cohort when the roster
+    /// is issued ([`Self::into_roster`]).
+    pub consent_covers: Option<Vec<String>>,
 }
 
 impl RosterIssueForm {
-    /// The wire form: `cohort`, `version` and `subjects`, each with `ordinal`, `subject`,
-    /// `display`, `consent`, optional `prior_status` and `fields`.
+    /// The wire form: `cohort`, `version`, `subjects`, each with `ordinal`, `subject`,
+    /// `display`, `consent`, optional `prior_status` and `fields`, and `consent-covers` when the
+    /// file declared it.
     pub fn to_value(&self) -> Value {
         let subjects = self
             .entries
@@ -238,11 +284,15 @@ impl RosterIssueForm {
                 cbor::map(fields)
             })
             .collect();
-        cbor::map([
+        let mut fields = vec![
             ("cohort", Value::Text(self.cohort.as_str().to_owned())),
             ("version", Value::Int(i128::from(self.version))),
             ("subjects", Value::Array(subjects)),
-        ])
+        ];
+        if let Some(covers) = &self.consent_covers {
+            fields.push(("consent-covers", Value::Array(covers.iter().cloned().map(Value::Text).collect())));
+        }
+        cbor::map(fields)
     }
 
     /// Canonical CBOR of the form.
@@ -255,9 +305,12 @@ impl RosterIssueForm {
         sha256(&self.encode())
     }
 
-    /// The form as a roster for `generation`.
-    pub fn into_roster(self, generation: Generation) -> Roster {
-        Roster { cohort: self.cohort, version: self.version, generation, entries: self.entries }
+    /// The form as a roster for `generation`. A roster that declared no `consent-covers` covers
+    /// `assigned`, the surveys assigned to its cohort now: the coverage is fixed when the
+    /// roster is issued, and a survey assigned later needs its own consent.
+    pub fn into_roster(self, generation: Generation, assigned: &[String]) -> Roster {
+        let consent_covers = normalised(self.consent_covers.unwrap_or_else(|| assigned.to_vec()));
+        Roster { cohort: self.cohort, version: self.version, generation, entries: self.entries, consent_covers }
     }
 }
 
@@ -271,7 +324,8 @@ fn finding(path: impl Into<String>, message: impl Into<String>) -> RosterFinding
 /// `subjects`. A subject has `subject` and `display` (text), and optionally `ordinal` (its
 /// position, counting from 1, when left out), `consent` (`granted`, `refused` or `unknown`, the
 /// default), `prior_status` (text) and `fields` (a map). Anything else, including `generation`,
-/// is a finding. Every finding is reported, not only the first.
+/// is a finding. The top level may also hold `consent-covers`, a list of survey names. Every
+/// finding is reported, not only the first.
 pub fn check_issue_form(value: Value) -> Result<RosterIssueForm, Vec<RosterFinding>> {
     let mut findings = Vec::new();
     let Value::Map(mut m) = value else {
@@ -314,6 +368,29 @@ pub fn check_issue_form(value: Value) -> Result<RosterIssueForm, Vec<RosterFindi
         None => {
             findings.push(finding("subjects", "subjects is missing"));
             Vec::new()
+        }
+    };
+    let consent_covers = match m.remove("consent-covers") {
+        None => None,
+        Some(Value::Array(a)) => {
+            let mut names = Vec::new();
+            for (i, v) in a.into_iter().enumerate() {
+                match v {
+                    Value::Text(t) if is_survey_name(&t) => {
+                        if names.contains(&t) {
+                            findings.push(finding(format!("consent-covers[{}]", i + 1), format!("survey `{t}` is listed twice")));
+                        } else {
+                            names.push(t);
+                        }
+                    }
+                    _ => findings.push(finding(format!("consent-covers[{}]", i + 1), "a survey name is text without spaces")),
+                }
+            }
+            Some(normalised(names))
+        }
+        Some(_) => {
+            findings.push(finding("consent-covers", "consent-covers must be a list of survey names"));
+            None
         }
     };
     for key in m.keys() {
@@ -398,7 +475,7 @@ pub fn check_issue_form(value: Value) -> Result<RosterIssueForm, Vec<RosterFindi
         }
     }
     let Some(cohort) = cohort else { return Err(findings) };
-    let form = RosterIssueForm { cohort, version: version.max(1), entries };
+    let form = RosterIssueForm { cohort, version: version.max(1), entries, consent_covers };
     if cbor::encode(&form.to_value()).is_err() {
         findings.push(finding("", "the roster has a value that can't be encoded (text must be NFC, integers within range)"));
     }

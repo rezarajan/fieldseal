@@ -5,6 +5,8 @@
 # `RosterSet::open` does not recurse, so this directory is not read as a current roster.
 cohort: village-a
 version: 4
+# Same coverage as the version it follows: its `granted` consent covers household-water-access.
+consent-covers: [household-water-access]
 subjects:
   - subject: hh-0001
     display: Household 1

@@ -67,6 +67,7 @@ fn roster(version: u64, generation: u32) -> Roster {
             consent: ConsentState::Unknown,
             prior_status: None,
         }],
+        consent_covers: vec![],
     }
 }
 

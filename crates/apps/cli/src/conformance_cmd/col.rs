@@ -46,6 +46,11 @@ fn path(p: &str) -> ItemPath {
     ItemPath::new(p).expect("path")
 }
 
+/// The fingerprint of the one instrument these worlds' bundles carry.
+fn sole(rt: &fieldseal_collection::application::Runtime<'_>) -> fieldseal_kernel::id::Fingerprint {
+    rt.held().expect("a bundle is held").instruments[0].fingerprint
+}
+
 fn subject(s: &str) -> SubjectId {
     SubjectId::new(s).expect("subject")
 }
@@ -104,7 +109,8 @@ impl World {
                 prior_status: None,
             })
             .collect();
-        HeldRoster { cohort: CohortId::new(cohort).unwrap(), version: 3, generation: 1, address: roster_address(cohort, 3, &subjects), subjects }
+        let consent_covers = vec![MEALS.to_owned(), WATER.to_owned()];
+        HeldRoster { cohort: CohortId::new(cohort).unwrap(), version: 3, generation: 1, address: roster_address(cohort, 3, &subjects), subjects, consent_covers }
     }
 
     /// A registered bundle file for the runtime's tenancy.
@@ -196,7 +202,7 @@ pub fn col_003_no_collection_about_real_subjects_before_registration() {
     let file = w.bundle(&rt, WATER, &[], vec![w.roster("village-a", &water_people())], false);
     rt.import_bundle(&file).unwrap();
     assert_eq!(rt.state(), Some(TenancyState::Local));
-    assert!(matches!(rt.start_capture(&subject("h-002"), CaptureMode::First), Err(CollectionError::NotAllowed(_))));
+    assert!(matches!(rt.start_capture(&subject("h-002"), &sole(&rt), CaptureMode::First), Err(CollectionError::NotAllowed(_))));
 }
 
 pub fn col_005_a_bundle_with_a_verified_certificate_registers_the_tenancy() {
@@ -217,7 +223,7 @@ fn import_with_tree_head(issued_day: u64, edit: impl FnOnce(&mut fieldseal_publi
         .authority
         .bundle(rt.tenancy().unwrap(), BundleSpec { instrument: &doc, layouts: &[], rosters: vec![], register: true, issued_day, seq: 1 })
         .unwrap();
-    edit(&mut contents.instrument);
+    edit(&mut contents.instruments[0]);
     rt.import_bundle(&w.device.bundles.register(contents))
 }
 
@@ -225,7 +231,7 @@ pub fn col_006_end_tenancy_seals_closing_moves_the_journal_to_the_outbox_and_cry
     let w = World::new();
     let mut rt = water(&w);
     let tenancy = rt.tenancy().unwrap();
-    rt.record_status(&subject("h-002"), StatusOutcome::Absent).unwrap();
+    rt.record_status(&subject("h-002"), &sole(&rt), StatusOutcome::Absent).unwrap();
     let summary = rt.end_tenancy().unwrap();
     assert_eq!(summary.parts, 1);
     assert_eq!(rt.state(), None, "erased");
@@ -338,7 +344,7 @@ pub fn col_024_sessions_lock_when_idle_and_on_background() {
     let w = World::new();
     let mut rt = water(&w);
     w.device.clock.advance_ms(119_000);
-    rt.start_capture(&subject("h-002"), CaptureMode::First).expect("still open");
+    rt.start_capture(&subject("h-002"), &sole(&rt), CaptureMode::First).expect("still open");
     w.device.clock.advance_ms(121_000);
     assert_eq!(rt.set_value(&path("household.members"), Value::Int(2)).unwrap_err(), CollectionError::Locked);
     assert!(!rt.is_unlocked(), "the key and the capture are dropped");
@@ -354,12 +360,110 @@ pub fn col_027_forgotten_pin_help_says_nothing_sealed_is_lost() {
     assert!(Runtime::forgotten_pin_help().contains("forgotten-pin"));
 }
 
+/// COL-031: a roster's `granted` consent covers only the surveys its version names. A roster
+/// covering one survey grants it, and another survey in the same bundle needs the consent
+/// recorded on the device first, as for `unknown`; `refused` still refuses every survey.
+pub fn col_031_a_roster_covers_only_the_surveys_it_names() {
+    let w = World::new();
+    let mut rt = w.runtime();
+    rt.create_tenancy(&pin(PIN)).expect("create");
+    let tenancy = rt.tenancy().expect("tenancy");
+    let (water, meals) = (example(WATER), example(MEALS));
+    // Both surveys require consent: the water survey takes the meals survey's consent block.
+    let consent = meals.instrument.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|m| m.get("consent")).cloned().expect("the meals consent block");
+    let mut water_doc = water.instrument.clone();
+    if let Value::Map(root) = &mut water_doc
+        && let Some(Value::Map(spec)) = root.get_mut("spec")
+    {
+        spec.insert("consent".into(), consent);
+    }
+    let mut roster = w.roster("village-a", &water_people());
+    roster.consent_covers = vec![WATER.to_owned()];
+    let mut contents = w.authority.bundle(tenancy, BundleSpec { instrument: &water_doc, layouts: &[], rosters: vec![roster], register: true, issued_day: 15, seq: 1 }).expect("bundle");
+    let second = w.authority.bundle(tenancy, BundleSpec { instrument: &meals.instrument, layouts: &[], rosters: vec![], register: false, issued_day: 15, seq: 1 }).expect("bundle");
+    contents.instruments.extend(second.instruments);
+    let file = w.device.bundles.register(contents);
+    rt.import_bundle(&file).expect("a bundle with two instruments imports");
+    let held = rt.held().expect("held");
+    let (water_fp, meals_fp) = (held.instruments[0].fingerprint, held.instruments[1].fingerprint);
+
+    // h-002 is `granted` on a roster that covers the water survey.
+    rt.start_capture(&subject("h-002"), &water_fp, CaptureMode::First).expect("the covered survey needs no consent of its own");
+    rt.discard_capture();
+    // The meals survey is not covered: it needs the consent recorded first.
+    assert!(matches!(rt.start_capture(&subject("h-002"), &meals_fp, CaptureMode::First), Err(CollectionError::ConsentNeeded)), "granted does not reach a survey the roster does not name");
+    rt.record_consent(&subject("h-002"), &ConsentInput { instrument: meals_fp, basis: "form-seen".into(), statement_version: 1, capture_evidence: false }).expect("consent on the device");
+    rt.start_capture(&subject("h-002"), &meals_fp, CaptureMode::First).expect("the recorded consent starts the survey");
+    rt.discard_capture();
+    // `unknown` needs consent for the covered survey too, and `refused` refuses both.
+    assert!(matches!(rt.start_capture(&subject("h-001"), &water_fp, CaptureMode::First), Err(CollectionError::ConsentNeeded)));
+    for fp in [water_fp, meals_fp] {
+        assert!(matches!(rt.start_capture(&subject("h-003"), &fp, CaptureMode::First), Err(CollectionError::ConsentRefused)));
+    }
+}
+
+/// COL-111: a bundle that carries two instruments is held whole. Each is conducted only with the
+/// cohort it is assigned to, and each record carries its own instrument's fingerprint.
+pub fn col_111_a_bundle_holds_every_instrument_and_each_record_names_its_own() {
+    use fieldseal_distribution::domain::BundleAssignment;
+    use fieldseal_kernel::id::Generation;
+    let w = World::new();
+    let mut rt = w.runtime();
+    rt.create_tenancy(&pin(PIN)).expect("create");
+    let tenancy = rt.tenancy().expect("tenancy");
+    let (water, meals) = (example(WATER), example(MEALS));
+    let layout = |s: &crate::embedded::Embedded| vec![s.layout("compact").expect("a compact layout").clone()];
+    let rosters = vec![w.roster("village-a", &water_people()), w.roster("cohort-a", &[("p-001", ConsentState::Granted), ("p-002", ConsentState::Unknown)])];
+    let mut contents = w.authority.bundle(tenancy, BundleSpec { instrument: &water.instrument, layouts: &layout(&water), rosters, register: true, issued_day: 15, seq: 1 }).expect("bundle");
+    let second = w.authority.bundle(tenancy, BundleSpec { instrument: &meals.instrument, layouts: &layout(&meals), rosters: vec![], register: false, issued_day: 15, seq: 1 }).expect("bundle");
+    contents.instruments.extend(second.instruments);
+    contents.layouts.extend(second.layouts);
+    let assign = |survey: &str, at: usize, cohort: &str| BundleAssignment {
+        survey: survey.into(),
+        instrument: *contents.instruments[at].address(),
+        cohort: CohortId::new(cohort).unwrap(),
+        generation: Generation(1),
+    };
+    contents.assignments = vec![assign(WATER, 0, "village-a"), assign(MEALS, 1, "cohort-a")];
+    let file = w.device.bundles.register(contents);
+    rt.import_bundle(&file).expect("a bundle with two instruments imports");
+
+    let held = rt.held().expect("held");
+    assert_eq!(held.instruments.len(), 2);
+    assert!(held.instruments.iter().all(|i| i.layouts.len() == 1), "each instrument holds its own layout");
+    let (water_fp, meals_fp) = (held.instruments[0].fingerprint, held.instruments[1].fingerprint);
+    assert_ne!(water_fp, meals_fp);
+
+    // A survey goes only to the cohort it is assigned to.
+    assert!(matches!(rt.start_capture(&subject("p-001"), &water_fp, CaptureMode::First), Err(CollectionError::NotAllowed(_))), "the water survey is not assigned to cohort-a");
+    assert!(matches!(rt.start_capture(&subject("h-002"), &meals_fp, CaptureMode::First), Err(CollectionError::NotAllowed(_))), "the meals survey is not assigned to village-a");
+    assert!(matches!(rt.record_status(&subject("p-001"), &water_fp, StatusOutcome::Absent), Err(CollectionError::NotAllowed(_))));
+
+    // Each record carries the fingerprint of the instrument it was made with.
+    rt.start_capture(&subject("h-002"), &water_fp, CaptureMode::First).expect("water for village-a");
+    fill_water(&mut rt);
+    let n = rt.capture_view().unwrap().unanswered.len();
+    rt.acknowledge_incomplete(n).unwrap();
+    rt.seal().expect("sealed");
+    rt.start_capture(&subject("p-001"), &meals_fp, CaptureMode::First).expect("meals for cohort-a");
+    rt.discard_capture();
+    rt.record_status(&subject("p-001"), &meals_fp, StatusOutcome::NotThem).expect("a status for the meals survey");
+    assert_eq!(items(&w, &rt).iter().map(|i| i.instrument).collect::<Vec<_>>(), vec![water_fp]);
+    let statuses: Vec<_> = payloads(&w, &rt).into_iter().filter_map(|(_, p)| if let Payload::Status { instrument, .. } = p { Some(instrument) } else { None }).collect();
+    assert_eq!(statuses, vec![meals_fp]);
+
+    // The review keeps a state for each instrument.
+    let review = rt.review(&ReviewFilter::default()).unwrap();
+    let reviewed: Vec<_> = review.subjects.iter().map(|s| (s.subject.as_str(), s.instrument)).collect();
+    assert_eq!(reviewed, vec![("p-001", meals_fp), ("h-002", water_fp)], "grouped by cohort, one state for each subject and instrument");
+}
+
 // ---- 5.5 Dual write ----------------------------------------------------------------------
 
 pub fn col_050_col_053_every_record_is_in_the_journal_and_the_local_record_signed_and_ticked() {
     let w = World::new();
     let mut rt = water(&w);
-    rt.record_status(&subject("h-001"), StatusOutcome::NotThem).unwrap();
+    rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::NotThem).unwrap();
     let local: Vec<String> = w.device.storage.list(StorageClass::SessionEncrypted).into_iter().filter(|n| n.starts_with("local/")).collect();
     let journal = payloads(&w, &rt);
     assert_eq!(local.len(), journal.len(), "one local entry per journal record");
@@ -398,7 +502,7 @@ pub fn col_092_crash_between_journal_append_and_local_write_is_completed_on_reco
     let mut rt = water(&w);
     // Seal steps: marker, pending entry, pending note, ticks, append | local entry, …
     w.device.storage.crash_after(5);
-    assert!(rt.record_status(&subject("h-001"), StatusOutcome::Absent).is_err());
+    assert!(rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).is_err());
     drop(rt);
     w.device.storage.restart();
     let mut rt = w.runtime();
@@ -407,7 +511,7 @@ pub fn col_092_crash_between_journal_append_and_local_write_is_completed_on_reco
     rt.open_session(&pin(PIN)).unwrap();
     let review = rt.review(&ReviewFilter::default()).unwrap();
     assert_eq!(review.subjects[0].status, Some(fieldseal_collection::domain::payload::StatusCode::Absent), "COL-050: both copies, as one operation");
-    rt.record_status(&subject("h-002"), StatusOutcome::Absent).expect("the chain continues");
+    rt.record_status(&subject("h-002"), &sole(&rt), StatusOutcome::Absent).expect("the chain continues");
     assert_eq!(payloads(&w, &rt).len(), 6);
 }
 
@@ -416,7 +520,7 @@ pub fn col_092_crash_before_the_append_discards_the_unsealed_record() {
     let mut rt = water(&w);
     let journal = rt.journal().unwrap();
     w.device.storage.crash_after(3);
-    assert!(rt.record_status(&subject("h-001"), StatusOutcome::Absent).is_err());
+    assert!(rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).is_err());
     drop(rt);
     w.device.storage.restart();
     let rt = w.runtime();
@@ -430,7 +534,7 @@ pub fn col_093_a_torn_journal_frame_is_truncated_without_losing_earlier_records(
     let mut rt = water(&w);
     let journal = rt.journal().unwrap();
     w.device.storage.tear_next_append(40);
-    assert!(rt.record_status(&subject("h-001"), StatusOutcome::Absent).is_err());
+    assert!(rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).is_err());
     assert_eq!(w.device.storage.peek(StorageClass::DeviceEncrypted, "journal").unwrap().len(), journal.len() + 40, "torn");
     drop(rt);
     w.device.storage.restart();
@@ -439,7 +543,7 @@ pub fn col_093_a_torn_journal_frame_is_truncated_without_losing_earlier_records(
     assert_eq!(rt.recovery().seals_discarded, vec![4]);
     assert_eq!(rt.journal().unwrap(), journal, "earlier records intact");
     rt.open_session(&pin(PIN)).unwrap();
-    rt.record_status(&subject("h-001"), StatusOutcome::Absent).unwrap();
+    rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).unwrap();
     assert_eq!(payloads(&w, &rt).len(), 5);
 }
 
@@ -448,7 +552,7 @@ pub fn col_093_fault_injection_at_every_step_of_seal_and_clear_leaves_a_consiste
         let w = World::new();
         let mut rt = water(&w);
         let start = w.device.storage.ops();
-        rt.record_status(&subject("h-001"), StatusOutcome::Absent).unwrap();
+        rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).unwrap();
         rt.clear(Seq(4), &pin(PIN), &pin(PIN), None).unwrap();
         w.device.storage.ops() - start
     };
@@ -456,7 +560,7 @@ pub fn col_093_fault_injection_at_every_step_of_seal_and_clear_leaves_a_consiste
         let w = World::new();
         let mut rt = water(&w);
         w.device.storage.crash_after(k);
-        let _ = rt.record_status(&subject("h-001"), StatusOutcome::Absent).and_then(|_| rt.clear(Seq(4), &pin(PIN), &pin(PIN), None));
+        let _ = rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).and_then(|_| rt.clear(Seq(4), &pin(PIN), &pin(PIN), None));
         drop(rt);
         w.device.storage.restart();
         let mut rt = w.runtime();
@@ -474,13 +578,13 @@ pub fn col_093_fault_injection_at_every_step_of_seal_and_clear_leaves_a_consiste
             assert!(cleared.is_some_and(|c| *seq <= c) || local.contains(seq), "step {k}: journal record {seq} has its local copy");
         }
         assert!(local.iter().all(|s| journal.iter().any(|(j, _)| j == s)), "step {k}: no local entry without a journal record");
-        rt.record_status(&subject("h-002"), StatusOutcome::Absent).unwrap_or_else(|e| panic!("step {k}: {e}"));
+        rt.record_status(&subject("h-002"), &sole(&rt), StatusOutcome::Absent).unwrap_or_else(|e| panic!("step {k}: {e}"));
     }
 }
 pub fn col_060_to_col_063_review_shows_current_state_records_and_field_checks() {
     let w = World::new();
     let mut rt = water(&w);
-    rt.start_capture(&subject("h-002"), CaptureMode::First).unwrap();
+    rt.start_capture(&subject("h-002"), &sole(&rt), CaptureMode::First).unwrap();
     fill_water(&mut rt);
     rt.set_value(&path("water.litres_per_day"), Value::Int(20)).unwrap();
     rt.override_soft("low-use", "dry-season").unwrap();
@@ -488,10 +592,10 @@ pub fn col_060_to_col_063_review_shows_current_state_records_and_field_checks() 
     rt.acknowledge_incomplete(n).unwrap();
     w.device.clock.advance_ms(10_000);
     rt.seal().unwrap();
-    rt.start_capture(&subject("h-002"), CaptureMode::Correction).unwrap();
+    rt.start_capture(&subject("h-002"), &sole(&rt), CaptureMode::Correction).unwrap();
     rt.set_value(&path("household.members"), Value::Int(4)).unwrap();
     rt.seal().unwrap();
-    rt.record_status(&subject("h-001"), StatusOutcome::Absent).unwrap();
+    rt.record_status(&subject("h-001"), &sole(&rt), StatusOutcome::Absent).unwrap();
     let review = rt.review(&ReviewFilter::default()).unwrap();
     let h2 = review.subjects.iter().find(|s| s.subject == subject("h-002")).unwrap();
     assert_eq!(h2.cohort.as_ref().unwrap().as_str(), "village-a", "grouped by cohort");
@@ -514,10 +618,11 @@ pub fn col_026_locked_runtime_refuses_work_but_still_applies_a_close_certificate
     let w = World::new();
     let mut rt = water(&w);
     let tenancy = rt.tenancy().unwrap();
+    let survey = sole(&rt);
     rt.lock("test");
     assert!(!rt.is_unlocked());
-    assert!(rt.record_status(&subject("h-002"), StatusOutcome::Absent).is_err(), "no signing while locked");
-    assert!(rt.start_capture(&subject("h-002"), CaptureMode::First).is_err(), "no capture while locked");
+    assert!(rt.record_status(&subject("h-002"), &survey, StatusOutcome::Absent).is_err(), "no signing while locked");
+    assert!(rt.start_capture(&subject("h-002"), &survey, CaptureMode::First).is_err(), "no capture while locked");
     let cert = w.authority.closes.issue(tenancy, Seq(3), "forgotten-pin");
     rt.apply_close_certificate(&cert, &w.authority.closes).expect("the exception: no PIN, no session");
     assert_eq!(rt.state(), None);
@@ -529,7 +634,7 @@ pub fn col_008_col_010_the_journal_moves_to_the_outbox_without_the_pin_and_the_o
     let w = World::new();
     let mut rt = water(&w);
     let tenancy = rt.tenancy().unwrap();
-    rt.record_status(&subject("h-002"), StatusOutcome::Absent).unwrap();
+    rt.record_status(&subject("h-002"), &sole(&rt), StatusOutcome::Absent).unwrap();
     rt.lock("test");
     let cert = w.authority.closes.issue(tenancy, Seq(3), "forgotten-pin");
     rt.apply_close_certificate(&cert, &w.authority.closes).unwrap();
@@ -541,7 +646,7 @@ pub fn col_008_col_010_the_journal_moves_to_the_outbox_without_the_pin_and_the_o
     assert_eq!(rt.outbox_summary().unwrap().parts, 1, "the journal travelled to the outbox");
 }
 
-// covers: COL-001, COL-002, COL-003, COL-005, COL-006, COL-007, COL-008, COL-009, COL-010, COL-021, COL-022, COL-023, COL-024, COL-026, COL-027, COL-050, COL-051, COL-052, COL-053, COL-062, COL-063, COL-092, COL-093, COL-101, INS-051, INS-052, INS-053
+// covers: COL-031, COL-111, COL-001, COL-002, COL-003, COL-005, COL-006, COL-007, COL-008, COL-009, COL-010, COL-021, COL-022, COL-023, COL-024, COL-026, COL-027, COL-050, COL-051, COL-052, COL-053, COL-062, COL-063, COL-092, COL-093, COL-101, INS-051, INS-052, INS-053
 
 const fn c(reqs: &'static [&'static str], name: &'static str, run: fn()) -> Check {
     Check { reqs, name, run }
@@ -562,6 +667,8 @@ const LIFECYCLE: &[Check] = &[
     c(&["COL-007"], "a close certificate closes without the PIN", col_007_a_close_certificate_closes_without_the_pin),
     c(&["COL-008", "COL-010"], "the journal moves to the outbox without the PIN and the outbox is readable", col_008_col_010_the_journal_moves_to_the_outbox_without_the_pin_and_the_outbox_is_readable),
     c(&["COL-009"], "outbox entries go only under a receipt", col_009_outbox_entries_go_only_under_a_receipt),
+    c(&["COL-031"], "a roster's granted consent covers only the surveys its version names", col_031_a_roster_covers_only_the_surveys_it_names),
+    c(&["COL-111"], "a bundle holds every instrument it carries and each record names its own", col_111_a_bundle_holds_every_instrument_and_each_record_names_its_own),
 ];
 
 const SESSION: &[Check] = &[

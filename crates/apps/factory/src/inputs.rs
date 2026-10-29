@@ -13,7 +13,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use fieldseal_distribution::application::BuildRequest;
-use fieldseal_distribution::domain::{Roster, RuntimeProfile, instrument_facts, layout_facts};
+use fieldseal_distribution::domain::{BundleAssignment, Roster, RuntimeProfile, instrument_facts, layout_facts};
 use fieldseal_distribution::ports::{RosterSource, RuntimeProfiles};
 use fieldseal_instrument::domain::{Compatibility, SemVer, WindowClass, check_compatibility};
 use fieldseal_kernel::cbor;
@@ -202,12 +202,13 @@ impl BuildInputs {
         let agreement_key = record.active_key(DeviceKeyKind::Agreement).ok_or(InputsError::NotRegistered)?.public_key.as_bytes().to_vec();
         let profile = ports.profiles.profile(tenancy).map_err(port("RuntimeProfiles"))?.ok_or(InputsError::ProfileUnknown)?;
 
-        // The latest assignment of each survey to this account (the journal is oldest first).
-        let mut latest: BTreeMap<String, (CohortId, Generation)> = BTreeMap::new();
+        // The latest assignment of each survey to each cohort for this account (the journal is
+        // oldest first). One survey may go to several cohorts, so both key the assignment.
+        let mut latest: BTreeMap<(String, CohortId), Generation> = BTreeMap::new();
         for a in ports.registry.assignments().map_err(port("RegistryStore"))?.into_iter().filter(|a| a.account == record.account) {
-            latest.insert(a.survey, (a.cohort, a.generation));
+            latest.insert((a.survey, a.cohort), a.generation);
         }
-        let assignments: Vec<(String, CohortId, Generation)> = latest.into_iter().map(|(survey, (cohort, generation))| (survey, cohort, generation)).collect();
+        let assignments: Vec<(String, CohortId, Generation)> = latest.into_iter().map(|((survey, cohort), generation)| (survey, cohort, generation)).collect();
 
         let recorded = ports.artefacts.withdrawals().map_err(port("ArtefactRegistry"))?;
         // A withdrawal counts only when it verifies against the publication it names, under
@@ -333,6 +334,14 @@ impl BuildInputs {
     pub fn request_for(&self) -> BuildRequest {
         let mut request = BuildRequest::new(self.tenancy, self.instruments.iter().map(|(_, a)| *a).collect());
         request.layouts.clone_from(&self.layouts);
+        request.assignments = self
+            .assignments
+            .iter()
+            .filter_map(|(survey, cohort, generation)| {
+                let (_, instrument) = self.instruments.iter().find(|(s, _)| s == survey)?;
+                Some(BundleAssignment { survey: survey.clone(), instrument: *instrument, cohort: cohort.clone(), generation: *generation })
+            })
+            .collect();
         request
     }
 }

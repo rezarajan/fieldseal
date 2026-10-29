@@ -19,7 +19,7 @@
 use std::collections::BTreeSet;
 
 use fieldseal_kernel::crypto::{Purpose, tags};
-use fieldseal_kernel::id::{ContentAddress, KeyId, TenancyId};
+use fieldseal_kernel::id::{ContentAddress, Fingerprint, KeyId, TenancyId};
 use fieldseal_kernel::seal::{RecipientKey, seal_with_context};
 use fieldseal_policy::application::Decide;
 use fieldseal_policy::domain::LayerSelector;
@@ -34,10 +34,11 @@ use fieldseal_trust::ports::{KeyCustody, RandomSource, SourceRng};
 use zeroize::Zeroizing;
 
 use super::release::{check_state, decide_release, release_facts};
+use crate::domain::content::consistent_assignments;
 use crate::domain::file::MAX_BUNDLE_FILE;
 use crate::domain::{
-    BundleContent, BundleFile, BundleManifest, BundleSeq, DistributionError, DistributionEvent, ReleaseDecision, Roster,
-    SealedBundle, artefacts_of, check_composition,
+    BundleAssignment, BundleContent, BundleFile, BundleManifest, BundleSeq, DistributionError, DistributionEvent, ReleaseDecision, Roster,
+    SealedBundle, artefacts_of, check_composition, layout_facts,
 };
 use crate::ports::{AnchorSource, BundleStore, RosterSource, RuntimeProfiles};
 
@@ -54,6 +55,10 @@ pub struct BuildRequest {
     pub localisations: Vec<ContentAddress>,
     /// Newer trust bundles to carry, as published `TrustBundle` artefacts.
     pub trust_updates: Vec<ContentAddress>,
+    /// The surveys assigned to the tenancy's account, from the factory's assignment journal.
+    /// Each names one of `instruments` and a cohort the tenancy holds a roster for; a practice
+    /// bundle carries none.
+    pub assignments: Vec<BundleAssignment>,
     /// A practice bundle: no rosters (DIS-004).
     pub practice: bool,
     /// Which policy layers apply to this bundle's instruments.
@@ -69,6 +74,7 @@ impl BuildRequest {
             layouts: vec![],
             localisations: vec![],
             trust_updates: vec![],
+            assignments: vec![],
             practice: false,
             selector: LayerSelector::default(),
         }
@@ -243,6 +249,44 @@ impl BuildBundle for BundleBuilder<'_, '_> {
 
         // 4. Rosters.
         let rosters = if request.practice { Vec::new() } else { self.rosters(&record, &referenced)? };
+        // Only an assignment whose instrument this build includes and whose cohort has a roster in
+        // it is carried, at that roster's generation. The factory's journal and the tenancy's
+        // cohorts are written separately, so one can be briefly ahead of the other; the bundle
+        // leaves such an assignment out rather than failing the whole build.
+        let mut assignments: Vec<BundleAssignment> = if request.practice {
+            Vec::new()
+        } else {
+            request
+                .assignments
+                .iter()
+                .filter(|a| instruments.iter().any(|p| *p.address() == a.instrument && p.artefact.name() == a.survey))
+                .filter_map(|a| {
+                    let roster = rosters.iter().find(|r| r.cohort == a.cohort)?;
+                    Some(BundleAssignment { generation: roster.generation, ..a.clone() })
+                })
+                .collect()
+        };
+        assignments.sort_by(|a, b| (&a.survey, &a.cohort).cmp(&(&b.survey, &b.cohort)));
+        assignments.dedup_by(|a, b| a.survey == b.survey && a.cohort == b.cohort);
+        // A request with assignments means the account is to conduct only those surveys: the
+        // bundle carries just the instruments (and their layouts) that a surviving assignment
+        // names. Dropping an assignment must never widen what the device allows, because a
+        // bundle that carries no assignments at all lets every survey go with every roster
+        // (DIS-018, COL-111).
+        let (instruments, layouts) = if request.practice || request.assignments.is_empty() {
+            (instruments, layouts)
+        } else {
+            let kept: Vec<_> = instruments.into_iter().filter(|p| assignments.iter().any(|a| a.instrument == *p.address())).collect();
+            let layouts = layouts
+                .into_iter()
+                .filter(|l| layout_facts(&l.artefact).is_ok_and(|f| kept.iter().any(|p| Fingerprint::from(*p.address().as_bytes()) == f.instrument)))
+                .collect();
+            (kept, layouts)
+        };
+        if instruments.is_empty() && rosters.is_empty() {
+            return Err(DistributionError::Withheld(vec!["no-instruments".into()]));
+        }
+        consistent_assignments(&instruments, &rosters, &assignments).map_err(DistributionError::Wire)?;
         let certificate = if request.practice { None } else { record.certificate.clone() };
         if !request.practice && certificate.is_none() {
             return Err(DistributionError::NotRegistered);
@@ -279,6 +323,7 @@ impl BuildBundle for BundleBuilder<'_, '_> {
             localisations,
             policy,
             rosters,
+            assignments,
             trust_updates,
             withdrawals,
         };

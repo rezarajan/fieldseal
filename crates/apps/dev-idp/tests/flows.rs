@@ -386,7 +386,7 @@ fn reg_046_an_assignment_for_a_subject_reaches_the_tenancy_that_person_registers
     let cohorts = Cohorts(BTreeSet::from(["cohort-a"]));
     struct NoRosters;
     impl fieldseal_registration::ports::RosterIssuer for NoRosters {
-        fn issue(&self, _: &CohortId, _: &[u8]) -> fieldseal_registration::ports::IssueOutcome {
+        fn issue(&self, _: &CohortId, _: &[u8], _: &[String]) -> fieldseal_registration::ports::IssueOutcome {
             fieldseal_registration::ports::IssueOutcome::Invalid("not used".into())
         }
     }

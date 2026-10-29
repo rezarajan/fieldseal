@@ -86,13 +86,23 @@ fn plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands() {
 
     // Capture through the real runtime; the core's own rules say what blocks sealing.
     let held = json(&dev.held_json().expect("held"));
+    // The device knows which survey is conducted with which cohort, and the survey's title: it
+    // shows the survey, not the cohort id (the bundle's assignments, WIRE-094).
+    let surveys = field(&held, "surveys");
+    let survey = &surveys.as_array().unwrap()[0];
+    assert_eq!(field(survey, "survey").as_text(), Some("household-water-access"));
+    let water_fp = field(survey, "fingerprint").as_text().expect("a fingerprint").to_owned();
+    assert!(field(survey, "title").as_map().unwrap().values().any(|t| t.as_text().is_some_and(|t| !t.is_empty())), "the instrument's title is carried");
     let rosters = field(&held, "rosters");
-    let first = field(&rosters.as_array().unwrap()[0], "subjects");
+    assert_eq!(field(survey, "cohort").as_text(), Some("village-a"), "the survey names the cohort whose roster it uses, though the bundle carries every certified roster");
+    assert!(rosters.as_array().unwrap().iter().any(|r| field(r, "cohort").as_text() == Some("village-a")));
+    let village = rosters.as_array().unwrap().iter().find(|r| field(r, "cohort").as_text() == Some("village-a")).expect("the survey's roster");
+    let first = field(village, "subjects");
     let subject = field(&first.as_array().unwrap()[0], "subject").as_text().unwrap().to_owned();
-    let mut ok = dev.start_capture(&subject, "first");
+    let mut ok = dev.start_capture(&subject, &water_fp, "first");
     if matches!(&ok, Err(e) if e == "consent_needed") {
-        dev.record_consent(&subject, "form-seen", 1).expect("consent");
-        ok = dev.start_capture(&subject, "first");
+        dev.record_consent(&subject, &water_fp, "form-seen", 1).expect("consent");
+        ok = dev.start_capture(&subject, &water_fp, "first");
     }
     ok.expect("PLAT-113: capture starts");
     let set = dev.set_values("{\"household.members\":4}").expect("answers set");
@@ -102,9 +112,32 @@ fn plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands() {
     dev.acknowledge_incomplete(unanswered).expect("ack");
     let sealed = dev.seal().expect("PLAT-114: the record seals (dual write)");
     assert!(sealed.contains("seq"));
-    let ev = dev.evaluate(&RenderOptions::default(), &Default::default(), &Default::default()).expect("evaluate");
+    let ev = dev.evaluate(&water_fp, &RenderOptions::default(), &Default::default(), &Default::default()).expect("evaluate");
     assert!(ev.contains("blocksSealing"));
-    assert!(dev.render(&RenderOptions::default(), None, None).expect("render").contains("<html"));
+    assert!(dev.render(&water_fp, &RenderOptions::default(), None, None).expect("render").contains("<html"));
+
+    // A bundle the factory builds with both example instruments is held whole: each survey has its
+    // own title and cohort, and the other survey can be conducted for its own cohort's people.
+    let both = demo.build_bundle_for(&req.tenancy, &["household-water-access", "school-meals-baseline"]).expect("a bundle with two instruments");
+    dev.import_bundle(&both.bytes).expect("the runtime accepts a bundle with two instruments");
+    let held = json(&dev.held_json().expect("held"));
+    let surveys = field(&held, "surveys");
+    let surveys = surveys.as_array().unwrap();
+    assert_eq!(surveys.len(), 2, "both surveys are listed");
+    let by = |name: &str| surveys.iter().find(|s| field(s, "survey").as_text() == Some(name)).unwrap_or_else(|| panic!("no survey {name}"));
+    let (water, meals) = (by("household-water-access"), by("school-meals-baseline"));
+    assert_ne!(field(water, "fingerprint"), field(meals, "fingerprint"));
+    let (water_fp, meals_fp) = (field(water, "fingerprint").as_text().unwrap().to_owned(), field(meals, "fingerprint").as_text().unwrap().to_owned());
+    assert_ne!(field(water, "title"), field(meals, "title"), "each survey has its own title");
+    assert_eq!(field(meals, "cohort").as_text(), Some("cohort-a"));
+    let meals_people = field(field(&held, "rosters").as_array().unwrap().iter().find(|r| field(r, "cohort").as_text() == Some("cohort-a")).expect("the meals roster"), "subjects");
+    let child = field(&meals_people.as_array().unwrap()[0], "subject").as_text().unwrap().to_owned();
+    let started = dev.start_capture(&child, &meals_fp, "first");
+    assert!(started.is_ok() || matches!(&started, Err(e) if e == "consent_needed"), "the meals survey starts for its own cohort: {started:?}");
+    assert!(dev.start_capture(&child, &water_fp, "first").is_err(), "the water survey is not assigned to that cohort");
+    assert!(dev.render(&meals_fp, &RenderOptions::default(), None, None).expect("render").contains("<html"));
+    assert!(dev.render("household-water-access", &RenderOptions::default(), None, None).is_err(), "a survey is named by its fingerprint, not its name");
+    dev.discard_capture();
 
     // Export, upload and receipt verification.
     let export = dev.export(true).expect("PLAT-115: export builds and verifies");

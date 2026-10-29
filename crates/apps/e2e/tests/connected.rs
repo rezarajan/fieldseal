@@ -11,7 +11,7 @@ use fieldseal_collection::application::CaptureMode;
 use fieldseal_collection::domain::{DeliveryState, RuntimePin, TenancyState};
 use fieldseal_delivery::domain::{AddressHint, DeliveryLabel, HintSource};
 use fieldseal_distribution::domain::ConsentState;
-use fieldseal_e2e::{Couriers, Enrolled, Intake, Opener, PIN, Phone, Site, delivery, household_answers, now, roster};
+use fieldseal_e2e::{Couriers, Enrolled, Intake, Opener, PIN, Phone, Site, delivery, household_answers, sole_survey, now, roster};
 use fieldseal_intake::domain::{ObservedValue, Reading};
 use fieldseal_intake::ports::DataPlatform;
 use fieldseal_kernel::Value;
@@ -60,26 +60,26 @@ fn del_002_int_050_the_connected_flow_lands_what_was_captured_and_the_device_cle
     rt.import_bundle(&bundle).expect("the device verifies and imports it");
     assert_eq!(rt.state(), Some(TenancyState::Registered), "COL-005: the certificate registers the tenancy");
     let held = rt.held().expect("held");
-    assert_eq!(held.fingerprint, site.fingerprint(), "DIS-062: named by fingerprint");
+    assert_eq!(held.instruments[0].fingerprint, site.fingerprint(), "DIS-062: named by fingerprint");
     assert_eq!(held.rosters[0].subjects.len(), 4);
     assert!(!held.rosters[0].subjects[0].fields().contains_key("internal_note"), "DIS-013: only referenced roster fields travel");
     let held_rosters = held.rosters.clone();
 
     // -- COL-030..043: capture. h-003 refused consent, so nothing may be recorded for them.
-    assert!(rt.start_capture(&subject("h-003"), CaptureMode::First).is_err(), "COL-030");
+    assert!(rt.start_capture(&subject("h-003"), &sole_survey(&rt), CaptureMode::First).is_err(), "COL-030");
     // h-002: roster consent. First visit in Spanish, with a nonresponse; then a resurvey.
     rt.set_languages(&["es"]).expect("language");
     let first = fieldseal_e2e::capture_household(&mut rt, "h-002", 5);
-    rt.start_capture(&subject("h-002"), CaptureMode::Resurvey).expect("resurvey");
+    rt.start_capture(&subject("h-002"), &sole_survey(&rt), CaptureMode::Resurvey).expect("resurvey");
     rt.set_value(&path("household.members"), Value::Int(6)).expect("changed");
     let resurvey = rt.seal().expect("seal");
     // h-001: consent unknown on the roster, attested by the collector (COL-031, COL-040).
     rt.set_languages(&["en"]).expect("language");
-    assert!(rt.start_capture(&subject("h-001"), CaptureMode::First).is_err(), "COL-031: consent first");
-    rt.record_consent(&subject("h-001"), &fieldseal_collection::application::ConsentInput { basis: "form-seen".into(), statement_version: 1, capture_evidence: true }).expect("attestation");
+    assert!(rt.start_capture(&subject("h-001"), &sole_survey(&rt), CaptureMode::First).is_err(), "COL-031: consent first");
+    rt.record_consent(&subject("h-001"), &fieldseal_collection::application::ConsentInput { instrument: sole_survey(&rt), basis: "form-seen".into(), statement_version: 1, capture_evidence: true }).expect("attestation");
     let attested = fieldseal_e2e::capture_household(&mut rt, "h-001", 2);
     // h-004: not at home.
-    rt.record_status(&subject("h-004"), fieldseal_collection::application::StatusOutcome::Absent).expect("status");
+    rt.record_status(&subject("h-004"), &sole_survey(&rt), fieldseal_collection::application::StatusOutcome::Absent).expect("status");
     assert!(attested > resurvey && resurvey > first);
 
     // -- DEL-002..008, INT-001..014, INT-050..051: upload, gate, landing, receipt. ---------
@@ -133,4 +133,48 @@ fn del_002_int_050_the_connected_flow_lands_what_was_captured_and_the_device_cle
     assert!(rt.review(&fieldseal_collection::application::ReviewFilter::default()).expect("review").subjects.is_empty(), "the readable copy is gone");
     assert_eq!(rt.clear_offer(), None);
     assert!(svc.outstanding(&rt).expect("outstanding").iter().all(|s| *s > result.covered_through), "only what was sealed after the clear is outstanding");
+}
+
+/// A roster's `granted` consent covers only the surveys its version names (COL-031, INT-031): on a
+/// roster that names another survey, the sample survey needs the collector's consent, the device
+/// asks for it before the capture, and intake takes the attestation as the basis.
+#[test]
+fn col_031_int_031_a_granted_roster_that_does_not_cover_the_survey_needs_consent_on_the_device() {
+    let mut site = Site::new(12, 2);
+    site.set_cohorts(&[("village-a", 1)]);
+    let phone = Phone::new(22);
+    let opener = Opener::new(&site, &phone.device);
+    let mut rt = phone.runtime(&site, &opener);
+    rt.create_tenancy(&RuntimePin::new(PIN).expect("pin")).expect("create tenancy");
+    let tenancy = rt.tenancy().expect("tenancy");
+    opener.tenancy.set(Some(tenancy));
+    site.register_online(&phone, &rt, "alice", "blue phone");
+    let mut other = roster("village-a", 1, 1, &[("h-001", ConsentState::Unknown), ("h-002", ConsentState::Granted)]);
+    other.consent_covers = vec!["a-survey-assigned-later".to_owned()];
+    site.assign(tenancy, vec![other]);
+    rt.import_bundle(&site.build_bundle(tenancy).expect("the bundle builds")).expect("imports");
+    let held_rosters = rt.held().expect("held").rosters.clone();
+    assert!(!held_rosters[0].covers(fieldseal_e2e::SAMPLE_SURVEY), "the bundle carries the roster's coverage");
+
+    assert!(
+        matches!(rt.start_capture(&subject("h-002"), &sole_survey(&rt), CaptureMode::First), Err(fieldseal_collection::application::CollectionError::ConsentNeeded)),
+        "COL-031: granted on a roster that does not name the survey is not consent for it"
+    );
+    rt.record_consent(&subject("h-002"), &fieldseal_collection::application::ConsentInput { instrument: sole_survey(&rt), basis: "form-seen".into(), statement_version: 1, capture_evidence: true }).expect("attestation");
+    let sealed = fieldseal_e2e::capture_household(&mut rt, "h-002", 4);
+
+    let intake = Intake::new(&site, &[Enrolled { tenancy, keys: rt.key_history(), rosters: held_rosters, predecessor: None }]);
+    let gate = intake.gate(&site);
+    let upload = intake.upload(&site, &gate);
+    let loopback = LoopbackTransport::new(&upload, now);
+    let couriers = Couriers::new();
+    let policy = RuntimeEvaluator::from_effective(&effective_default()).expect("policy");
+    delivery!(site, phone, couriers, &couriers.removable, policy, &loopback, svc);
+    let hints = vec![AddressHint { address: "http://intake.loopback".into(), source: HintSource::DeviceConfiguration }];
+    let result = svc.upload(&mut rt, &hints).expect("upload");
+    assert!(result.covered_through >= sealed);
+    let rows = intake.platform.observations(&site.fingerprint()).expect("observations");
+    let basis: Vec<_> = rows.iter().filter(|r| r.observation.subject == fieldseal_e2e::intake_subject("h-002")).map(|r| r.observation.consent_basis.clone()).collect();
+    assert!(!basis.is_empty() && basis.iter().all(|b| b == "attestation:form-seen"), "INT-031/INT-032: intake agrees the roster did not cover the survey: {basis:?}");
+    assert!(rows.iter().all(|r| r.excluded.is_none()), "the attestation was accepted");
 }

@@ -440,17 +440,37 @@ msgctxt "instrument/title"
 msgid "School meals baseline survey"
 msgstr "Encuesta inicial sobre comidas escolares"
 
-msgctxt "layout/compact/about-the-pupil"
-msgid "About the pupil"
-msgstr "Sobre el alumno"
-
 msgctxt "layout/compact/who"
 msgid "Who"
 msgstr "Quién"
 
-msgctxt "layout/compact/measurements"
-msgid "Measurements"
-msgstr "Medidas"
+msgctxt "layout/compact/sex"
+msgid "Sex"
+msgstr "Sexo"
+
+msgctxt "layout/compact/weight"
+msgid "Weight"
+msgstr "Peso"
+
+msgctxt "layout/compact/height"
+msgid "Height"
+msgstr "Estatura"
+
+msgctxt "layout/compact/shop-items"
+msgid "At the shop"
+msgstr "En la tienda"
+
+msgctxt "layout/compact/counted-other-name"
+msgid "Name the food"
+msgstr "Nombre del alimento"
+
+msgctxt "layout/compact/weighed-other-name"
+msgid "Name the food or drink"
+msgstr "Nombre del alimento o bebida"
+
+msgctxt "layout/compact/finished"
+msgid "Finished"
+msgstr "Terminado"
 
 msgctxt "layout/compact/school-shop"
 msgid "School shop"
@@ -460,13 +480,69 @@ msgctxt "layout/compact/school-meals"
 msgid "School meals"
 msgstr "Comidas escolares"
 
-msgctxt "layout/compact/main-foods"
-msgid "Main foods"
-msgstr "Alimentos principales"
+msgctxt "layout/compact/foods-and-drinks"
+msgid "Foods and drinks"
+msgstr "Alimentos y bebidas"
 
-msgctxt "layout/compact/foods-and-drinks-by-weight-or-volume"
-msgid "Foods and drinks by weight or volume"
-msgstr "Alimentos y bebidas por peso o volumen"
+msgctxt "layout/compact/counted-bread-and-cereals"
+msgid "Bread and cereals"
+msgstr "Pan y cereales"
+
+msgctxt "layout/compact/counted-rice-and-pasta"
+msgid "Rice and pasta"
+msgstr "Arroz y pasta"
+
+msgctxt "layout/compact/counted-vegetables"
+msgid "Vegetables"
+msgstr "Verduras"
+
+msgctxt "layout/compact/counted-fruit"
+msgid "Fruit"
+msgstr "Fruta"
+
+msgctxt "layout/compact/counted-eggs"
+msgid "Eggs"
+msgstr "Huevos"
+
+msgctxt "layout/compact/counted-beans-and-lentils"
+msgid "Beans and lentils"
+msgstr "Frijoles y lentejas"
+
+msgctxt "layout/compact/counted-other"
+msgid "Another food"
+msgstr "Otro alimento"
+
+msgctxt "layout/compact/weighed-meat-and-fish"
+msgid "Meat and fish"
+msgstr "Carne y pescado"
+
+msgctxt "layout/compact/weighed-nuts"
+msgid "Nuts"
+msgstr "Frutos secos"
+
+msgctxt "layout/compact/weighed-milk-and-yoghurt"
+msgid "Milk and yoghurt"
+msgstr "Leche y yogur"
+
+msgctxt "layout/compact/weighed-sweets"
+msgid "Sweets"
+msgstr "Dulces"
+
+msgctxt "layout/compact/weighed-snacks"
+msgid "Snacks"
+msgstr "Aperitivos"
+
+msgctxt "layout/compact/weighed-sweet-drinks"
+msgid "Sweet drinks"
+msgstr "Bebidas azucaradas"
+
+msgctxt "layout/compact/weighed-water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "layout/compact/weighed-other"
+msgid "Another food or drink"
+msgstr "Otro alimento o bebida"
 
 msgctxt "layout/expanded/about-the-pupil"
 msgid "About the pupil"

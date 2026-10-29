@@ -22,6 +22,12 @@ logins:
     roles: [collector]
     amr: [hwk]
     acr: phr
+  # Assigned two surveys for one cohort by the survey picker test (tools/browser-tests/picker.sh).
+  - login: collector2
+    subject: 00000000-0000-4000-8000-000000000003
+    roles: [collector]
+    amr: [hwk]
+    acr: phr
 clients:
   - id: fieldseal-factory
     secretRef: factory-oidc-client-secret

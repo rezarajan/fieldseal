@@ -1,10 +1,10 @@
-//! Compares a roster with the instrument that reads it (DIS-013): shared by `survey check
-//! --roster` and `roster check`, and the closed-schema check of the roster file itself.
+//! Compares a roster with the instrument that reads it (DIS-013), and the surveys a roster's consent
+//! covers with the instruments given: shared by `survey check --roster`, `roster check` and
+//! `roster issue`.
 
 use std::collections::BTreeSet;
 
-use fieldseal_distribution::domain::{Roster, RosterFinding, check_issue_form, collect_roster_fields};
-use fieldseal_kernel::id::Generation;
+use fieldseal_distribution::domain::{Roster, RosterFinding, collect_roster_fields};
 use fieldseal_instrument::domain::{Finding, FindingKind, Severity};
 use fieldseal_kernel::Value;
 
@@ -40,9 +40,22 @@ pub fn compare_roster(roster: &Roster, instrument: &Value) -> Vec<Finding> {
     findings
 }
 
-/// The closed-schema check of a roster file (DIS-063), which lives in the Distribution context so
-/// that the factory runs the same code. The roster comes back with generation 1: a file has none
-/// (WIRE-198), and the comparison with an instrument does not read it.
-pub fn check_roster_form(value: Value) -> Result<Roster, Vec<RosterFinding>> {
-    check_issue_form(value).map(|form| form.into_roster(Generation(1)))
+/// The surveys a roster file names in `consent-covers` that none of `instruments` is: a typo
+/// there would leave every `granted` consent uncovered. Nothing is checked when the file
+/// declares none (the factory records the cohort's assigned surveys when it issues the roster).
+pub fn coverage_findings(declared: Option<&[String]>, instruments: &[Value]) -> Vec<RosterFinding> {
+    let names: Vec<&str> = instruments
+        .iter()
+        .filter_map(|i| i.as_map()?.get("metadata")?.as_map()?.get("name")?.as_text())
+        .collect();
+    declared
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+        .filter(|(_, name)| !names.contains(&name.as_str()))
+        .map(|(i, name)| RosterFinding {
+            path: format!("consent-covers[{}]", i + 1),
+            message: format!("`{name}` is not one of the surveys given with --instrument"),
+        })
+        .collect()
 }

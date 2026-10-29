@@ -12,86 +12,100 @@
       {
         "contents": [
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "about.school"
-                },
-                {
-                  "element": "about.name"
-                },
-                {
-                  "element": "about.class"
-                },
-                {
-                  "element": "about.age"
-                },
-                {
-                  "element": "about.sex"
-                }
-              ],
-              "title": {
-                "en": "Who",
-                "es": "Quién"
-              }
-            }
+            "element": "about.school"
           },
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "about.weight"
-                },
-                {
-                  "element": "about.height"
-                }
-              ],
-              "title": {
-                "en": "Measurements",
-                "es": "Medidas"
-              }
-            }
+            "element": "about.name"
           },
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "about.uses_shop"
-                },
-                {
-                  "element": "about.shop_weekly"
-                },
-                {
-                  "element": "about.shop_buys"
-                }
-              ],
-              "title": {
-                "en": "School shop",
-                "es": "Tienda de la escuela"
-              }
-            }
+            "element": "about.class"
           },
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "about.meal_programme"
-                },
-                {
-                  "element": "about.meal_which"
-                }
-              ],
-              "title": {
-                "en": "School meals",
-                "es": "Comidas escolares"
-              }
-            }
+            "element": "about.age"
           }
         ],
         "navigation": "linear",
         "title": {
-          "en": "About the pupil",
-          "es": "Sobre el alumno"
+          "en": "Who",
+          "es": "Quién"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.sex"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Sex",
+          "es": "Sexo"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.weight"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Weight",
+          "es": "Peso"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.height"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Height",
+          "es": "Estatura"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.uses_shop"
+          },
+          {
+            "element": "about.shop_weekly"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "School shop",
+          "es": "Tienda de la escuela"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.shop_buys"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "At the shop",
+          "es": "En la tienda"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "about.meal_programme"
+          },
+          {
+            "element": "about.meal_which"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "School meals",
+          "es": "Comidas escolares"
         }
       },
       {
@@ -101,32 +115,318 @@
           },
           {
             "element": "diet.diet_instructions"
-          },
-          {
-            "as": "list",
-            "repeat": "diet.counted.plate"
           }
         ],
         "navigation": "free",
         "title": {
-          "en": "Main foods",
-          "es": "Alimentos principales"
+          "en": "Foods and drinks",
+          "es": "Alimentos y bebidas"
         }
       },
       {
         "contents": [
           {
-            "as": "list",
-            "repeat": "diet.weighed.extras"
+            "element": "diet.counted.plate.bread_and_cereals.freq"
           },
           {
-            "element": "thanks"
+            "element": "diet.counted.plate.bread_and_cereals.amount"
+          },
+          {
+            "element": "diet.counted.plate.bread_and_cereals.yesterday"
           }
         ],
         "navigation": "free",
         "title": {
-          "en": "Foods and drinks by weight or volume",
-          "es": "Alimentos y bebidas por peso o volumen"
+          "en": "Bread and cereals",
+          "es": "Pan y cereales"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.rice_and_pasta.freq"
+          },
+          {
+            "element": "diet.counted.plate.rice_and_pasta.amount"
+          },
+          {
+            "element": "diet.counted.plate.rice_and_pasta.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Rice and pasta",
+          "es": "Arroz y pasta"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.vegetables.freq"
+          },
+          {
+            "element": "diet.counted.plate.vegetables.amount"
+          },
+          {
+            "element": "diet.counted.plate.vegetables.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Vegetables",
+          "es": "Verduras"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.fruit.freq"
+          },
+          {
+            "element": "diet.counted.plate.fruit.amount"
+          },
+          {
+            "element": "diet.counted.plate.fruit.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Fruit",
+          "es": "Fruta"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.eggs.freq"
+          },
+          {
+            "element": "diet.counted.plate.eggs.amount"
+          },
+          {
+            "element": "diet.counted.plate.eggs.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Eggs",
+          "es": "Huevos"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.beans_and_lentils.freq"
+          },
+          {
+            "element": "diet.counted.plate.beans_and_lentils.amount"
+          },
+          {
+            "element": "diet.counted.plate.beans_and_lentils.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Beans and lentils",
+          "es": "Frijoles y lentejas"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.other.other"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Name the food",
+          "es": "Nombre del alimento"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.counted.plate.other.freq"
+          },
+          {
+            "element": "diet.counted.plate.other.amount"
+          },
+          {
+            "element": "diet.counted.plate.other.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Another food",
+          "es": "Otro alimento"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.meat_and_fish.freq"
+          },
+          {
+            "element": "diet.weighed.extras.meat_and_fish.amount"
+          },
+          {
+            "element": "diet.weighed.extras.meat_and_fish.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Meat and fish",
+          "es": "Carne y pescado"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.nuts.freq"
+          },
+          {
+            "element": "diet.weighed.extras.nuts.amount"
+          },
+          {
+            "element": "diet.weighed.extras.nuts.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Nuts",
+          "es": "Frutos secos"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.milk_and_yoghurt.freq"
+          },
+          {
+            "element": "diet.weighed.extras.milk_and_yoghurt.amount"
+          },
+          {
+            "element": "diet.weighed.extras.milk_and_yoghurt.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Milk and yoghurt",
+          "es": "Leche y yogur"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.sweets.freq"
+          },
+          {
+            "element": "diet.weighed.extras.sweets.amount"
+          },
+          {
+            "element": "diet.weighed.extras.sweets.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Sweets",
+          "es": "Dulces"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.snacks.freq"
+          },
+          {
+            "element": "diet.weighed.extras.snacks.amount"
+          },
+          {
+            "element": "diet.weighed.extras.snacks.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Snacks",
+          "es": "Aperitivos"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.sweet_drinks.freq"
+          },
+          {
+            "element": "diet.weighed.extras.sweet_drinks.amount"
+          },
+          {
+            "element": "diet.weighed.extras.sweet_drinks.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Sweet drinks",
+          "es": "Bebidas azucaradas"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.water.freq"
+          },
+          {
+            "element": "diet.weighed.extras.water.amount"
+          },
+          {
+            "element": "diet.weighed.extras.water.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Water",
+          "es": "Agua"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.other.other"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Name the food or drink",
+          "es": "Nombre del alimento o bebida"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "diet.weighed.extras.other.freq"
+          },
+          {
+            "element": "diet.weighed.extras.other.amount"
+          },
+          {
+            "element": "diet.weighed.extras.other.yesterday"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Another food or drink",
+          "es": "Otro alimento o bebida"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "thanks"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Finished",
+          "es": "Terminado"
         }
       }
     ],

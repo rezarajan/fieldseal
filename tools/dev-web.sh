@@ -16,7 +16,9 @@
 #   tools/dev-web.sh --check --browser
 #                               also run, in a headless browser, the cookie-scoping check
 #                               (tools/browser-tests/cookies.sh) and the eight steps of the guided
-#                               demo (tools/browser-tests/demo-e2e.sh); both need chromium and
+#                               demo (tools/browser-tests/demo-e2e.sh) and the phone-fit check
+#                               (tools/browser-tests/phone-fit.sh) and the survey picker test
+#                               (tools/browser-tests/picker.sh); all need chromium and
 #                               python3 with `websockets`, both in the dev shell
 #
 # State is in deploy/local/.state/dev-web/ (git-ignored): remove it to start over. `just web` and
@@ -191,8 +193,8 @@ cli() {
 cli roster issue --factory-url http://localhost:8080 --browser none --login presenter \
   examples/rosters/village-a.yaml examples/rosters/cohort-a.yaml >"$LOGS/roster.log" 2>&1 \
   || { tail -n 20 "$LOGS/roster.log" >&2; die "could not issue the example rosters (deploy/local/.state/dev-web/logs/roster.log)"; }
-# A runtime holds exactly one instrument per bundle (the browser device refuses more), so each
-# account gets one survey: the presenter the water survey, collector1 the school-meals survey.
+# Each of these accounts gets one survey: the presenter the water survey, collector1 the
+# school-meals survey. (`--check --browser` gives collector2 both, for the survey picker.)
 COLLECTOR1=00000000-0000-4000-8000-000000000002
 cli roster assign --factory-url http://localhost:8080 --browser none --login presenter --account "$PRESENTER" \
   --assign household-water-access=village-a >>"$LOGS/roster.log" 2>&1 \
@@ -218,7 +220,6 @@ start web "$TARGET/fieldseal-web" "" \
   FIELDSEAL_WEB_ALLOWED_SOURCES="$(env_value "$STATE/env/intake.env" FIELDSEAL_INTAKE_ALLOWED_SOURCES)" \
   FIELDSEAL_WEB_EXAMPLES_DIR="$ROOT/examples" FIELDSEAL_WEB_WASM_DIR="$WASM_DIR" \
   FIELDSEAL_WEB_AUTHORITY_DIR="$STATE/authority" FIELDSEAL_WEB_PUBLISHED_DIR="$STATE/published" FIELDSEAL_WEB_REGISTRY_DIR="$STATE/cli/registry" \
-  FIELDSEAL_WEB_SURVEY_COHORTS="school-meals-baseline=cohort-a,household-water-access=village-a" \
   FIELDSEAL_WEB_ROSTER_DIR="$STATE/rosters" \
   FIELDSEAL_FACTORY_URL=http://localhost:8080 FIELDSEAL_UPLOAD_URL=http://localhost:8480 FIELDSEAL_LOG_URL=http://localhost:9001 FIELDSEAL_WEB_PUBLIC_URL=http://127.0.0.1:8090 \
   FIELDSEAL_WEB_RESULTS_URL=http://localhost:8481
@@ -388,7 +389,7 @@ if [ "$CHECK" = 1 ]; then
   say "check: the factory signs in through the development IdP"
   curl -fsS --max-time 10 http://127.0.0.1:8090/publishing | grep -q 'household-water-access' || die "check: the Publishing page does not list the published examples"
   say "check: the Publishing page lists the published examples"
-  curl -fsS --max-time 10 http://127.0.0.1:8090/instruments/school-meals-baseline/roster | grep -q '"cohort":"cohort-a"' || die "check: the roster page does not show the issued roster of cohort-a"
+  curl -fsS --max-time 10 http://127.0.0.1:8090/instruments/school-meals-baseline/roster?cohort=cohort-a | grep -q '"cohort":"cohort-a"' || die "check: the roster page does not show the issued roster of cohort-a"
   say "check: the roster page reads the roster the factory stored"
   check_adapters
   check_pages
@@ -400,6 +401,18 @@ if [ "$CHECK" = 1 ]; then
     say "check: the browser sends no factory or results reader cookie to the collector stand-in"
     "$ROOT/tools/browser-tests/demo-e2e.sh" --state "$STATE" || die "check: the guided demo's eight steps did not pass in the browser"
     say "check: the eight steps of the guided demo ran end to end, each confirmation found at its own source"
+    "$ROOT/tools/browser-tests/phone-fit.sh" --state "$STATE" || die "check: a device screen does not fit a phone without scrolling"
+    say "check: every device screen (your surveys, the roster, each step of both examples, the review) fits 390x844 without scrolling"
+    # The picker's own state: a roster for a cohort that both example surveys are assigned to, for an account of its own.
+    COLLECTOR2=00000000-0000-4000-8000-000000000003
+    cli roster issue --factory-url http://localhost:8080 --browser none --login presenter \
+      "$ROOT/tools/browser-tests/fixtures/picker-a.yaml" >>"$LOGS/roster.log" 2>&1 \
+      || { tail -n 20 "$LOGS/roster.log" >&2; die "check: could not issue the picker's roster"; }
+    cli roster assign --factory-url http://localhost:8080 --browser none --login presenter --account "$COLLECTOR2" \
+      --assign household-water-access=picker-a --assign school-meals-baseline=picker-a >>"$LOGS/roster.log" 2>&1 \
+      || { tail -n 20 "$LOGS/roster.log" >&2; die "check: could not assign both surveys to the picker's cohort"; }
+    "$ROOT/tools/browser-tests/picker.sh" --state "$STATE" || die "check: the survey picker did not work in the browser"
+    say "check: a group of two surveys is chosen from, survey by survey, on the roster; a capture starts for a person and backs out"
   fi
   say "dev-web --check passed"
   exit 0

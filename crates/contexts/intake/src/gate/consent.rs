@@ -54,7 +54,18 @@ struct Import {
 type Reject = (&'static str, String);
 type Attested = Result<(ConsentDecision, bool, Vec<Digest>), Reject>;
 
-fn check_roster_basis(issued: &[IssuedRoster], imports: &[Import], rec_seq: u64, roster: &Digest, version: u64, subject: &SubjectId) -> Result<IssuedRoster, Reject> {
+/// Checks a record's claim that a roster version gave the subject's consent for `survey` (the
+/// instrument's name): the version was issued, imported before the record, grants the subject's
+/// consent, and covers the survey (INT-031).
+fn check_roster_basis(
+    issued: &[IssuedRoster],
+    imports: &[Import],
+    rec_seq: u64,
+    roster: &Digest,
+    version: u64,
+    subject: &SubjectId,
+    survey: &str,
+) -> Result<IssuedRoster, Reject> {
     let Some(r) = issued.iter().find(|r| &r.address == roster && r.version == version) else {
         return Err(("INT-031", "the roster version named was not issued to this tenancy".into()));
     };
@@ -68,6 +79,9 @@ fn check_roster_basis(issued: &[IssuedRoster], imports: &[Import], rec_seq: u64,
         Some(IssuedConsent::Granted) => {}
         Some(IssuedConsent::Refused) => return Err(("INT-034", "the subject's consent is refused on the roster".into())),
         _ => return Err(("INT-031", "the roster does not grant the subject's consent".into())),
+    }
+    if !r.covers.contains(survey) {
+        return Err(("INT-031", "the roster's consent does not cover this survey".into()));
     }
     for later in issued.iter().filter(|x| x.cohort == r.cohort && x.version > version) {
         if later.consent.get(subject) != Some(&IssuedConsent::Refused) {
@@ -210,7 +224,7 @@ impl IntakeService<'_> {
                         hold(&mut out, sub, "INT-030", "the record claims no consent is needed, but its instrument requires consent".into());
                     }
                     ConsentRef::Roster { roster, version } => {
-                        match check_roster_basis(&issued, &imports, seq, roster, *version, &subject) {
+                        match check_roster_basis(&issued, &imports, seq, roster, *version, &subject, &inst.definition().name) {
                             Err((rule, msg)) => hold(&mut out, sub, rule, msg),
                             Ok(_) => {
                                 let basis = ConsentBasis::Roster { roster: *roster, version: *version };
@@ -260,6 +274,7 @@ impl IntakeService<'_> {
                                     bases.iter().any(|b| &b.code == basis),
                                     &issued,
                                     &subject,
+                                    &inst.definition().name,
                                     evidence,
                                     &evidence_in,
                                     part.bounds[cn],
@@ -320,6 +335,7 @@ impl IntakeService<'_> {
         basis_listed: bool,
         issued: &[IssuedRoster],
         subject: &SubjectId,
+        survey: &str,
         evidence: &[EvidenceRef],
         evidence_in: &BTreeMap<[u8; 16], (Digest, u64, u64)>,
         lower: Option<AuthorityTime>,
@@ -328,14 +344,15 @@ impl IntakeService<'_> {
         if !basis_listed {
             return Err(("INT-032", "the attested basis is not one the instrument lists (INS-061)".into()));
         }
-        // INT-032: the roster the tenancy held had the subject as `unknown`.
+        // INT-032: the roster the tenancy held had no consent for the subject and this survey:
+        // `unknown`, or `granted` for surveys it doesn't cover.
         let held = issued
             .iter()
             .filter(|r| r.consent.contains_key(subject) && lower.is_none_or(|t| r.issued_at <= t))
             .max_by_key(|r| (r.issued_at, r.version));
-        match held.and_then(|r| r.consent.get(subject)) {
-            Some(IssuedConsent::Unknown) => {}
-            Some(_) => return Err(("INT-032", "an attestation is accepted only where the roster had the subject's consent as unknown".into())),
+        match held.and_then(|r| r.consent.get(subject).map(|c| (c, r.covers.contains(survey)))) {
+            Some((IssuedConsent::Unknown, _)) | Some((IssuedConsent::Granted, false)) => {}
+            Some(_) => return Err(("INT-032", "an attestation is accepted only where the roster had no consent for the subject and this survey".into())),
             None => return Err(("INT-032", "the subject is on no roster the tenancy held".into())),
         }
         // INT-033: evidence present, hash matching.
@@ -366,5 +383,42 @@ impl IntakeService<'_> {
             // A failing engine holds for review, never accepts (POL-034).
             Err(_) => (ConsentDecision::Pending, false, hashes),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn issued(covers: &[&str], consent: IssuedConsent) -> IssuedRoster {
+        IssuedRoster {
+            cohort: fieldseal_kernel::id::CohortId::new("village-a").expect("cohort"),
+            version: 1,
+            address: Digest::from([1; 32]),
+            issued_at: AuthorityTime(1),
+            consent: BTreeMap::from([(SubjectId::new("s-1").expect("subject"), consent)]),
+            covers: covers.iter().map(|c| (*c).to_owned()).collect(),
+        }
+    }
+
+    fn basis(rosters: &[IssuedRoster], survey: &str) -> Result<IssuedRoster, Reject> {
+        check_roster_basis(rosters, &[], 5, &Digest::from([1; 32]), 1, &SubjectId::new("s-1").expect("subject"), survey)
+    }
+
+    // covers: INT-031
+    #[test]
+    fn a_roster_that_covers_survey_a_grants_a_and_not_b() {
+        let rosters = [issued(&["survey-a"], IssuedConsent::Granted)];
+        assert!(basis(&rosters, "survey-a").is_ok());
+        let (rule, why) = basis(&rosters, "survey-b").expect_err("not covered");
+        assert_eq!(rule, "INT-031");
+        assert!(why.contains("does not cover"), "{why}");
+    }
+
+    // covers: INT-031
+    #[test]
+    fn a_roster_that_covers_no_survey_grants_none_and_refused_stays_refused() {
+        assert!(basis(&[issued(&[], IssuedConsent::Granted)], "survey-a").is_err());
+        assert_eq!(basis(&[issued(&["survey-a"], IssuedConsent::Refused)], "survey-a").expect_err("refused").0, "INT-034");
     }
 }

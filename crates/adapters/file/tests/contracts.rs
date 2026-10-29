@@ -119,6 +119,7 @@ fn roster(cohort: &str, version: u64, display: &str) -> Roster {
             consent: ConsentState::Granted,
             prior_status: None,
         }],
+        consent_covers: vec!["survey-a".to_owned()],
     }
 }
 
@@ -776,14 +777,14 @@ fn reg_047_the_file_roster_issuer_checks_before_it_writes_and_maps_the_store_out
         ]))
         .expect("encodable")
     };
-    let Out::Issued { version: 2, digest } = issuer.issue(&cohort, &body(2, "Bo")) else { panic!("issued") };
-    assert_eq!(issuer.issue(&cohort, &body(2, "Bo")), Out::AlreadyIssued { version: 2, digest });
-    assert_eq!(issuer.issue(&cohort, &body(2, "Other")), Out::VersionTaken);
-    assert_eq!(issuer.issue(&cohort, &body(1, "Bo")), Out::NotNewer);
-    assert!(matches!(issuer.issue(&CohortId::new("village-b").expect("cohort"), &body(3, "Bo")), Out::Invalid(_)), "the roster names another cohort");
-    assert!(matches!(issuer.issue(&cohort, b"not cbor"), Out::Invalid(_)));
+    let Out::Issued { version: 2, digest } = issuer.issue(&cohort, &body(2, "Bo"), &[]) else { panic!("issued") };
+    assert_eq!(issuer.issue(&cohort, &body(2, "Bo"), &[]), Out::AlreadyIssued { version: 2, digest });
+    assert_eq!(issuer.issue(&cohort, &body(2, "Other"), &[]), Out::VersionTaken);
+    assert_eq!(issuer.issue(&cohort, &body(1, "Bo"), &[]), Out::NotNewer);
+    assert!(matches!(issuer.issue(&CohortId::new("village-b").expect("cohort"), &body(3, "Bo"), &[]), Out::Invalid(_)), "the roster names another cohort");
+    assert!(matches!(issuer.issue(&cohort, b"not cbor", &[]), Out::Invalid(_)));
     // Bytes that decode but are not in canonical form (a map with keys in the wrong order).
-    assert!(matches!(issuer.issue(&cohort, b"\xa2\x61b\x01\x61a\x02"), Out::Invalid(_)));
+    assert!(matches!(issuer.issue(&cohort, b"\xa2\x61b\x01\x61a\x02", &[]), Out::Invalid(_)));
     assert_eq!(issuer.store().versions(&cohort).expect("versions"), vec![2], "nothing else was written");
     // The stored digest is the checksum the store keeps and `roster list` prints.
     assert_eq!(digest, fieldseal_kernel::digest::sha256(&issuer.store().get(&cohort, 2).expect("get").expect("stored").encode()));

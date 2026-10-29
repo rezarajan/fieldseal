@@ -294,6 +294,15 @@ impl Payload {
         }
     }
 
+    /// The instrument a record is about, if any.
+    pub fn instrument(&self) -> Option<&Fingerprint> {
+        match self {
+            Self::Items(p) => Some(&p.instrument),
+            Self::Status { instrument, .. } | Self::Consent { instrument, .. } => Some(instrument),
+            _ => None,
+        }
+    }
+
     /// The payload as a value.
     pub fn to_value(&self) -> Result<Value, WireError> {
         let tick = |t: &Tick| t.to_value();

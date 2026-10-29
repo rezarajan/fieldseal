@@ -1,5 +1,5 @@
 //! The roster page reads the factory's roster store when `FIELDSEAL_WEB_ROSTER_DIR` is set,
-//! showing counts only, and the examples' rosters when it is not.
+//! showing counts only, and the examples' rosters, also as counts, when it is not.
 #![allow(missing_docs)]
 
 use std::path::PathBuf;
@@ -39,19 +39,21 @@ fn roster(cohort: &str, version: u64, people: &[(&str, &str, ConsentState)]) -> 
                 prior_status: None,
             })
             .collect(),
+        consent_covers: vec![],
     }
 }
 
 fn state(roster_dir: Option<PathBuf>) -> AppState {
     AppState {
         examples_dir: examples(),
-        survey_cohorts: [("school-meals-baseline".to_owned(), "cohort-a".to_owned())].into_iter().collect(),
         roster_dir,
         ..AppState::default()
     }
 }
 
-const PAGE: &str = "/instruments/school-meals-baseline/roster";
+/// The cohort comes with the request: the device's bundle assigns it to the survey.
+const PAGE: &str = "/instruments/school-meals-baseline/roster?cohort=cohort-a";
+const NO_COHORT: &str = "/instruments/school-meals-baseline/roster";
 
 #[test]
 fn web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examples_otherwise() {
@@ -84,13 +86,10 @@ fn web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examp
         assert!(!body.contains(hidden), "the page shows counts only, not {hidden}");
     }
 
-    // A survey with no cohort, and a cohort with no roster in the store: the same empty state.
-    let mut none = state(Some(store_dir.clone()));
-    none.survey_cohorts.clear();
-    assert_eq!(dispatch(&none, &Request::get(PAGE)).body_text(), "{}");
-    let mut elsewhere = state(Some(store_dir.clone()));
-    elsewhere.survey_cohorts.insert("school-meals-baseline".into(), "no-such-cohort".into());
-    assert_eq!(dispatch(&elsewhere, &Request::get(PAGE)).body_text(), "{}");
+    // No cohort named, and a cohort with no roster in the store: the same empty state.
+    assert_eq!(dispatch(&state(Some(store_dir.clone())), &Request::get(NO_COHORT)).body_text(), "{}");
+    let elsewhere = "/instruments/school-meals-baseline/roster?cohort=no-such-cohort";
+    assert_eq!(dispatch(&state(Some(store_dir.clone())), &Request::get(elsewhere)).body_text(), "{}");
 
     // A store directory that others can reach is refused, as the store itself refuses it.
     #[cfg(unix)]
@@ -102,9 +101,15 @@ fn web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examp
         assert_eq!(dispatch(&state(Some(wide)), &Request::get(PAGE)).status, 422);
     }
 
-    // Unset: the examples' roster file, as before (its first subject is in the file).
+    // Unset: the examples' roster file, also as counts and never as names.
     let page = dispatch(&state(None), &Request::get(PAGE));
     assert_eq!(page.status, 200);
-    assert!(page.body_text().contains("p-0001"), "the examples' roster is read when no store is set");
+    let body = page.body_text();
+    assert!(body.contains("\"cohort\":\"cohort-a\"") && body.contains("\"subjects\":2"), "{body}");
+    for hidden in ["p-0001", "Participant", "Hill School"] {
+        assert!(!body.contains(hidden), "the examples' roster is shown as counts, not {hidden}");
+    }
+    assert_eq!(dispatch(&state(None), &Request::get(NO_COHORT)).body_text(), "{}");
+    assert_eq!(dispatch(&state(None), &Request::get(elsewhere)).body_text(), "{}");
     let _ = std::fs::remove_dir_all(dir);
 }

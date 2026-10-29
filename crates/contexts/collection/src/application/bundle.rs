@@ -8,7 +8,7 @@
 //! PUB-073), the instrument and layouts are validated by the format core, and the rosters
 //! are held only in memory for the session.
 
-use fieldseal_distribution::domain::{AnchorKind, check_publication_tree_head_age};
+use fieldseal_distribution::domain::{AnchorKind, BundleAssignment, check_publication_tree_head_age, layout_facts};
 use fieldseal_instrument::application::{LayoutBinding, LayoutOptions, validate_instrument, validate_layout_with};
 use fieldseal_instrument::domain::{Instrument, Layout as InstrumentLayout};
 use fieldseal_kernel::cbor;
@@ -26,19 +26,31 @@ use crate::domain::TenancyState;
 use crate::domain::bundle::{HeldRoster, OpenedBundle, RosterSubject, TimeAnchor};
 use crate::domain::payload::{ImportedRoster, Payload};
 
+/// One instrument of a verified bundle with the layouts bound to it.
+#[derive(Clone, Debug)]
+pub struct HeldInstrument {
+    /// The content address of the publication, which an assignment names.
+    pub address: ContentAddress,
+    /// The instrument.
+    pub instrument: Instrument,
+    /// Its fingerprint (WIRE-186).
+    pub fingerprint: Fingerprint,
+    /// Validated layouts bound to this instrument's fingerprint (INS-200), with their content
+    /// addresses.
+    pub layouts: Vec<(InstrumentLayout, ContentAddress)>,
+}
+
 /// A verified bundle's contents, held in memory for one session (COL-090).
 #[derive(Clone, Debug)]
 pub struct Held {
     /// The bundle content's address.
     pub address: Digest,
-    /// The instrument.
-    pub instrument: Instrument,
-    /// Its fingerprint (WIRE-186).
-    pub fingerprint: Fingerprint,
-    /// Validated layouts, with their content addresses.
-    pub layouts: Vec<(InstrumentLayout, ContentAddress)>,
+    /// Every instrument the bundle carries, in bundle order.
+    pub instruments: Vec<HeldInstrument>,
     /// The rosters.
     pub rosters: Vec<HeldRoster>,
+    /// The surveys assigned to this account: which cohort each is to be conducted with.
+    pub assignments: Vec<BundleAssignment>,
     /// The runtime policy layers' content addresses, outermost first; empty when the bundle
     /// carried none.
     pub policy: Vec<ContentAddress>,
@@ -48,6 +60,17 @@ impl Held {
     /// Whether this is a practice bundle: one without rosters (COL-003).
     pub fn is_practice(&self) -> bool {
         self.rosters.is_empty()
+    }
+
+    /// The held instrument with this fingerprint.
+    pub fn instrument(&self, fingerprint: &Fingerprint) -> Option<&HeldInstrument> {
+        self.instruments.iter().find(|i| &i.fingerprint == fingerprint)
+    }
+
+    /// Whether `survey` is to be conducted with the people of `roster`: the bundle's assignments
+    /// say so, or, in a bundle that carries none, every survey goes with every roster.
+    pub fn is_assigned(&self, survey: &HeldInstrument, roster: &HeldRoster) -> bool {
+        self.assignments.is_empty() || self.assignments.iter().any(|a| a.instrument == survey.address && a.cohort == roster.cohort)
     }
 
     /// The roster entry for a subject, and its roster.
@@ -135,21 +158,26 @@ impl Runtime<'_> {
         if opened.tenancy != self.meta()?.tenancy {
             return Err(rejected("bundle", "for another tenancy"));
         }
-        self.verify_publication(&opened.instrument, ArtefactKind::Instrument, &opened.withdrawals)?;
-        let fingerprint = opened.instrument.artefact.fingerprint().ok_or_else(|| rejected("instrument", "no fingerprint"))?;
-        let document = cbor::decode(opened.instrument.artefact.canonical_bytes()).map_err(|e| rejected("instrument", e))?;
-        let instrument = validate_instrument(&document)
-            .map_err(|f| rejected("instrument", format!("{} validation findings", f.len())))?
-            .instrument;
-        let mut layouts = Vec::new();
+        let mut instruments: Vec<HeldInstrument> = Vec::new();
+        for p in &opened.instruments {
+            self.verify_publication(p, ArtefactKind::Instrument, &opened.withdrawals)?;
+            let fingerprint = p.artefact.fingerprint().ok_or_else(|| rejected("instrument", "no fingerprint"))?;
+            let document = cbor::decode(p.artefact.canonical_bytes()).map_err(|e| rejected("instrument", e))?;
+            let instrument = validate_instrument(&document)
+                .map_err(|f| rejected("instrument", format!("{} validation findings", f.len())))?
+                .instrument;
+            instruments.push(HeldInstrument { address: *p.address(), instrument, fingerprint, layouts: Vec::new() });
+        }
         for p in &opened.layouts {
             self.verify_publication(p, ArtefactKind::Layout, &opened.withdrawals)?;
             let doc = cbor::decode(p.artefact.canonical_bytes()).map_err(|e| rejected("layout", e))?;
-            // INS-200: a bundled layout names the instrument by its fingerprint.
-            let binding = LayoutBinding { expected: fingerprint, resolve: &|_| None };
-            let layout = validate_layout_with(&doc, &instrument, LayoutOptions { binding: Some(binding) })
+            // INS-200: a bundled layout names one instrument of the bundle by its fingerprint.
+            let bound = layout_facts(&p.artefact).map_err(|e| rejected("layout", e))?.instrument;
+            let held = instruments.iter_mut().find(|i| i.fingerprint == bound).ok_or_else(|| rejected("layout", "bound to an instrument the bundle doesn't carry"))?;
+            let binding = LayoutBinding { expected: bound, resolve: &|_| None };
+            let layout = validate_layout_with(&doc, &held.instrument, LayoutOptions { binding: Some(binding) })
                 .map_err(|f| rejected("layout", format!("{} validation findings", f.len())))?;
-            layouts.push((layout, *p.address()));
+            held.layouts.push((layout, *p.address()));
         }
         let mut policy = None;
         let mut applied = None;
@@ -177,17 +205,16 @@ impl Runtime<'_> {
         };
         let max_age_ms = evaluator.policy().max_tree_head_age.as_secs().saturating_mul(AuthorityTime::SECOND);
         let store = TrustStore::new(self.prov.trust);
-        let all = std::iter::once(&opened.instrument).chain(&opened.layouts).chain(&opened.policy);
+        let all = opened.instruments.iter().chain(&opened.layouts).chain(&opened.policy);
         for p in all {
             check_publication_tree_head_age(p, opened.issued, &store, max_age_ms).map_err(|e| rejected(p.artefact.kind().as_str(), e))?;
         }
         Ok(Verified {
             held: Held {
                 address: opened.address,
-                instrument,
-                fingerprint,
-                layouts,
+                instruments,
                 rosters: opened.rosters.clone(),
+                assignments: opened.assignments.clone(),
                 policy: opened.policy.iter().map(|p| *p.address()).collect(),
             },
             policy,
@@ -262,8 +289,8 @@ impl Runtime<'_> {
             self.chain_anchor(*t)?;
         }
         let held = &verified.held;
-        let mut artefacts = vec![Digest::from(*held.fingerprint.as_bytes())];
-        artefacts.extend(held.layouts.iter().map(|(_, a)| Digest::from(*a.as_bytes())));
+        let mut artefacts: Vec<Digest> = held.instruments.iter().map(|i| Digest::from(*i.fingerprint.as_bytes())).collect();
+        artefacts.extend(held.instruments.iter().flat_map(|i| i.layouts.iter().map(|(_, a)| Digest::from(*a.as_bytes()))));
         artefacts.extend(held.policy.iter().map(|a| Digest::from(*a.as_bytes())));
         let rosters: Vec<ImportedRoster> =
             held.rosters.iter().map(|r| ImportedRoster { cohort: r.cohort.as_str().to_owned(), version: r.version, address: r.address }).collect();
@@ -296,11 +323,12 @@ impl Runtime<'_> {
     }
 
     fn hold(&mut self, verified: Verified) -> Result<(), CollectionError> {
-        let fp = verified.held.fingerprint;
-        if let Some(m) = self.meta.as_mut()
-            && !m.instruments.contains(&fp)
-        {
-            m.instruments.push(fp);
+        for i in &verified.held.instruments {
+            if let Some(m) = self.meta.as_mut()
+                && !m.instruments.contains(&i.fingerprint)
+            {
+                m.instruments.push(i.fingerprint);
+            }
         }
         let session = self.session.as_mut().ok_or(CollectionError::Locked)?;
         if let Some(policy) = verified.policy {

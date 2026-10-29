@@ -4,11 +4,14 @@
 //!
 //! ```text
 //! roster <cohort> <version> <address hex> <issued-at ms>
+//! covers <survey>
 //! consent <subject>=<granted|refused|unknown>
 //! ```
 //!
 //! Development only. The roster contents (display names, attributes) are not kept here, only
-//! each subject's consent state, which is what the gate needs (INT-040–INT-045).
+//! each subject's consent state and the surveys a `granted` state covers, which is what the
+//! gate needs (INT-031, INT-040–INT-045). A `covers` line belongs to the roster line above it;
+//! a roster with none covers no survey.
 
 use std::path::{Path, PathBuf};
 
@@ -66,6 +69,9 @@ pub fn record_issued(dir: &Path, tenancy: &TenancyId, roster: &IssuedRoster) -> 
         Err(e) => return Err(e),
     };
     text.push_str(&format!("roster {} {} {} {}\n", roster.cohort.as_str(), roster.version, fieldseal_kernel::digest::lower_hex(roster.address.as_bytes()), roster.issued_at.0));
+    for survey in &roster.covers {
+        text.push_str(&format!("covers {survey}\n"));
+    }
     for (s, c) in &roster.consent {
         text.push_str(&format!("consent {}={}\n", s.as_str(), consent_name(*c)));
     }
@@ -97,7 +103,12 @@ fn parse(text: &str) -> Option<Vec<IssuedRoster>> {
             let p: Vec<&str> = rest.split(' ').collect();
             let [cohort, version, address, issued] = p[..] else { return None };
             let address = Digest::from_bytes(&(0..address.len() / 2).map(|i| u8::from_str_radix(address.get(2 * i..2 * i + 2)?, 16).ok()).collect::<Option<Vec<u8>>>()?).ok()?;
-            out.push(IssuedRoster { cohort: CohortId::new(cohort).ok()?, version: version.parse().ok()?, address, issued_at: AuthorityTime(issued.parse().ok()?), consent: Default::default() });
+            out.push(IssuedRoster { cohort: CohortId::new(cohort).ok()?, version: version.parse().ok()?, address, issued_at: AuthorityTime(issued.parse().ok()?), consent: Default::default(), covers: Default::default() });
+        } else if let Some(survey) = line.strip_prefix("covers ") {
+            if !fieldseal_distribution::domain::is_survey_name(survey) {
+                return None;
+            }
+            out.last_mut()?.covers.insert(survey.to_owned());
         } else if let Some(rest) = line.strip_prefix("consent ") {
             let (s, c) = rest.split_once('=')?;
             let c = match c {
@@ -146,6 +157,7 @@ mod tests {
             address: Digest::from([version as u8; 32]),
             issued_at: AuthorityTime(1_000),
             consent: [(SubjectId::new("s-1").expect("subject"), IssuedConsent::Granted)].into_iter().collect(),
+            covers: ["survey-a".to_owned(), "survey-b".to_owned()].into_iter().collect(),
         }
     }
 
@@ -179,6 +191,29 @@ mod tests {
             assert!(record_issued(&dir, &t, &roster(2)).is_err(), "cut at {cut}");
             assert_eq!(std::fs::read(&path).expect("read"), before, "a refused record leaves the file as it was");
         }
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    // covers: INT-031, INT-040
+    #[test]
+    fn the_surveys_a_roster_covers_are_kept_and_a_file_without_them_covers_none() {
+        let dir = scratch("covers");
+        let t = TenancyId::from([1; 32]);
+        record_issued(&dir, &t, &roster(1)).expect("with coverage");
+        let mut none = roster(2);
+        none.covers.clear();
+        record_issued(&dir, &t, &none).expect("without");
+        let got = FileRosterHistory::new(&dir).issued(&t).expect("read");
+        assert_eq!(got[0].covers.iter().map(String::as_str).collect::<Vec<_>>(), ["survey-a", "survey-b"]);
+        assert!(got[1].covers.is_empty(), "a roster that lists none covers none");
+        // A file written before coverage was recorded has no `covers` lines and still reads.
+        let path = file(&dir, &t);
+        let old: String = std::fs::read_to_string(&path).expect("read").lines().filter(|l| !l.starts_with("covers ")).map(|l| format!("{l}\n")).collect();
+        std::fs::write(&path, old).expect("write");
+        assert!(FileRosterHistory::new(&dir).issued(&t).expect("old file").iter().all(|r| r.covers.is_empty()));
+        // A survey name with a space is not one line's worth.
+        std::fs::write(&path, "roster a 1 0000000000000000000000000000000000000000000000000000000000000000 1\ncovers two words\n").expect("write");
+        assert!(FileRosterHistory::new(&dir).issued(&t).is_err());
         let _ = std::fs::remove_dir_all(dir);
     }
 

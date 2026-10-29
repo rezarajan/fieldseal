@@ -250,14 +250,19 @@ pub fn registry_store_contract<S: RegistryStore + Sync>(make: impl Fn() -> S) {
 /// refuses bytes that are not a valid roster, and a roster of another cohort than the one named,
 /// writing nothing.
 pub fn roster_issuer_contract<I: RosterIssuer>(issuer: &I, cohort: &CohortId, body: impl Fn(&CohortId, u64, &str) -> Vec<u8>) {
-    let IssueOutcome::Issued { version: 2, digest } = issuer.issue(cohort, &body(cohort, 2, "A")) else { panic!("a valid roster is issued") };
-    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "A")), IssueOutcome::AlreadyIssued { version: 2, digest }, "idempotent by content");
-    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "B")), IssueOutcome::VersionTaken, "a version never changes");
-    assert_eq!(issuer.issue(cohort, &body(cohort, 1, "A")), IssueOutcome::NotNewer, "a lower version is not accepted");
-    assert!(matches!(issuer.issue(cohort, b"not a roster"), IssueOutcome::Invalid(_)), "bytes that are no roster are invalid");
+    let IssueOutcome::Issued { version: 2, digest } = issuer.issue(cohort, &body(cohort, 2, "A"), &[]) else { panic!("a valid roster is issued") };
+    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "A"), &[]), IssueOutcome::AlreadyIssued { version: 2, digest }, "idempotent by content");
+    assert_eq!(
+        issuer.issue(cohort, &body(cohort, 2, "A"), &["a-survey-assigned-since".to_owned()]),
+        IssueOutcome::AlreadyIssued { version: 2, digest },
+        "the coverage was fixed at issue: a survey assigned since doesn't make the same bytes another roster"
+    );
+    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "B"), &[]), IssueOutcome::VersionTaken, "a version never changes");
+    assert_eq!(issuer.issue(cohort, &body(cohort, 1, "A"), &[]), IssueOutcome::NotNewer, "a lower version is not accepted");
+    assert!(matches!(issuer.issue(cohort, b"not a roster", &[]), IssueOutcome::Invalid(_)), "bytes that are no roster are invalid");
     let other = CohortId::new("another-cohort").expect("cohort");
-    assert!(matches!(issuer.issue(cohort, &body(&other, 3, "A")), IssueOutcome::Invalid(_)), "a roster of another cohort is invalid");
-    assert!(matches!(issuer.issue(&other, &body(&other, 3, "A")), IssueOutcome::Issued { .. }), "and nothing was written for it");
+    assert!(matches!(issuer.issue(cohort, &body(&other, 3, "A"), &[]), IssueOutcome::Invalid(_)), "a roster of another cohort is invalid");
+    assert!(matches!(issuer.issue(&other, &body(&other, 3, "A"), &[]), IssueOutcome::Issued { .. }), "and nothing was written for it");
 }
 
 /// [`SurveyDirectory`]: knows `published` and not a name nobody published.

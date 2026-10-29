@@ -46,7 +46,10 @@ async function start() {
     const [i, format] = entry.split(":");
     wb.addLayout(await text(`${base}/layout/${i}/source`), format);
   }
-  const roster = await text(`${base}/roster`);
+  // The survey's cohort is the one the device's bundle assigns it (the device keeps that in this browser).
+  let cohort = "";
+  try { cohort = ((JSON.parse(localStorage.getItem("fs-device-view")).surveys || []).find((s) => s.survey === id) || {}).cohort || ""; } catch { /* no device here */ }
+  const roster = await text(`${base}/roster${cohort ? "?cohort=" + encodeURIComponent(cohort) : ""}`);
   // Null is not a value in the canonical data model: leave the field out instead.
   const choice = { languages: panel.dataset.lang ? [panel.dataset.lang] : [] };
   if (panel.dataset.window) choice.window = panel.dataset.window;

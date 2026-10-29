@@ -7,7 +7,7 @@
 //!
 //! **Development adapter.**
 
-use fieldseal_distribution::domain::check_issue_form;
+use fieldseal_distribution::domain::{Roster, check_issue_form};
 use fieldseal_kernel::cbor;
 use fieldseal_kernel::digest::sha256;
 use fieldseal_kernel::id::{CohortId, Generation};
@@ -41,7 +41,7 @@ impl FileRosterIssuer {
 }
 
 impl RosterIssuer for FileRosterIssuer {
-    fn issue(&self, cohort: &CohortId, canonical_bytes: &[u8]) -> IssueOutcome {
+    fn issue(&self, cohort: &CohortId, canonical_bytes: &[u8], assigned: &[String]) -> IssueOutcome {
         let invalid = |reason: &str| IssueOutcome::Invalid(reason.to_owned());
         let Ok(value) = cbor::decode_limited(canonical_bytes, MAX_ROSTER_BODY) else {
             return invalid("the roster is not canonical CBOR");
@@ -60,7 +60,18 @@ impl RosterIssuer for FileRosterIssuer {
             return invalid("the roster names another cohort than the request");
         }
         let version = form.version;
-        let roster = form.into_roster(STORED_GENERATION);
+        let declared = form.consent_covers.is_some();
+        let roster = form.into_roster(STORED_GENERATION, assigned);
+        // The coverage of a roster that declared none was fixed when it was first issued: the
+        // same bytes sent again are that roster whatever has been assigned since.
+        if !declared
+            && let Ok(Some(held)) = self.store.get(&roster.cohort, version)
+        {
+            let same = Roster { consent_covers: held.consent_covers.clone(), ..roster.clone() };
+            if held == same {
+                return IssueOutcome::AlreadyIssued { version, digest: sha256(&held.encode()) };
+            }
+        }
         let digest = sha256(&roster.encode());
         match self.store.issue(&roster) {
             Ok(Stored::Stored) => IssueOutcome::Issued { version, digest },

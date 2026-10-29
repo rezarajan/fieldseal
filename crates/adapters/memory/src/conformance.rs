@@ -243,6 +243,7 @@ pub fn contract_cases() -> Vec<ContractCase> {
                                 consent: ConsentState::Unknown,
                                 prior_status: None,
                             }],
+                            consent_covers: vec![],
                         }],
                     );
                     s
@@ -343,12 +344,13 @@ pub fn contract_cases() -> Vec<ContractCase> {
                 issued: SIMULATION_T0,
                 registration: None,
                 time_tokens: vec![],
-                instrument: authority
+                instruments: vec![authority
                     .publish(ArtefactKind::Policy, "sample-policy", "1.0.0", &fieldseal_kernel::cbor::map([("kind", fieldseal_kernel::Value::Text("Policy".into()))]))
-                    .expect("publish"),
+                    .expect("publish")],
                 layouts: vec![],
                 policy: vec![],
                 rosters: vec![],
+                assignments: vec![],
                 withdrawals: vec![],
             };
             let ours = opener.register(contents);
@@ -427,6 +429,7 @@ pub fn contract_cases() -> Vec<ContractCase> {
                                 address: Digest::from([version as u8; 32]),
                                 issued_at: AuthorityTime(version),
                                 consent: BTreeMap::from([(SubjectId::new("s").expect("id"), IssuedConsent::Unknown)]),
+                                covers: Default::default(),
                             },
                         );
                     }

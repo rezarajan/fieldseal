@@ -1,7 +1,9 @@
 //! The Device page: the browser device (the real format core compiled to WebAssembly, run in a
 //! worker) with PIN tenancy, registration, bundle verification, capture, review, export,
 //! upload, receipts and clear. The page shows one step at a time (Session, Capture, Review and
-//! seal, Export) and one screen of it, each with a single primary action. This module serves
+//! seal, Export) and one screen of it, each with a single primary action, and each screen fits a
+//! phone without scrolling: the status, the security log and the device's details are behind
+//! one secondary "Details" control. This module serves
 //! the page and the few things the device fetches: its provisioning and a blank frame. The
 //! device gets its bundle from the factory, through the proxy.
 
@@ -65,7 +67,23 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 <li data-pill="review">Review &amp; seal</li>
 <li data-pill="export">Export</li>
 </ol>
-<span class="devbar-end"><span class="chip" id="chip" title="Software keys in this browser: for assessing the system, not for field use (CLI-007, REG-017)">Unattested software device (development policy allows it)</span><button id="lock" type="button" class="btn btn-quiet btn-icon" hidden aria-label="Lock the device">Lock</button></span>
+<span class="devbar-end">
+<details id="details-box" class="details-menu"><summary class="btn btn-quiet btn-icon" id="details-summary">Details</summary>
+<div class="details-body">
+<p class="chip" id="chip" title="Software keys in this browser: for assessing the system, not for field use (CLI-007, REG-017)">Unattested software device (development policy allows it)</p>
+<p id="latest" class="latest" role="status"></p>
+<details id="log-box" class="more"><summary>Security log <span id="log-count" class="count">0</span></summary><p class="note">Every step the device took, and what it found.</p><ol id="log" class="steps"></ol></details>
+<details id="device-box" class="more"><summary>This device and its bundle</summary>
+<p class="note">An <strong>unattested software device</strong> running in this browser: the format core compiled to WebAssembly, in a worker, with software keys stored in IndexedDB. It is for assessing the system, not for field use (CLI-007, REG-017). Production deployments refuse it.</p>
+<div id="device-info" class="kv"></div>
+<p id="posture" class="note"></p>
+<p><button type="button" id="keys-link" class="btn btn-secondary">Show this device's public keys</button> <span class="note">for <code>fieldseal bundle build</code></span></p><pre id="keys-out" hidden></pre>
+<ol id="bundle-steps" class="steps"></ol>
+<p id="tenancy-info" class="note"></p>
+<p><button type="button" id="forget" class="btn btn-danger">Forget this device</button> <span class="note">Deletes the keys, journal and local record from this browser; a new tenancy must be created afterwards.</span></p>
+</details>
+</div></details>
+<button id="lock" type="button" class="btn btn-quiet btn-icon" hidden aria-label="Lock the device">Lock</button></span>
 </div>
 <div id="device-error" class="notice warn" role="alert" hidden></div>
 <noscript><p class="notice warn">The device needs JavaScript and WebAssembly.</p></noscript>
@@ -113,13 +131,26 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 </form>
 
 <div data-screen="bundle" id="screen-bundle" class="screen center" hidden>
-<h1>Your bundle</h1>
-<p class="lead">The factory prepares a bundle for this device: the surveys it was assigned and the people to visit. The device asks for it, then verifies it here, step by step, before anything in it is used. Come back to check for a newer one.</p>
+<h1>Load your surveys</h1>
+<p class="lead">This loads the surveys assigned to this account, and the people to visit, from the factory. The device verifies them here, step by step, before anything in them is used.</p>
 <p id="bundle-status" class="lead" role="status"></p>
-<button type="button" id="fetch-bundle" class="btn btn-primary" hidden>Get my bundle</button>
+<button type="button" id="fetch-bundle" class="btn btn-primary" hidden>Load my surveys</button>
 <label for="bundle-file" id="open-bundle" class="btn btn-secondary">or open a bundle file</label>
 <input id="bundle-file" type="file" class="visually-hidden">
 <p id="bundle-error" class="msg bad" role="alert"></p>
+</div>
+
+<div data-screen="surveys" id="screen-surveys" class="screen surveys" hidden>
+<div class="screen-head"><h1>Your surveys</h1><p id="surveys-sub" class="lead">The surveys assigned to this account. Choose one to see who to visit.</p></div>
+<input id="survey-filter" class="text-input" type="search" aria-label="Search your surveys" placeholder="Search your surveys" autocomplete="off" hidden>
+<div id="survey-list" class="subjects"></div>
+<p id="surveys-empty" class="lead" hidden>No survey is assigned to this account yet. An operator assigns surveys in the factory portal; then check for new surveys.</p>
+<div class="actions">
+<p id="surveys-status" class="msg" role="status"></p>
+<p id="surveys-error" class="msg bad" role="alert"></p>
+<button type="button" id="open-survey" class="btn btn-primary">Open</button>
+<button type="button" id="check-surveys" class="btn btn-secondary">Check for new surveys</button>
+</div>
 </div>
 
 <form data-screen="consent" id="form-consent" class="screen center" hidden>
@@ -132,17 +163,19 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 </form>
 
 <div data-screen="roster" id="screen-roster" class="screen roster" hidden>
-<aside class="card roster-side">
+<div class="roster-head">
 <h1 id="roster-title">Session</h1><p id="roster-sub" class="lead"></p>
 <div class="progress" aria-hidden="true"><span id="roster-bar"></span></div>
 <p id="roster-count" class="note"></p>
+<div id="survey-pick" class="survey-pick" role="group" aria-label="Survey to conduct" hidden></div>
+</div>
+<div id="subjects" class="subjects"></div>
+<div class="actions">
 <p id="capture-error" class="msg bad" role="alert"></p>
 <button type="button" id="start-next" class="btn btn-primary">Start</button>
-<button type="button" id="to-export" class="btn btn-secondary">Hand over the records</button>
-<button type="button" id="another-survey" class="btn btn-secondary">Check for a newer bundle</button>
-<button type="button" class="btn btn-danger reset-device">Reset this device</button>
-</aside>
-<div id="subjects" class="subjects"></div>
+<div class="actions-row"><button type="button" id="to-export" class="btn btn-secondary">Hand over the records</button>
+<button type="button" id="switch-survey" class="btn btn-secondary">Switch survey</button></div>
+</div>
 </div>
 </section>
 
@@ -165,8 +198,10 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 <button type="button" id="seal" class="btn btn-primary hold" aria-describedby="seal-note"><span class="hold-fill" aria-hidden="true"></span><span class="hold-label">Hold to seal</span></button>
 <p id="seal-note" class="note"><strong>Sealing is final.</strong> Press and hold for a moment; letting go early cancels. With the keyboard, hold Space or Enter.</p>
 <p id="seal-error" class="msg bad" role="alert"></p>
+<div class="seal-extra">
 <details class="more"><summary>Cannot hold?</summary><button type="button" id="seal-confirm" class="btn btn-secondary">Seal now</button><p class="note">Press twice to confirm. This does the same as holding.</p></details>
 <button type="button" id="back-to-form" class="btn btn-quiet">Back to the form</button>
+</div>
 </aside>
 </div>
 </div>
@@ -204,17 +239,4 @@ const DEVICE_BODY: &str = r##"<div id="device" class="device" data-mode="{{mode}
 </details>
 </section>
 
-<div class="devfoot">
-<p id="latest" class="latest" role="status"></p>
-<details id="log-box" class="more"><summary>Security log <span id="log-count" class="count">0</span></summary><p class="note">Every step the device took, and what it found.</p><ol id="log" class="steps"></ol></details>
-<details id="device-box" class="more"><summary>Device details</summary>
-<p class="note">An <strong>unattested software device</strong> running in this browser: the format core compiled to WebAssembly, in a worker, with software keys stored in IndexedDB. It is for assessing the system, not for field use (CLI-007, REG-017). Production deployments refuse it.</p>
-<div id="device-info" class="kv"></div>
-<p id="posture" class="note"></p>
-<p><button type="button" id="keys-link" class="btn btn-secondary">Show this device's public keys</button> <span class="note">for <code>fieldseal bundle build</code></span></p><pre id="keys-out" hidden></pre>
-<ol id="bundle-steps" class="steps"></ol>
-<p id="tenancy-info" class="note"></p>
-<p><button type="button" id="forget" class="btn btn-danger">Forget this device</button> <span class="note">Deletes the keys, journal and local record from this browser; a new tenancy must be created afterwards.</span></p>
-</details>
-</div>
 </div>"##;

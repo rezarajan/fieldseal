@@ -45,7 +45,7 @@ use crate::ports::{
     WallClock,
 };
 
-pub use self::bundle::Held;
+pub use self::bundle::{Held, HeldInstrument};
 pub use self::capture::{CaptureView, ConsentInput, StatusOutcome};
 pub use self::clear::{ClearOutcome, ClearPreview, ReceiptOutcome};
 pub use self::close::{OutboxEntry, OutboxSummary};
@@ -226,6 +226,9 @@ pub enum CollectionEvent {
     FieldCheckRaised(String),
     /// The local record was cleared through a `seq`.
     LocalRecordCleared(Seq),
+    /// A sealed capture's paused position could not be forgotten. The record is sealed; the
+    /// position is stale and the next pause or seal of that subject and survey replaces it.
+    ProgressNotCleared(String),
     /// The tenancy closed.
     TenancyClosed(TenancyId),
     /// The tenancy's keys and local data were deleted.
@@ -291,8 +294,10 @@ pub(crate) mod names {
     pub fn applied_policies() -> StorageName {
         n("policy-versions")
     }
+    /// The paused captures' positions. The name carries the format's version: a blob written
+    /// before progress named its survey is left unread instead of failing every read (COL-110).
     pub fn progress() -> StorageName {
-        n("progress")
+        n("progress/2")
     }
     pub fn local(seq: u64) -> StorageName {
         StorageName(format!("local/{seq:020}"))

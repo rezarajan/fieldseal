@@ -56,12 +56,12 @@ This spec defines the runtime's behaviour on a device, independent of platform.
 | `CreateTenancy` | New PIN | Tenancy in `local` state, keys created | `PlatformUnsupported` |
 | `OpenSession` | PIN | `Session` | `WrongPin(wait)`, `LockedOut(until)` |
 | `LockSession` | — | — | — |
-| `StartCapture` | Subject, mode (`first`, `resume`, `resurvey`) | `Capture` with starting values | `ConsentRefused`, `ConsentNeeded`, `NotInRoster` |
+| `StartCapture` | Subject, survey (instrument), mode (`first`, `resume`, `resurvey`) | `Capture` with starting values | `ConsentRefused`, `ConsentNeeded`, `NotInRoster` |
 | `SetValue` / `ClearValue` | Item path, value | Updated verdicts | `NotEditable`, `OutOfRange` |
 | `AcknowledgeIncomplete` | — | — | — |
-| `RecordConsent` | Subject, basis, statement version, optional evidence | Consent record sealed | `NotAllowed` |
+| `RecordConsent` | Subject, survey, basis, statement version, optional evidence | Consent record sealed | `NotAllowed` |
 | `Seal` | `Capture` (or pause) | Record sealed in journal and local record | `HardVerdict`, `IncompleteNotAcknowledged`, `SealFailed` |
-| `RecordStatus` | Subject, `absent` / `declines` / `not-them` | Status record sealed | `ConsentRefused` |
+| `RecordStatus` | Subject, survey, `absent` / `declines` / `not-them` | Status record sealed | `ConsentRefused` |
 | `Review` | Filter (cohort, subject, check) | Records from the local record, and field-check results | — |
 | `Clear` | Through `seq` | Checkpoint sealed; data deleted | `DeliveryConditionNotMet` |
 | `EndTenancy` | — | Tenancy closed and erased | — |
@@ -117,8 +117,8 @@ Each is provided by a platform adapter; the contracts are in [Platform profiles]
 
 ### 5.3 Capture
 
-- **COL-030** `StartCapture` MUST refuse a subject whose roster consent is `refused`, and MUST NOT write any record about them, including status records.
-- **COL-031** If the instrument requires consent and the roster says `unknown`, `StartCapture` MUST require a consent record for the subject first (§5.4).
+- **COL-030** `StartCapture` MUST refuse a subject whose roster consent is `refused`, for every survey, and MUST NOT write any record about them, including status records.
+- **COL-031** If the instrument requires consent and the roster says `unknown`, `StartCapture` MUST require a consent record for the subject first (§5.4). A roster's `granted` counts only for the surveys that the roster version covers (its `consent_covers`, WIRE-095, DIS-013): for a survey it does not cover, `StartCapture` MUST require a consent record for the subject first, exactly as for `unknown`. A survey assigned to the cohort after the roster was issued is not covered by it.
 - **COL-032** In `first` mode every control MUST start unselected (INS-020). In `resurvey` mode controls MUST start from the subject's current values in the local record, and the record sealed MUST contain only the item paths whose values changed.
 - **COL-033** `resume` mode MUST continue a paused capture from its stored position, showing earlier values from the local record as editable.
 - **COL-034** Pausing MUST seal what has been set so far as a normal record. No unsealed capture MUST ever be written to storage.
@@ -129,10 +129,12 @@ Each is provided by a platform adapter; the contracts are in [Platform profiles]
 - **COL-108** A capture MUST be drawn from the render plan compiled by the format core for the instrument, the bundle's layout for the device's current window class (or the default layout), and the session's language (INS-206–INS-208). The runtime MUST seal every record of a capture with that layout's content address (INS-209). If the window class changes during a capture, the runtime MAY switch layouts only between records.
 - **COL-109** The unanswered count (COL-036, COL-063) MUST count a nonresponse as answered (INS-141), and MUST NOT count questions hidden by a skip rule or `when`.
 
+- **COL-111** A bundle MAY carry several instruments, and the runtime MUST hold every one with the layouts bound to it (INS-200). `StartCapture`, `RecordConsent` and `RecordStatus` MUST name the survey (the instrument) as well as the subject. When the bundle carries assignments (WIRE-096), the runtime MUST refuse a survey for a subject whose cohort the survey is not assigned to. Only a bundle that carries no assignments at all (a practice bundle, a bundle built by `fieldseal bundle build`, and a bundle built before assignments existed) allows every survey for every roster; a bundle built for an account with assignments none of which survived carries no instrument (DIS-018), so it allows nothing. Each record carries its own instrument's fingerprint, the local record keeps one state for each subject and instrument, and Review names the instrument of each state. Consent is the instrument's own (COL-031), so a person surveyed with two instruments may need consent twice.
+
 ### 5.4 Consent and evidence
 
 - **COL-040** `RecordConsent` MUST record a basis from the instrument's list, the statement version, and optionally evidence references, and MUST be confirmed with hold-to-confirm.
-- **COL-041** Survey records about a subject MUST carry a `consent_ref`: the consent record's ID, or the roster version for `granted`, or `not-required` (INS-062).
+- **COL-041** Survey records about a subject MUST carry a `consent_ref`: the consent record's ID, or the roster version for `granted` where that roster covers the record's survey (COL-031), or `not-required` (INS-062).
 - **COL-042** Evidence images MUST come only from `Camera` capture into memory. The runtime MUST NOT offer a gallery or file picker for evidence, and MUST NOT write images to shared storage.
 - **COL-043** An evidence image MUST be re-encoded at the instrument's maximum dimension with metadata (including location) removed before its SHA-256 is computed. It MUST be sealed only into the journal (an `evidence` record), not into the local record. The local record MUST note only that evidence exists.
 - **COL-044** After sealing, the runtime MUST NOT display the evidence image again.
@@ -227,6 +229,7 @@ runtime:
 | Consent and evidence handling | COL-040–COL-044 | `fieldseal device simulate --scenario consent`, `fieldseal export inspect` |
 | Dual write and recovery | COL-050–COL-053, COL-092, COL-093 | `fieldseal conformance run --suite col-crash` (fault injection at every step) |
 | Review and field checks | COL-060–COL-063 | `fieldseal device simulate --review` |
+| A bundle holds every instrument it carries; a survey is conducted only with the cohorts it is assigned to; records carry their own instrument | COL-111 | `fieldseal conformance run --suite col-lifecycle` |
 | Captures follow the render plan and name their layout; nonresponse counted as answered | COL-108, COL-109 | `fieldseal device simulate --layout`, `fieldseal export inspect` |
 | Clear at any time with twice-entered PIN; journal kept until receipt | COL-073, COL-100–COL-107 | `fieldseal device simulate --scenario clear`, `fieldseal export verify` |
 | Ticks | COL-080–COL-083 | `fieldseal export verify --ticks`, `fieldseal intake replay` |

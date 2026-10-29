@@ -51,7 +51,7 @@ impl CohortDirectory for Cohorts {
 pub struct NoRosters;
 
 impl RosterIssuer for NoRosters {
-    fn issue(&self, _: &CohortId, _: &[u8]) -> IssueOutcome {
+    fn issue(&self, _: &CohortId, _: &[u8], _: &[String]) -> IssueOutcome {
         IssueOutcome::Invalid("no roster store in this test".into())
     }
 }

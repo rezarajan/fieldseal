@@ -13,7 +13,7 @@ use fieldseal_collection::domain::{DeliveryState, RuntimePin};
 use fieldseal_delivery::application::DeliveryError;
 use fieldseal_delivery::domain::{AddressHint, DeliveryLabel, ExportId, HintSource};
 use fieldseal_delivery::ports::{PrivateStorage, PrivateStorageError};
-use fieldseal_e2e::{Couriers, Enrolled, Intake, PIN, Site, capture_household, delivery, device, intake_subject, now};
+use fieldseal_e2e::{Couriers, Enrolled, Intake, PIN, Site, capture_household, delivery, device, intake_subject, now, sole_survey};
 use fieldseal_intake::domain::{FindingKind, Reading, ObservedValue};
 use fieldseal_intake::ports::DataPlatform;
 use fieldseal_kernel::frame::read_frames;
@@ -62,7 +62,7 @@ fn seal_then_clear(seed: u64, cut: Option<u64>) -> u64 {
     if let Some(k) = cut {
         phone.device.storage.crash_after(k);
     }
-    let sealed = rt.record_status(&subject("h-004"), StatusOutcome::Absent);
+    let sealed = rt.record_status(&subject("h-004"), &sole_survey(&rt), StatusOutcome::Absent);
     let through = sealed.as_ref().map_or(first, |s| *s);
     let cleared = sealed.as_ref().ok().map(|_| rt.clear(through, &pin(), &pin(), None));
     let used = phone.device.storage.ops() - started;
@@ -83,7 +83,7 @@ fn seal_then_clear(seed: u64, cut: Option<u64>) -> u64 {
         assert!(n >= 5, "cut {cut}: a record the device acknowledged is in the journal ({recovery:?})");
     }
     // The chain continues after recovery.
-    rt.record_status(&subject("h-001"), StatusOutcome::Absent).unwrap_or_else(|e| panic!("cut {cut}: the chain continues: {e}"));
+    rt.record_status(&subject("h-001"), &sole_survey(&rt), StatusOutcome::Absent).unwrap_or_else(|e| panic!("cut {cut}: the chain continues: {e}"));
 
     // Everything the device holds reaches intake: no gap, no loss, no duplicate.
     let intake_after = Intake::new(&site, &[Enrolled::of(&rt)]);
@@ -126,14 +126,14 @@ fn col_093_a_torn_journal_frame_is_truncated_and_everything_before_it_lands() {
     capture_household(&mut rt, "h-002", 3);
     let before = rt.journal().expect("journal");
     phone.device.storage.tear_next_append(40);
-    assert!(rt.record_status(&subject("h-004"), StatusOutcome::Absent).is_err());
+    assert!(rt.record_status(&subject("h-004"), &sole_survey(&rt), StatusOutcome::Absent).is_err());
     drop(rt);
     phone.device.storage.restart();
     let mut rt = phone.runtime(&site, &opener);
     assert_eq!(rt.recovery().truncated_bytes, 40);
     assert_eq!(rt.journal().expect("journal"), before, "the torn frame is gone, earlier records intact");
     rt.open_session(&pin()).expect("open");
-    rt.record_status(&subject("h-004"), StatusOutcome::Absent).expect("the chain continues");
+    rt.record_status(&subject("h-004"), &sole_survey(&rt), StatusOutcome::Absent).expect("the chain continues");
     let intake = Intake::new(&site, &[Enrolled::of(&rt)]);
     let gate = intake.gate(&site);
     let upload = intake.upload(&site, &gate);
@@ -312,7 +312,7 @@ fn col_080_081_int_010_a_clock_reset_and_a_reboot_leave_ticks_that_intake_accept
     drop(rt);
     let mut rt = phone.runtime(&site, &opener);
     rt.open_session(&pin()).expect("and again with no wall clock");
-    rt.record_status(&subject("h-004"), StatusOutcome::Absent).expect("sealing is not blocked by device time");
+    rt.record_status(&subject("h-004"), &sole_survey(&rt), StatusOutcome::Absent).expect("sealing is not blocked by device time");
 
     // Intake sees ticks that never go back (WIRE-071, WIRE-072, INT-010): no flag, no loss.
     phone.device.wall.set(Some(now().0));
@@ -335,7 +335,7 @@ fn col_080_081_int_010_a_clock_reset_and_a_reboot_leave_ticks_that_intake_accept
 
 /// A second visit, as a resurvey with a changed answer.
 fn capture_household_again(rt: &mut fieldseal_collection::application::Runtime<'_>, who: &str, members: i128) {
-    rt.start_capture(&subject(who), fieldseal_collection::application::CaptureMode::Resurvey).expect("resurvey");
+    rt.start_capture(&subject(who), &sole_survey(rt), fieldseal_collection::application::CaptureMode::Resurvey).expect("resurvey");
     rt.set_value(&ItemPath::new("household.members").expect("path"), fieldseal_kernel::Value::Int(members)).expect("set");
     rt.seal().expect("seal");
 }

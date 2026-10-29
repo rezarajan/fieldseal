@@ -1,45 +1,47 @@
 # Presentation only (ADR 0033), in the compact dialect (ADR 0040): partitions the survey, never reorders it.
+# A compact window is a phone, so each step shows at most four questions and fits the screen
+# without scrolling (INS-210).
 layout: {name: household-water-access-compact, instrument: ../instrument.yaml, window: compact}
 steps:
 - id: household
   title: The household
   contents:
   - {element: welcome}
-  - card:
-      id: who-lives-here
-      title: Who lives here
-      contents:
-      - show: [household.members, household.repaired_on]
-- id: water
-  title: Water
+  - show: [household.members, household.repaired_on]
+- id: the-source
+  title: The source
   navigation: free
   contents:
-  - card:
-      id: the-source
-      title: The source
-      contents:
-      - show: [water.source, water.minutes_to_source]
-  - card:
-      id: use-and-treatment
-      title: Use and treatment
-      contents:
-      - show: [water.litres_per_day, water.treatments]
-  - card:
-      id: cost
-      title: Cost
-      contents:
-      - {element: water.monthly_cost}
-- id: sanitation-and-hygiene
-  title: Sanitation and hygiene
+  - show: [water.source]
+- id: the-trip
+  title: The trip
+  navigation: free
   contents:
-  - card:
-      id: the-toilet
-      title: The toilet
-      contents:
-      - {group: sanitation}
-  - card:
-      id: hygiene
-      title: Hygiene
-      contents:
-      - {group: hygiene}
+  - show: [water.minutes_to_source, water.litres_per_day]
+- id: treatment
+  title: Treatment
+  navigation: free
+  contents:
+  - show: [water.treatments]
+- id: cost
+  title: Cost
+  navigation: free
+  contents:
+  - {element: water.monthly_cost}
+- id: the-toilet
+  title: The toilet
+  contents:
+  - {element: sanitation.toilet.type}
+- id: sharing
+  title: Sharing
+  contents:
+  - {group: sanitation.toilet.sharing}
+- id: hygiene
+  title: Hygiene
+  contents:
+  - show: [hygiene.handwashing_place, hygiene.soap_seen]
+- id: notes
+  title: Notes
+  contents:
+  - show: [hygiene.notes]
   - {element: thanks}

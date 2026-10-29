@@ -61,7 +61,7 @@ fn reg_042_dis_042_int_054_two_devices_are_registered_apart_and_intake_orders_th
             other => panic!("another device's bundle must be refused, got {other:?}"),
         }
     }
-    assert_eq!(rt_b.held().expect("held").fingerprint, held_before.fingerprint);
+    assert_eq!(rt_b.held().expect("held").instruments[0].fingerprint, held_before.instruments[0].fingerprint);
     assert_eq!(rt_b.state(), Some(TenancyState::Registered));
     rt_a.import_bundle(&bundle_a).expect("a's own newer bundle imports");
     rt_b.import_bundle(&bundle_b).expect("b's own newer bundle imports");

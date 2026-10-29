@@ -4,8 +4,7 @@
 //! on every call, so edits to the files show up. A survey that fails to resolve or validate is
 //! still listed, with its findings.
 
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use fieldseal_adapters_authoring::survey::{RosterSet, SurveyTree};
 use fieldseal_adapters_authoring::Format;
@@ -68,12 +67,6 @@ pub struct Entry {
     pub layouts: Vec<LayoutFile>,
     /// The survey's layouts that do not validate: window class and findings.
     pub layout_errors: Vec<(String, Vec<String>)>,
-    /// The latest roster of the survey's cohort, if the survey has a cohort and the cohort a roster.
-    pub roster: Option<PathBuf>,
-    /// Set when the roster store is configured (`FIELDSEAL_WEB_ROSTER_DIR`): what the roster page
-    /// answers, instead of `roster`. `{}` when the survey has no cohort or the cohort no roster,
-    /// else the cohort, the version and counts, never a name, a subject or a field value.
-    pub stored_roster: Option<Result<String, String>>,
     /// Set when the survey on disk fails to load but an earlier version loaded: the other fields
     /// are that last good version, and this holds the findings of the file as it is now.
     pub current_errors: Option<Vec<String>>,
@@ -101,12 +94,12 @@ impl Entry {
 /// Like [`load_all`], keeping the last good version of each survey in `state` and showing it,
 /// with the findings of the file as it is now, when the survey no longer loads.
 pub fn load_all_cached(state: &AppState) -> Vec<Entry> {
-    load_all(&state.examples_dir, &state.survey_cohorts, state.roster_dir.as_deref()).into_iter().map(|e| remember(state, e)).collect()
+    load_all(&state.examples_dir).into_iter().map(|e| remember(state, e)).collect()
 }
 
 /// Like [`load`], with the last-good cache of [`load_all_cached`].
 pub fn load_cached(state: &AppState, id: &str) -> Option<Entry> {
-    load(&state.examples_dir, id, &state.survey_cohorts, state.roster_dir.as_deref()).map(|e| remember(state, e))
+    load(&state.examples_dir, id).map(|e| remember(state, e))
 }
 
 /// A good load replaces the cache; a failed one leaves it alone and is shown beside it.
@@ -124,7 +117,7 @@ fn remember(state: &AppState, entry: Entry) -> Entry {
     }
 }
 
-/// The rosters a survey's pages can use: the files of `<dir>/rosters`, or the factory's roster store.
+/// The rosters the pages can use: the files of `<dir>/rosters`, or the factory's roster store.
 struct Rosters {
     files: Option<RosterSet>,
     /// `Some` when `FIELDSEAL_WEB_ROSTER_DIR` is set: the store, `None` inside when the directory
@@ -140,53 +133,73 @@ impl Rosters {
         Self { files: if store.is_some() { None } else { RosterSet::open(&dir.join("rosters")).ok() }, store }
     }
 
-    fn for_survey(&self, id: &str, cohorts: &BTreeMap<String, String>) -> (Option<PathBuf>, Option<Result<String, String>>) {
-        let cohort = cohorts.get(id);
+    fn for_cohort(&self, cohort: Option<&str>) -> Result<RosterPage, String> {
         match &self.store {
-            None => (cohort.and_then(|c| self.files.as_ref()?.latest(c)).map(|f| f.path.clone()), None),
-            Some(Err(e)) => (None, Some(Err(e.clone()))),
+            None => match cohort.and_then(|c| self.files.as_ref()?.latest(c)) {
+                Some(f) => file_counts(&f.path).map(RosterPage::Counts),
+                None => Ok(RosterPage::Empty),
+            },
+            Some(Err(e)) => Err(e.clone()),
             Some(Ok(store)) => {
                 let latest = cohort.zip(store.as_ref()).map(|(c, store)| CohortId::new(c).map_err(|e| e.to_string()).and_then(|c| store.latest(&c).map_err(|e| e.to_string())));
-                (None, Some(latest.unwrap_or(Ok(None)).map(|r| r.map_or_else(|| "{}".to_owned(), |r| counts(&r)))))
+                Ok(latest.transpose()?.flatten().map_or(RosterPage::Empty, |r| RosterPage::Counts(counts(&r))))
             }
         }
     }
 }
 
+/// What the roster page answers for a cohort.
+pub enum RosterPage {
+    /// The cohort has no roster, or none was named: `{}`.
+    Empty,
+    /// The cohort, the version and counts, never a name, a subject or a field value.
+    Counts(String),
+}
+
+/// The roster page's answer for `cohort`, the cohort the device's assignment names (the bundle
+/// it holds links each survey to a cohort, WIRE-094). The latest roster in `<dir>/rosters`, or,
+/// with `roster_dir` (`FIELDSEAL_WEB_ROSTER_DIR`), the latest in the factory's roster store there.
+pub fn roster_page(state: &AppState, cohort: Option<&str>) -> Result<RosterPage, String> {
+    Rosters::open(&state.examples_dir, state.roster_dir.as_deref()).for_cohort(cohort)
+}
+
 /// The roster page's answer for a stored roster: counts, not people.
 fn counts(roster: &Roster) -> String {
     let n = |state: ConsentState| roster.entries.iter().filter(|e| e.consent == state).count();
-    format!(
-        "{{\"cohort\":\"{}\",\"version\":{},\"subjects\":{},\"granted\":{},\"refused\":{},\"unknown\":{}}}",
-        roster.cohort.as_str(),
-        roster.version,
-        roster.entries.len(),
-        n(ConsentState::Granted),
-        n(ConsentState::Refused),
-        n(ConsentState::Unknown)
-    )
+    counts_json(roster.cohort.as_str(), roster.version, roster.entries.len(), [n(ConsentState::Granted), n(ConsentState::Refused), n(ConsentState::Unknown)])
 }
 
-/// Loads every survey in `<dir>/surveys`. `cohorts` maps a survey name to the cohort whose roster
-/// its pages use (`FIELDSEAL_WEB_SURVEY_COHORTS`); a survey with no entry has no roster. The
-/// roster is the latest in `<dir>/rosters`, or, with `roster_dir` (`FIELDSEAL_WEB_ROSTER_DIR`),
-/// the latest in the factory's roster store there.
-pub fn load_all(dir: &Path, cohorts: &BTreeMap<String, String>, roster_dir: Option<&Path>) -> Vec<Entry> {
+fn counts_json(cohort: &str, version: u64, subjects: usize, [granted, refused, unknown]: [usize; 3]) -> String {
+    format!("{{\"cohort\":{},\"version\":{version},\"subjects\":{subjects},\"granted\":{granted},\"refused\":{refused},\"unknown\":{unknown}}}", fieldseal_adapters_web::json::quote(cohort))
+}
+
+/// The same counts for an examples roster file, which is read as a document: its names and
+/// fields are not passed on.
+fn file_counts(path: &Path) -> Result<String, String> {
+    let doc = fieldseal_adapters_authoring::decode_path(path).map_err(|e| e.message)?;
+    let top = doc.as_map().ok_or("the roster is not a map")?;
+    let head = top.get("roster").and_then(|v| v.as_map()).unwrap_or(top);
+    let cohort = head.get("cohort").and_then(|v| v.as_text()).ok_or("the roster names no cohort")?;
+    let version = head.get("version").and_then(|v| v.as_int()).and_then(|v| u64::try_from(v).ok()).ok_or("the roster names no version")?;
+    let subjects = head.get("subjects").and_then(|v| v.as_array()).unwrap_or_default();
+    let n = |state: &str| subjects.iter().filter(|s| s.as_map().and_then(|m| m.get("consent")).and_then(|c| c.as_text()).unwrap_or("unknown") == state).count();
+    Ok(counts_json(cohort, version, subjects.len(), [n("granted"), n("refused"), n("unknown")]))
+}
+
+/// Loads every survey in `<dir>/surveys`.
+pub fn load_all(dir: &Path) -> Vec<Entry> {
     let Ok(tree) = SurveyTree::open(&dir.join("surveys")) else { return Vec::new() };
-    let rosters = Rosters::open(dir, roster_dir);
-    tree.names().iter().map(|name| load_one(&tree, name, &rosters, cohorts)).collect()
+    tree.names().iter().map(|name| load_one(&tree, name)).collect()
 }
 
 /// Loads the survey `id`.
-pub fn load(dir: &Path, id: &str, cohorts: &BTreeMap<String, String>, roster_dir: Option<&Path>) -> Option<Entry> {
+pub fn load(dir: &Path, id: &str) -> Option<Entry> {
     let tree = SurveyTree::open(&dir.join("surveys")).ok()?;
-    let rosters = Rosters::open(dir, roster_dir);
-    tree.names().iter().any(|n| n == id).then(|| load_one(&tree, id, &rosters, cohorts))
+    tree.names().iter().any(|n| n == id).then(|| load_one(&tree, id))
 }
 
-fn load_one(tree: &SurveyTree, id: &str, rosters: &Rosters, cohorts: &BTreeMap<String, String>) -> Entry {
-    let (roster, stored_roster) = rosters.for_survey(id, cohorts);
-    let mut entry = Entry { id: id.to_owned(), source: Vec::new(), format: Format::Json, status: Err(Vec::new()), layouts: Vec::new(), layout_errors: Vec::new(), roster, stored_roster, current_errors: None };
+fn load_one(tree: &SurveyTree, id: &str) -> Entry {
+    let mut entry = Entry { id: id.to_owned(), source: Vec::new(), format: Format::Json, status: Err(Vec::new()), layouts: Vec::new(), layout_errors: Vec::new(), current_errors: None };
     let loaded = match tree.survey(id).map_err(|e| vec![e]).and_then(|survey| survey.load()) {
         Ok(loaded) => loaded,
         Err(errors) => {
@@ -229,4 +242,16 @@ fn load_one(tree: &SurveyTree, id: &str, rosters: &Rosters, cohorts: &BTreeMap<S
         }
     }
     entry
+}
+
+#[cfg(test)]
+mod tests {
+    use super::counts_json;
+
+    // covers: DIS-081
+    #[test]
+    fn a_cohort_name_is_escaped_in_the_counts() {
+        let json = counts_json("a\"b\\c", 1, 2, [1, 0, 1]);
+        assert!(json.starts_with(r#"{"cohort":"a\"b\\c","#), "{json}");
+    }
 }

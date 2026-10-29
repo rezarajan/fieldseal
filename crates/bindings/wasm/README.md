@@ -27,7 +27,7 @@ Wrapped crates: `fieldseal-kernel`, `fieldseal-instrument`, `fieldseal-adapters-
 - `Device`: `new Device(provisioning, persisted, boot_count)`, `drainChanges`, `eraseAll`,
   `takeDownloads`, `state`, `createTenancy(pin)`, `unlock(pin)`, `lock`, `publicKeys`,
   `registrationRequest(token, label)`, `importBundle(file)`, `fetchBundle(factoryUrl, held)`
-  (`held` is the held sequence number or `-1`; answers JSON with `status` `imported`, `current`, `preparing` or `refused`), `held`, `render`, `evaluate`, `rosterFields`,
+  (`held` is the held sequence number or `-1`; answers JSON with `status` `imported`, `current`, `preparing` or `refused`), `held` (answers JSON with `surveys`: each assigned survey with its instrument's titles by language and its cohort, WIRE-096), `render`, `evaluate`, `rosterFields`,
   `recordConsent`, `recordStatus`, `startCapture`, `setValues`, `overrideSoft`, `acknowledgeIncomplete`,
   `seal`, `discardCapture`, `review`, `export(parity)`, `upload(address)`, `importReceipt`,
   `clearPreview`, `clear`, `lastSeq`.

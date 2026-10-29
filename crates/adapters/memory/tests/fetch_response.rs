@@ -50,6 +50,7 @@ fn roster() -> Roster {
             consent: ConsentState::Unknown,
             prior_status: None,
         }],
+        consent_covers: vec![],
     }
 }
 

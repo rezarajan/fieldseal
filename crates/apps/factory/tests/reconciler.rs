@@ -3,7 +3,7 @@
 
 mod common;
 
-use fieldseal_distribution::domain::BundleSeq;
+use fieldseal_distribution::domain::{BundleAssignment, BundleContent, BundleSeq};
 use fieldseal_distribution::ports::BundleStore as _;
 use fieldseal_registration::ports::RegistryStore as _;
 use fieldseal_factory::reconciler::{Outcome, ReconcileEvent};
@@ -37,6 +37,86 @@ fn dis_082_registration_builds_sequence_one() {
     assert_eq!(content.instruments.iter().map(|p| *p.address()).collect::<Vec<_>>(), vec![*instrument.address()]);
     assert!(env.digest_file(&device).is_file());
     assert!(env.events().iter().any(|e| matches!(e, ReconcileEvent::Built { seq: 1, .. })));
+}
+
+#[test]
+fn wire_094_the_bundle_carries_the_assignments_of_the_journal() {
+    let (env, device, instrument) = basic("assignments");
+    let r = env.reconciler();
+    r.run_once();
+    let cohort = fieldseal_kernel::id::CohortId::new("cohort-a").expect("id");
+    let first = BundleAssignment { survey: "survey-a".into(), instrument: *instrument.address(), cohort: cohort.clone(), generation: fieldseal_kernel::id::Generation(1) };
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    assert_eq!(content.assignments, vec![first.clone()], "the survey is linked to the cohort the journal says");
+    assert_eq!(BundleContent::decode(&content.encode().expect("encodes")).expect("decodes"), content, "the assignments round-trip");
+
+    // A second survey for the same cohort is a second assignment, in survey order.
+    let second = env.instrument("survey-b", "1.0.0", "^1.0");
+    env.assign("a", "survey-b", "cohort-a", 1);
+    assert_eq!(built(&r.reconcile_all(&[device.tenancy])), vec![2]);
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    let b = BundleAssignment { survey: "survey-b".into(), instrument: *second.address(), cohort, generation: fieldseal_kernel::id::Generation(1) };
+    assert_eq!(content.assignments, vec![first, b]);
+    assert_eq!(content.manifest().assignments, content.assignments, "the manifest lists them too");
+
+    // An assignment to a cohort the bundle holds no roster for is not a bundle.
+    let mut bad = content;
+    bad.assignments[0].cohort = fieldseal_kernel::id::CohortId::new("elsewhere").expect("id");
+    assert!(BundleContent::decode(&bad.encode().expect("encodes")).is_err());
+}
+
+#[test]
+fn dis_018_a_survey_assigned_to_two_cohorts_carries_both_assignments() {
+    let env = Env::new("two-cohorts");
+    let instrument = env.instrument("survey-a", "1.0.0", "^1.0");
+    let device = env.device("a", &[("cohort-a", 1), ("cohort-b", 1)], SCHEMA_1_0);
+    env.assign("a", "survey-a", "cohort-a", 1);
+    env.assign("a", "survey-a", "cohort-b", 1);
+    env.world.assign_rosters(&device, vec![roster("cohort-a", 1, 1), roster("cohort-b", 1, 1)]);
+    env.reconciler().run_once();
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    let cohorts: Vec<_> = content.assignments.iter().map(|a| (a.survey.as_str(), a.cohort.as_str(), a.instrument)).collect();
+    assert_eq!(cohorts, vec![("survey-a", "cohort-a", *instrument.address()), ("survey-a", "cohort-b", *instrument.address())]);
+}
+
+#[test]
+fn dis_018_an_assignment_without_a_roster_is_left_out_of_the_bundle() {
+    let (env, device, instrument) = basic("no-roster");
+    // The journal is ahead of the tenancy: cohort-b has no roster in this build.
+    env.assign("a", "survey-a", "cohort-b", 1);
+    env.reconciler().run_once();
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    assert_eq!(content.assignments.len(), 1);
+    assert_eq!(content.assignments[0].cohort.as_str(), "cohort-a");
+    assert_eq!(content.assignments[0].instrument, *instrument.address());
+}
+
+#[test]
+fn dis_018_an_instrument_whose_assignments_were_all_left_out_is_not_carried() {
+    let (env, device, instrument) = basic("dropped-instrument");
+    // survey-b is published and assigned, but only to a cohort this build holds no roster for.
+    env.instrument("survey-b", "1.0.0", "^1.0");
+    env.assign("a", "survey-b", "cohort-b", 1);
+    env.reconciler().run_once();
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    assert_eq!(content.instruments.iter().map(|p| *p.address()).collect::<Vec<_>>(), vec![*instrument.address()], "survey-b is not carried, so a device can't conduct it");
+    assert_eq!(content.assignments.len(), 1);
+}
+
+#[test]
+fn dis_018_when_no_assignment_survives_the_bundle_carries_no_instrument() {
+    let env = Env::new("none-survive");
+    env.instrument("survey-a", "1.0.0", "^1.0");
+    let device = env.device("a", &[("cohort-a", 1)], SCHEMA_1_0);
+    // The only assignment is to a cohort the tenancy holds no roster for.
+    env.assign("a", "survey-a", "cohort-b", 1);
+    env.world.assign_rosters(&device, vec![roster("cohort-a", 1, 1)]);
+    env.reconciler().run_once();
+    let content = env.open(&device, &env.latest(&device).expect("stored"));
+    assert!(content.instruments.is_empty(), "nothing is left to conduct, and an empty list of assignments must not mean everything");
+    assert!(content.assignments.is_empty());
+    assert_eq!(content.rosters.len(), 1);
+    assert_eq!(BundleContent::decode(&content.encode().expect("encodes")).expect("decodes"), content);
 }
 
 #[test]
@@ -400,6 +480,9 @@ fn int_040_issued_rosters_are_recorded_for_intake_with_restricted_fields() {
     assert!(carried.entries.iter().all(|e| e.attributes.contains_key("age") && !e.attributes.contains_key("district")));
     let address = fieldseal_kernel::digest::lower_hex(fieldseal_kernel::id::ContentAddress::of(&carried.encode()).as_bytes());
     assert!(recorded.contains(&address));
+    // The surveys the roster's consent covers travel in the bundle and are recorded for intake (INT-031).
+    assert_eq!(carried.consent_covers, ["survey-a"]);
+    assert!(recorded.contains("covers survey-a\n"), "{recorded}");
     // A rebuild for the same roster does not record it twice.
     env.clock.advance(25 * HOUR);
     env.reconciler().run_once();

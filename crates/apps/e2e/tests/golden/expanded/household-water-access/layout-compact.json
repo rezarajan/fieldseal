@@ -15,20 +15,10 @@
             "element": "welcome"
           },
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "household.members"
-                },
-                {
-                  "element": "household.repaired_on"
-                }
-              ],
-              "title": {
-                "en": "Who lives here",
-                "es": "Quién vive aquí"
-              }
-            }
+            "element": "household.members"
+          },
+          {
+            "element": "household.repaired_on"
           }
         ],
         "navigation": "linear",
@@ -40,84 +30,97 @@
       {
         "contents": [
           {
-            "card": {
-              "contents": [
-                {
-                  "element": "water.source"
-                },
-                {
-                  "element": "water.minutes_to_source"
-                }
-              ],
-              "title": {
-                "en": "The source",
-                "es": "La fuente"
-              }
-            }
-          },
-          {
-            "card": {
-              "contents": [
-                {
-                  "element": "water.litres_per_day"
-                },
-                {
-                  "element": "water.treatments"
-                }
-              ],
-              "title": {
-                "en": "Use and treatment",
-                "es": "Uso y tratamiento"
-              }
-            }
-          },
-          {
-            "card": {
-              "contents": [
-                {
-                  "element": "water.monthly_cost"
-                }
-              ],
-              "title": {
-                "en": "Cost",
-                "es": "Costo"
-              }
-            }
+            "element": "water.source"
           }
         ],
         "navigation": "free",
         "title": {
-          "en": "Water",
-          "es": "Agua"
+          "en": "The source",
+          "es": "La fuente"
         }
       },
       {
         "contents": [
           {
-            "card": {
-              "contents": [
-                {
-                  "group": "sanitation"
-                }
-              ],
-              "title": {
-                "en": "The toilet",
-                "es": "El inodoro"
-              }
-            }
+            "element": "water.minutes_to_source"
           },
           {
-            "card": {
-              "contents": [
-                {
-                  "group": "hygiene"
-                }
-              ],
-              "title": {
-                "en": "Hygiene",
-                "es": "Higiene"
-              }
-            }
+            "element": "water.litres_per_day"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "The trip",
+          "es": "El recorrido"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "water.treatments"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Treatment",
+          "es": "Tratamiento"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "water.monthly_cost"
+          }
+        ],
+        "navigation": "free",
+        "title": {
+          "en": "Cost",
+          "es": "Costo"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "sanitation.toilet.type"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "The toilet",
+          "es": "El inodoro"
+        }
+      },
+      {
+        "contents": [
+          {
+            "group": "sanitation.toilet.sharing"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Sharing",
+          "es": "Uso compartido"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "hygiene.handwashing_place"
+          },
+          {
+            "element": "hygiene.soap_seen"
+          }
+        ],
+        "navigation": "linear",
+        "title": {
+          "en": "Hygiene",
+          "es": "Higiene"
+        }
+      },
+      {
+        "contents": [
+          {
+            "element": "hygiene.notes"
           },
           {
             "element": "thanks"
@@ -125,8 +128,8 @@
         ],
         "navigation": "linear",
         "title": {
-          "en": "Sanitation and hygiene",
-          "es": "Saneamiento e higiene"
+          "en": "Notes",
+          "es": "Notas"
         }
       }
     ],

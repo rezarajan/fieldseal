@@ -17,7 +17,7 @@
 | Element | Type | Meaning |
 |---|---|---|
 | `Bundle` | Aggregate root | One sealed, signed package for one agreement key, identified by its content address. |
-| `BundleManifest` | Value object | What the bundle contains, inside the seal: tenancy, agreement key, item list with content addresses, bundle sequence number, issue time. |
+| `BundleManifest` | Value object | What the bundle contains, inside the seal: tenancy, agreement key, item list with content addresses, the survey assignments, bundle sequence number, issue time. |
 | `PublishedArtefactRef` | Value object | An instrument or policy content address with its publisher signatures, provenance and transparency-log inclusion proof. |
 | `Roster` | Entity | A cohort's subjects: pseudonymous subject IDs, display fields the instrument reads, consent state (`granted`, `refused`, `unknown`), optional prior status. |
 | `RosterVersion` | Value object | Cohort ID, version (monotonic), generation for this tenancy. |
@@ -88,11 +88,12 @@ On the runtime:
   It MAY contain trust updates.
 - **DIS-011** The factory MUST build bundles only from artefacts that `ArtefactRegistry` reports as published and not withdrawn.
 - **DIS-012** The factory MUST NOT include an instrument whose schema range is incompatible with the schema version the tenancy's runtime reported at registration (INS-093). The schema version is the one recorded with the tenancy at registration (REG-091); a runtime that reports an older version is given only what that version can open.
-- **DIS-013** A roster MUST carry, per subject, a pseudonymous `subject_id`, only the display fields the instrument references, and a consent state. It MUST NOT carry fields the instrument does not reference.
+- **DIS-013** A roster MUST carry, per subject, a pseudonymous `subject_id`, only the display fields the instrument references, and a consent state. It MUST NOT carry fields the instrument does not reference. A roster also carries the surveys its `granted` consent covers (`consent_covers`, WIRE-095): the roster file MAY declare them (`consent-covers`), and when it declares none the factory MUST record, when it accepts the roster (`IssueRoster`), the surveys assigned to the roster's cohort at that moment, in any account (REG-046). The list is stored with the roster version, never changes with it, and is not widened by a later assignment: the same bytes issued again are the roster already stored, and a survey assigned later needs the consent recorded on the device (COL-031) until a newer roster version covers it. The factory MUST record the list with the issued roster for intake (INT-031).
 - **DIS-014** Each roster MUST carry its cohort ID, a monotonic version and the tenancy's generation for that cohort.
 - **DIS-015** The bundle sequence number MUST increase by one for each bundle built for a tenancy.
 - **DIS-016** A bundle MAY contain, for each instrument, the published layouts that factory policy assigns to it, at most one per window class (INS-207), each as a `PublishedArtefactRef`. The factory MUST NOT include a layout bound to a different instrument fingerprint (INS-200).
 - **DIS-017** A bundle MAY contain published `Localisation` artefacts for the runtime UI, as policy assigns them. The factory MUST NOT include a catalogue whose reference version the tenancy's runtime build did not report at registration (PLAT-053). The reference version is the one recorded with the tenancy at registration (REG-091); a runtime that reported none is given no localisation.
+- **DIS-018** A bundle MUST carry, for each survey the factory has assigned to the tenancy's account (the latest assignment of each survey to each cohort in its assignment journal) and whose instrument the bundle contains, an assignment `{survey, instrument, cohort, generation}` (WIRE-096), so that a runtime knows which survey is conducted with which cohort's roster; a survey assigned to two cohorts has two assignments. An assignment whose cohort has no roster in the bundle is left out, and the generation is the roster's. The assignments are the factory's authority on what the account may use: the runtime shows the collector what the bundle says and no more, and a collector asks the factory for new surveys with the verified bundle fetch (DIS-040), not with a separate request. When the build has assignments, the bundle MUST carry only the instruments (and the layouts bound to them) that a surviving assignment names: an assignment left out for a missing roster or instrument leaves its instrument out too, so that dropping an assignment never widens what a runtime allows; if none survives, the bundle carries rosters and no instrument, and a runtime has nothing to conduct. Only a bundle built with no assignments at all (a practice bundle, a bundle built by `fieldseal bundle build`, and a bundle built before assignments existed) carries none, and a runtime reads such a bundle as each instrument's survey for every roster (COL-111). A bundle carries one version of each survey: no two of its instruments share a name. A runtime holds every instrument the bundle carries (COL-111). This is an additive amendment to the v1alpha1 bundle contents.
 
 ### 5.3 Sealing and signing
 
@@ -145,7 +146,7 @@ On the runtime:
 - **DIS-060** A bundle MUST be accepted from any source or route; its validity MUST rest only on its factory signature, sealing and contents.
 - **DIS-061** A bundle MUST NOT be required to name an upload destination. It MAY carry advisory destination hints, which the runtime MUST treat as untrusted ([Delivery](./delivery.md), DEL-061).
 - **DIS-062** Bundles MUST name instruments by fingerprint ([ADR 0027](../../explanation/adr/0027-salted-instrument-fingerprints.md)).
-- **DIS-063** Every reader of a bundle file, bundle content, roster or time token MUST reject unknown fields, enforce exact types, require every required field, and enforce every declared constraint: sizes before parsing, no trailing bytes, strictly increasing roster ordinals, unique subjects within a roster, one roster per cohort, no publication listed twice in a list, and a consent state from the declared set. A reader that projects an already validated artefact (the schema range of an instrument, the instrument of a layout) reads only the fields composition needs and fails closed on anything it cannot read.
+- **DIS-063** Every reader of a bundle file, bundle content, roster or time token MUST reject unknown fields, enforce exact types, require every required field, and enforce every declared constraint: sizes before parsing, no trailing bytes, strictly increasing roster ordinals, unique subjects within a roster, survey names in a roster's coverage list that are well formed, sorted and unique, no two instruments of one name in a bundle, one roster per cohort, no publication listed twice in a list, and a consent state from the declared set. A reader that projects an already validated artefact (the schema range of an instrument, the instrument of a layout) reads only the fields composition needs and fails closed on anything it cannot read.
 - **DIS-080** (provisional) A roster version, once issued, MUST NOT change, and a `RosterSource` MUST return, for a cohort, the highest version issued. Issuing the same content at the same version again leaves the store unchanged; different content at an issued version, or a version lower than the highest issued, is refused. A development roster store holds them as files that only its owner can read (the contract `FileRosterSource` and the file roster store satisfy).
 - **DIS-081** (provisional) The difference between two roster versions MUST be computable without exposing a subject: the counts of subjects added, removed and kept, of consent changes by state and of `prior_status` changes, and the names of the changed fields, without a subject id or a value.
 
@@ -172,6 +173,8 @@ spec:
   policy: { address: sha256:0b9e… }
   rosters:
     - { cohort: cohort:12a, version: 4, generation: 1, subjects: 28 }
+  assignments:
+    - { survey: health-check, instrument: sha256:77c1…, cohort: cohort:12a, generation: 1 }
   withdrawals: { address: sha256:e3f0…, count: 0 }
   anchors: 1
 ```
@@ -189,7 +192,7 @@ spec:
 | Test | Requirements | Command |
 |---|---|---|
 | Release refused before registration and for flagged tenancies | DIS-001–DIS-004 | `fieldseal policy evaluate`, `fieldseal conformance run --suite dis-release` |
-| Contents and published-only rule | DIS-010–DIS-015, DIS-063 | `fieldseal bundle build`, `fieldseal bundle inspect` |
+| Contents and published-only rule | DIS-010–DIS-015, DIS-018, DIS-063 | `fieldseal bundle build`, `fieldseal bundle inspect` |
 | File roster store and source, bundle store and runtime profiles satisfy their port contracts | DIS-012, DIS-015, DIS-023, DIS-080 | `cargo test -p fieldseal-adapters-file --test contracts` |
 | Roster issue form, and a roster diff that shows no subject | DIS-063, DIS-081 | `cargo test -p fieldseal-distribution --test roster_form`, `cargo test -p fieldseal-cli --test roster_cli` |
 | Sealing, signing, outer fields, naming | DIS-020–DIS-023 | `fieldseal bundle verify`, golden vectors |

@@ -158,6 +158,9 @@ pub fn profile() -> RuntimeProfile {
     RuntimeProfile { instrument_schema: DEMO_SCHEMA, localisation_reference: None }
 }
 
+/// The sample survey's name, which the sample rosters' consent covers.
+pub const SAMPLE_SURVEY: &str = "household-water-access";
+
 /// The sample instrument: the household water-access example with consent required (so the
 /// flow can exercise attestation), published once per [`Site`]. Languages are `en` and `es`.
 pub fn sample_instrument_document() -> Value {
@@ -454,6 +457,7 @@ pub fn roster(cohort: &str, version: u64, generation: u32, subjects: &[(&str, Co
                 prior_status: None,
             })
             .collect(),
+        consent_covers: vec![SAMPLE_SURVEY.to_owned()],
     }
 }
 
@@ -635,6 +639,7 @@ impl Intake {
                                 )
                             })
                             .collect(),
+                        covers: r.consent_covers.iter().cloned().collect(),
                     },
                 );
             }
@@ -772,11 +777,17 @@ pub fn household_answers(members: i128) -> Vec<(&'static str, Value)> {
     ]
 }
 
+/// The fingerprint of the one instrument a device's bundle carries.
+pub fn sole_survey(rt: &Runtime<'_>) -> fieldseal_kernel::id::Fingerprint {
+    rt.held().expect("a bundle is held").instruments[0].fingerprint
+}
+
 /// Captures a full first visit to `subject` (consent already on record or not required),
 /// acknowledges what was left unanswered and seals it; returns the record's `seq`.
 pub fn capture_household(rt: &mut Runtime<'_>, subject: &str, members: i128) -> fieldseal_kernel::id::Seq {
     use fieldseal_collection::application::CaptureMode;
-    rt.start_capture(&SubjectId::new(subject).expect("subject"), CaptureMode::First).expect("start");
+    let survey = sole_survey(rt);
+    rt.start_capture(&SubjectId::new(subject).expect("subject"), &survey, CaptureMode::First).expect("start");
     for (p, v) in household_answers(members) {
         rt.set_value(&fieldseal_kernel::id::ItemPath::new(p).expect("path"), v).unwrap_or_else(|e| panic!("{p}: {e}"));
     }

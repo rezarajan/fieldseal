@@ -21,7 +21,7 @@ use fieldseal_adapters_memory::demo::{DEMO_SCHEMA, DemoWorld};
 use fieldseal_adapters_memory::distribution::SoftwareAgreementKey;
 use fieldseal_distribution::application::{BuildRequest, HeldState, ImportState, VerifyBundle};
 use fieldseal_distribution::domain::{
-    BundleFile, ConsentState, DistributionError, MAX_BUNDLE_FILE, Roster, RosterEntry, RuntimeProfile, file_name,
+    BundleAssignment, BundleFile, ConsentState, DistributionError, MAX_BUNDLE_FILE, Roster, RosterEntry, RuntimeProfile, file_name,
 };
 use fieldseal_instrument::application::validate_instrument;
 use fieldseal_kernel::crypto::tags;
@@ -218,9 +218,10 @@ fn fetch(args: &Args, out: &mut Outcome) -> Res {
 
 // ---- the roster file --------------------------------------------------------------------------
 
-/// Reads a roster file: `cohort`, `version`, optional `generation`, and `subjects`, each with
-/// `subject`, `display`, optional `consent` (default `unknown`) and `prior_status`, and
-/// `fields` (the roster-supplied values an instrument may reference).
+/// Reads a roster file: `cohort`, `version`, optional `generation`, optional `consent-covers`
+/// (the surveys a `granted` consent covers), and `subjects`, each with `subject`, `display`,
+/// optional `consent` (default `unknown`) and `prior_status`, and `fields` (the roster-supplied
+/// values an instrument may reference).
 pub(crate) fn parse_roster(value: Value, generation: u32) -> Result<Roster, String> {
     let Value::Map(mut m) = value else { return Err("the roster must be a map".into()) };
     let cohort = match m.remove("cohort") {
@@ -237,6 +238,19 @@ pub(crate) fn parse_roster(value: Value, generation: u32) -> Result<Roster, Stri
         Some(_) => return Err("generation must be a whole number".into()),
     };
     let Some(Value::Array(subjects)) = m.remove("subjects") else { return Err("subjects must be a list".into()) };
+    let mut consent_covers = match m.remove("consent-covers") {
+        None => Vec::new(),
+        Some(Value::Array(a)) => a
+            .into_iter()
+            .map(|v| match v {
+                Value::Text(t) if fieldseal_distribution::domain::is_survey_name(&t) => Ok(t),
+                _ => Err("consent-covers names surveys as text without spaces".to_owned()),
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Some(_) => return Err("consent-covers must be a list of survey names".into()),
+    };
+    consent_covers.sort();
+    consent_covers.dedup();
     if let Some(extra) = m.keys().next() {
         return Err(format!("unknown field `{extra}`"));
     }
@@ -275,7 +289,7 @@ pub(crate) fn parse_roster(value: Value, generation: u32) -> Result<Roster, Stri
         }
         entries.push(RosterEntry { ordinal: i as u32 + 1, subject, display, attributes, consent, prior_status });
     }
-    Ok(Roster { cohort, version, generation: Generation(generation), entries })
+    Ok(Roster { cohort, version, generation: Generation(generation), entries, consent_covers })
 }
 
 // ---- build ------------------------------------------------------------------------------------
@@ -300,8 +314,19 @@ fn build(args: &Args) -> Result<u8, String> {
         eprintln!("{instrument_path}: the instrument is invalid ({} finding(s)); run `fieldseal instrument validate`", findings.iter().count());
         return Ok(1);
     }
+    // A roster that doesn't say which surveys its consent covers covers the one built here: there
+    // is no factory to record the surveys assigned to its cohort.
+    let survey_name = metadata(&instrument, "name", instrument_path)?;
     let roster = roster_path
-        .map(|p| parse_roster(load_document(p)?, generation).map_err(|e| format!("{p}: {e}")))
+        .map(|p| {
+            let doc = load_document(p)?;
+            let declared = doc.as_map().is_some_and(|m| m.contains_key("consent-covers"));
+            let mut roster = parse_roster(doc, generation).map_err(|e| format!("{p}: {e}"))?;
+            if !declared {
+                roster.consent_covers = vec![survey_name.clone()];
+            }
+            Ok::<_, String>(roster)
+        })
         .transpose()?;
 
     let world = DemoWorld::new(seed, now)?;
@@ -399,11 +424,13 @@ fn build(args: &Args) -> Result<u8, String> {
             ("rosters", int(m.rosters.len() as u64)),
             ("subjects", int(subjects as u64)),
             ("policy", Value::Array(m.policy.iter().map(|a| text(&a.to_text())).collect())),
+            ("assignments", assignments_value(&m.assignments)),
         ]);
         println!("{}", json::pretty(&doc));
     } else {
         println!("built {} (sequence {}, {} bytes)", dir.join(&name).display(), m.seq.0, built.sealed.bytes.len());
         println!("{} instrument(s), {} layout(s), {} roster(s) with {} subject(s)", m.instruments.len(), m.layouts.len(), m.rosters.len(), subjects);
+        print_assignments(&m.assignments);
         println!("verify it with: fieldseal bundle verify {} --trust {} --device-file {}", dir.join(&name).display(), dir.join("trust-bundle.cbor").display(), dir.join("device.txt").display());
     }
     Ok(0)
@@ -425,6 +452,33 @@ fn load_device(path: &str) -> Result<DeviceFile, String> {
         Some(DeviceFile { tenancy, key: SoftwareAgreementKey::new(secret).ok()? })
     })();
     parsed.ok_or_else(|| format!("{path}: not a device file written by `bundle build`"))
+}
+
+/// The assigned surveys of a bundle, for `--json`.
+fn assignments_value(assignments: &[BundleAssignment]) -> Value {
+    Value::Array(
+        assignments
+            .iter()
+            .map(|a| {
+                cbor::map([
+                    ("survey", text(&a.survey)),
+                    ("instrument", text(&a.instrument.to_text())),
+                    ("cohort", text(a.cohort.as_str())),
+                    ("generation", int(u64::from(a.generation.0))),
+                ])
+            })
+            .collect(),
+    )
+}
+
+/// One line for each survey the bundle assigns, or a note that it assigns none.
+fn print_assignments(assignments: &[BundleAssignment]) {
+    if assignments.is_empty() {
+        println!("no survey is assigned to a cohort: a device conducts every survey with every roster it holds");
+    }
+    for a in assignments {
+        println!("survey {} is conducted with cohort {} (generation {})", a.survey, a.cohort.as_str(), a.generation.0);
+    }
 }
 
 fn load_trust(path: &str) -> Result<TrustBundle, String> {
@@ -461,6 +515,7 @@ fn verify(args: &Args) -> Result<u8, String> {
                     ("layouts", int(m.layouts.len() as u64)),
                     ("rosters", int(m.rosters.len() as u64)),
                     ("subjects", int(subjects as u64)),
+                    ("assignments", assignments_value(&m.assignments)),
                     ("withdrawals", int(m.withdrawals as u64)),
                     ("trust_updates", int(m.trust_updates as u64)),
                 ]);
@@ -468,6 +523,7 @@ fn verify(args: &Args) -> Result<u8, String> {
             } else {
                 println!("{path}: verified (sequence {}, issued {} ms)", m.seq.0, m.issued.0);
                 println!("{} instrument(s), {} layout(s), {} roster(s) with {} subject(s), {} withdrawal(s)", m.instruments.len(), m.layouts.len(), m.rosters.len(), subjects, m.withdrawals);
+                print_assignments(&m.assignments);
             }
             Ok(0)
         }

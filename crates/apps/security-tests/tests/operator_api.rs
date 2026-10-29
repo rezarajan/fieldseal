@@ -47,7 +47,7 @@ impl CohortDirectory for Everything {
 struct AcceptingIssuer;
 
 impl RosterIssuer for AcceptingIssuer {
-    fn issue(&self, _: &CohortId, _: &[u8]) -> IssueOutcome {
+    fn issue(&self, _: &CohortId, _: &[u8], _: &[String]) -> IssueOutcome {
         IssueOutcome::Issued { version: 1, digest: fieldseal_kernel::id::Digest::from([1; 32]) }
     }
 }

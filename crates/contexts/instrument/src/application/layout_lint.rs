@@ -1,5 +1,6 @@
-//! `LintLayout` (INS §3, INS-210–INS-213): advisory choice-load findings about a validated
-//! layout. Nothing here makes a layout invalid; publishing policy
+//! `LintLayout` (INS §3, INS-210–INS-213): choice-load findings about a validated layout. They
+//! are warnings, except that too many questions on a screen of a compact layout is an error
+//! (INS-210). Nothing here makes a layout invalid; publishing policy
 //! (`publishing.layoutLint.*`) sets the thresholds and may make any of them blocking.
 
 use std::collections::BTreeMap;
@@ -33,8 +34,8 @@ impl Default for LayoutLintThresholds {
     }
 }
 
-/// `LintLayout`: advisory findings for `layout` (validated against `instrument`). Findings
-/// are warnings at the layout document path of the screen or leaf concerned.
+/// `LintLayout`: findings for `layout` (validated against `instrument`), at the layout document
+/// path of the screen or leaf concerned. They are warnings, except INS-210 on a compact layout.
 pub fn lint_layout(instrument: &Instrument, layout: &Layout, thresholds: LayoutLintThresholds) -> Findings {
     let mut f = Findings::new();
     let request = PlanRequest { languages: &[], window_class: layout.window_class().unwrap_or(WindowClass::Compact) };
@@ -67,9 +68,11 @@ pub fn lint_layout(instrument: &Instrument, layout: &Layout, thresholds: LayoutL
         screen(s, &mut count, &mut more);
         if count > thresholds.max_decisions_per_screen {
             let what = if matches!(s.kind, PlanKind::Tab { .. }) { "tab" } else { "step" };
+            // A compact window is a phone: a screen that long cannot be answered without scrolling.
+            let severity = if layout.window_class() == Some(WindowClass::Compact) { Severity::Error } else { Severity::Warning };
             f.lint(
                 "INS-210",
-                Severity::Warning,
+                severity,
                 s.source.clone(),
                 format!("this {what} shows {count} questions at once; more than {} slows every decision (Hick's law)", thresholds.max_decisions_per_screen),
             );

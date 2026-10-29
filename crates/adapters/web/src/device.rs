@@ -14,7 +14,7 @@ use fieldseal_adapters_memory::bundle_opener::FileBundleOpener;
 use fieldseal_adapters_memory::delivery::{MemoryPrivateStorage, MemoryRegistrationRecords};
 use fieldseal_adapters_memory::registration::reported_version;
 use fieldseal_collection::application::{
-    CaptureMode, CollectionError, ConsentInput, Platform, Provisioning, ReviewFilter, Runtime,
+    CaptureMode, CollectionError, ConsentInput, HeldInstrument, Platform, Provisioning, ReviewFilter, Runtime,
     StatusOutcome,
 };
 use fieldseal_collection::domain::bundle::OpenedBundle;
@@ -26,7 +26,6 @@ use fieldseal_delivery::domain::{AddressHint, AuthorisedDestination, HintSource,
 use fieldseal_delivery::ports::{UploadError, UploadTransport};
 use fieldseal_distribution::domain::RuntimeProfile;
 use fieldseal_instrument::domain::IMPLEMENTED_SCHEMA;
-use fieldseal_instrument::domain::Instrument;
 use fieldseal_instrument::domain::metadata::ConsentRequirement;
 use fieldseal_kernel::Value;
 use fieldseal_kernel::base64url::base64url_decode;
@@ -342,7 +341,7 @@ impl WebDevice {
         let state = self.rt.state().map(state_name);
         let held = self.rt.held().map(|h| {
             let subjects: usize = h.rosters.iter().map(|r| r.subjects.len()).sum();
-            format!("{{\"practice\":{},\"rosters\":{},\"subjects\":{},\"layouts\":{}}}", h.is_practice(), h.rosters.len(), subjects, h.layouts.len())
+            format!("{{\"practice\":{},\"rosters\":{},\"subjects\":{},\"layouts\":{}}}", h.is_practice(), h.rosters.len(), subjects, h.instruments.iter().map(|i| i.layouts.len()).sum::<usize>())
         });
         let posture = self.rt.posture_findings().into_iter().map(|(r, s)| format!("{{\"restriction\":{},\"state\":{}}}", quote(&r), quote(&s))).collect::<Vec<_>>().join(",");
         format!(
@@ -435,7 +434,7 @@ impl WebDevice {
         steps.push(step("envelope", true, format!("{} bytes; factory signature verified against the trust bundle; sealed to this device's agreement key and opened (WIRE-090..093)", file.len())));
         let verify = VerifyPublication::new(TrustStore::new(&self.provisioned.trust), &self.provisioned.publishing);
         let mut publications: Vec<String> = Vec::new();
-        let all = std::iter::once(&opened.instrument).chain(opened.layouts.iter()).chain(opened.policy.iter());
+        let all = opened.instruments.iter().chain(opened.layouts.iter()).chain(opened.policy.iter());
         for p in all {
             let st = p.provenance.statement();
             match verify.verify(p, &opened.withdrawals) {
@@ -472,7 +471,7 @@ impl WebDevice {
             }
         }
         self.rt.import_bundle(file).map_err(err)?;
-        steps.push(step("import", true, format!("the instrument, {} layout(s) and {} roster(s) validated and held; tenancy {}", opened.layouts.len(), opened.rosters.len(), self.rt.state().map_or("?", state_name))));
+        steps.push(step("import", true, format!("{} instrument(s), {} layout(s) and {} roster(s) validated and held; tenancy {}", opened.instruments.len(), opened.layouts.len(), opened.rosters.len(), self.rt.state().map_or("?", state_name))));
         Ok(format!("{{\"ok\":true,\"steps\":[{}],\"publications\":[{}],\"state\":{}}}", steps.join(","), publications.join(","), self.state_json()))
     }
 
@@ -524,23 +523,22 @@ impl WebDevice {
         }
     }
 
-    fn held_workbench(&self) -> Result<Workbench, String> {
+    /// The held instrument with this fingerprint, in lower-case hex as `held_json` lists it. A
+    /// survey is named by the version the collector sees, not by a name that two versions share.
+    fn held_survey(&self, fingerprint: &str) -> Result<&HeldInstrument, String> {
         let h = self.rt.held().ok_or("no bundle is held")?;
-        Ok(Workbench::from_parts(h.instrument.clone(), h.layouts.to_vec()))
+        h.instruments.iter().find(|i| lower_hex(i.fingerprint.as_bytes()) == fingerprint).ok_or_else(|| "the bundle holds no such survey".to_owned())
     }
 
-    /// Describes the held instrument for the page: its name, languages, subjects and consent
-    /// bases.
+    fn held_workbench(&self, fingerprint: &str) -> Result<Workbench, String> {
+        let s = self.held_survey(fingerprint)?;
+        Ok(Workbench::from_parts(s.instrument.clone(), s.layouts.to_vec()))
+    }
+
+    /// Describes what the bundle holds for the page: the surveys assigned (with their titles,
+    /// cohorts and consent bases), and the rosters' subjects.
     pub fn held_json(&self) -> Result<String, String> {
         let h = self.rt.held().ok_or("no bundle is held")?;
-        let consent = match &h.instrument.definition().consent {
-            ConsentRequirement::NotRequired => "{\"required\":false}".to_owned(),
-            ConsentRequirement::Required { bases, statement, .. } => format!(
-                "{{\"required\":true,\"statementVersion\":{},\"bases\":[{}]}}",
-                statement.version,
-                bases.iter().map(|b| quote(&b.code)).collect::<Vec<_>>().join(",")
-            ),
-        };
         let mut rosters = Vec::new();
         for r in &h.rosters {
             let subjects = r
@@ -554,18 +552,49 @@ impl WebDevice {
                 .join(",");
             rosters.push(format!("{{\"cohort\":{},\"version\":{},\"subjects\":[{subjects}]}}", quote(r.cohort.as_str()), r.version));
         }
-        Ok(format!("{{\"fingerprint\":{},\"layouts\":{},\"consent\":{consent},\"rosters\":[{}]}}", quote(&lower_hex(h.fingerprint.as_bytes())), h.layouts.len(), rosters.join(",")))
+        // The surveys to conduct, each with its cohort. A bundle without assignments (one built
+        // before they existed) is read as each instrument's survey for every roster it carries.
+        let assigned: Vec<(&HeldInstrument, &str, u64)> = if h.assignments.is_empty() {
+            h.instruments.iter().flat_map(|i| h.rosters.iter().map(move |r| (i, r.cohort.as_str(), r.generation))).collect()
+        } else {
+            h.assignments.iter().filter_map(|a| Some((h.instruments.iter().find(|i| i.address == a.instrument)?, a.cohort.as_str(), u64::from(a.generation.0)))).collect()
+        };
+        let surveys = assigned
+            .iter()
+            .map(|(held, cohort, generation)| {
+                let definition = held.instrument.definition();
+                let title = definition.metadata.title.iter().map(|(k, v)| format!("{}:{}", quote(k.as_str()), quote(v))).collect::<Vec<_>>().join(",");
+                let consent = match &definition.consent {
+                    ConsentRequirement::NotRequired => "{\"required\":false}".to_owned(),
+                    ConsentRequirement::Required { bases, statement, .. } => format!(
+                        "{{\"required\":true,\"statementVersion\":{},\"bases\":[{}]}}",
+                        statement.version,
+                        bases.iter().map(|b| quote(&b.code)).collect::<Vec<_>>().join(",")
+                    ),
+                };
+                // Whether the cohort's roster consent (`granted`) covers this survey (COL-031).
+                let covered = h.rosters.iter().any(|r| r.cohort.as_str() == *cohort && r.covers(&definition.name));
+                format!(
+                    "{{\"survey\":{},\"fingerprint\":{},\"title\":{{{title}}},\"consent\":{consent},\"covered\":{covered},\"cohort\":{},\"generation\":{generation}}}",
+                    quote(&definition.name),
+                    quote(&lower_hex(held.fingerprint.as_bytes())),
+                    quote(cohort)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        Ok(format!("{{\"layouts\":{},\"surveys\":[{surveys}],\"rosters\":[{}]}}", h.instruments.iter().map(|i| i.layouts.len()).sum::<usize>(), rosters.join(",")))
     }
 
-    /// Draws the held instrument for the collector (the same render as `instrument preview`),
-    /// with the capture's current values when one is open.
-    pub fn render(&mut self, options: &RenderOptions, values: Option<&BTreeMap<String, Value>>, roster: Option<&BTreeMap<String, Value>>) -> Result<String, String> {
-        self.held_workbench()?.render(options, values, roster, true).map(|r| r.html)
+    /// Draws the held instrument with this `fingerprint` for the collector (the same render as `instrument
+    /// preview`), with the capture's current values when one is open.
+    pub fn render(&mut self, fingerprint: &str, options: &RenderOptions, values: Option<&BTreeMap<String, Value>>, roster: Option<&BTreeMap<String, Value>>) -> Result<String, String> {
+        self.held_workbench(fingerprint)?.render(options, values, roster, true).map(|r| r.html)
     }
 
-    /// Evaluates the held instrument's rules over `values` (live checks while typing).
-    pub fn evaluate(&mut self, options: &RenderOptions, values: &BTreeMap<String, Value>, roster: &BTreeMap<String, Value>) -> Result<String, String> {
-        self.held_workbench()?.evaluate_json(options, values, roster)
+    /// Evaluates the rules of the held instrument with this `fingerprint` over `values` (live checks while typing).
+    pub fn evaluate(&mut self, fingerprint: &str, options: &RenderOptions, values: &BTreeMap<String, Value>, roster: &BTreeMap<String, Value>) -> Result<String, String> {
+        self.held_workbench(fingerprint)?.evaluate_json(options, values, roster)
     }
 
     /// The roster fields of a subject, for rendering `$roster.<field>`.
@@ -576,23 +605,25 @@ impl WebDevice {
         Ok(entry.fields())
     }
 
-    /// Records consent for a subject (COL-040).
-    pub fn record_consent(&mut self, subject: &str, basis: &str, statement_version: u32) -> Result<String, String> {
+    /// Records consent for a subject to a survey, named by its fingerprint (COL-040).
+    pub fn record_consent(&mut self, subject: &str, fingerprint: &str, basis: &str, statement_version: u32) -> Result<String, String> {
         let s = SubjectId::new(subject).map_err(err)?;
-        let seq = self.rt.record_consent(&s, &ConsentInput { basis: basis.to_owned(), statement_version, capture_evidence: false }).map_err(err)?;
+        let instrument = self.held_survey(fingerprint)?.fingerprint;
+        let seq = self.rt.record_consent(&s, &ConsentInput { instrument, basis: basis.to_owned(), statement_version, capture_evidence: false }).map_err(err)?;
         Ok(format!("{{\"seq\":{}}}", seq.0))
     }
 
     /// Records that a subject was absent, declined or was not the expected person.
-    pub fn record_status(&mut self, subject: &str, outcome: &str) -> Result<String, String> {
+    pub fn record_status(&mut self, subject: &str, fingerprint: &str, outcome: &str) -> Result<String, String> {
         let s = SubjectId::new(subject).map_err(err)?;
+        let instrument = self.held_survey(fingerprint)?.fingerprint;
         let o = match outcome {
             "absent" => StatusOutcome::Absent,
             "declines" => StatusOutcome::Declines,
             "not-them" => StatusOutcome::NotThem,
             other => return Err(format!("unknown outcome {other}")),
         };
-        let seq = self.rt.record_status(&s, o).map_err(err)?;
+        let seq = self.rt.record_status(&s, &instrument, o).map_err(err)?;
         Ok(format!("{{\"seq\":{}}}", seq.0))
     }
 
@@ -610,9 +641,11 @@ impl WebDevice {
         )
     }
 
-    /// Starts a capture about `subject` (`first`, `resume`, `resurvey` or `correction`).
-    pub fn start_capture(&mut self, subject: &str, mode: &str) -> Result<String, String> {
+    /// Starts a capture about `subject` for the survey with this `fingerprint` (`first`, `resume`, `resurvey` or
+    /// `correction`).
+    pub fn start_capture(&mut self, subject: &str, fingerprint: &str, mode: &str) -> Result<String, String> {
         let s = SubjectId::new(subject).map_err(err)?;
+        let instrument = self.held_survey(fingerprint)?.fingerprint;
         let m = match mode {
             "first" => CaptureMode::First,
             "resume" => CaptureMode::Resume,
@@ -620,7 +653,7 @@ impl WebDevice {
             "correction" => CaptureMode::Correction,
             other => return Err(format!("unknown mode {other}")),
         };
-        let v = self.rt.start_capture(&s, m).map_err(|e| match e {
+        let v = self.rt.start_capture(&s, &instrument, m).map_err(|e| match e {
             CollectionError::ConsentNeeded => "consent_needed".to_owned(),
             other => other.to_string(),
         })?;
@@ -691,9 +724,10 @@ impl WebDevice {
             .map(|s| {
                 let records = s.records.iter().map(|x| format!("{{\"seq\":{},\"kind\":{},\"mode\":{},\"delivery\":{}}}", x.seq.0, quote(x.kind), x.mode.map_or("null".into(), quote), quote(&format!("{:?}", x.delivery)))).collect::<Vec<_>>().join(",");
                 format!(
-                    "{{\"cohort\":{},\"subject\":{},\"current\":{},\"unanswered\":{},\"keptSoft\":{},\"status\":{},\"records\":[{records}]}}",
+                    "{{\"cohort\":{},\"subject\":{},\"instrument\":{},\"current\":{},\"unanswered\":{},\"keptSoft\":{},\"status\":{},\"records\":[{records}]}}",
                     s.cohort.as_ref().map_or("null".into(), |c| quote(c.as_str())),
                     quote(s.subject.as_str()),
+                    quote(&lower_hex(s.instrument.as_bytes())),
                     to_json(&Value::Map(s.current.clone())),
                     s.unanswered,
                     to_json(&Value::Map(s.kept_soft.iter().map(|(k, v)| (k.clone(), Value::Text(v.clone()))).collect())),
@@ -825,5 +859,3 @@ pub struct RegistrationRequest {
     pub agree_pub: String,
 }
 
-/// An `Instrument` re-exported for hosts that render one directly.
-pub type HeldInstrument = Instrument;

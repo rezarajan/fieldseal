@@ -87,6 +87,7 @@ pub fn roster(cohort: &str, version: u64, generation: u32) -> Roster {
         version,
         generation: Generation(generation),
         entries: vec![entry(1, "s-001", ConsentState::Granted), entry(2, "s-002", ConsentState::Unknown)],
+        consent_covers: vec!["survey-a".to_owned()],
     }
 }
 

@@ -1,5 +1,6 @@
-/* The Device page: one step at a time, one primary action per screen. Flat white surfaces with
-   1px borders, 24px cards, pill buttons, 52px targets (tokens.css). */
+/* The Device page: one step at a time, one primary action per screen, and on a phone each screen
+   fits the window without scrolling. Flat white surfaces with 1px borders, 24px cards, pill
+   buttons, 52px targets (tokens.css). */
 .device { --chrome: 266px; font-family: var(--font); color: var(--ink); background: var(--bg); max-width: none; margin: 0; }
 .device [hidden] { display: none !important; }
 .device * { box-sizing: border-box; }
@@ -14,7 +15,7 @@ main:has(> .device), main:has(.device) { padding: 0; max-width: none; margin: 0;
 .device :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 /* Step pills under the app header */
-.devbar { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.devbar { position: relative; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .pills { list-style: none; margin: 0; padding: 0; display: flex; gap: .5rem; flex-wrap: wrap; counter-reset: pill; }
 .pills li { counter-increment: pill; display: inline-flex; align-items: center; gap: .5rem; min-height: 40px; padding: 0 16px 0 8px; border-radius: var(--radius-full); border: 1.5px solid var(--unset); color: var(--ink-2); font-weight: 700; font-size: .95rem; background: var(--bg); }
 .pills li::before { content: counter(pill); width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f0f2f1; font-size: .8rem; font-weight: 800; }
@@ -84,11 +85,23 @@ main:has(> .device), main:has(.device) { padding: 0; max-width: none; margin: 0;
 .pad .spacer { visibility: hidden; }
 .pad .del { font-size: 1rem; }
 
-/* Roster */
-.screen.roster { display: grid; grid-template-columns: 22rem 1fr; gap: 24px; align-items: start; max-width: 70rem; margin: 0 auto; }
+/* Roster and survey list: the head, the people (or surveys), then the actions. */
+.screen.roster, .screen.surveys { display: grid; grid-template-columns: 22rem 1fr; grid-template-areas: "head list" "actions list"; grid-template-rows: auto 1fr; gap: 16px 24px; align-items: start; max-width: 70rem; margin: 0 auto; }
+.screen.surveys { grid-template-columns: 1fr; grid-template-areas: "head" "filter" "list" "empty" "actions"; grid-template-rows: none; max-width: 40rem; }
+.roster-head, .screen-head { grid-area: head; }
+.roster-head { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 24px; }
+.survey-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.survey-pick[hidden] { display: none; }
+.survey-pick .pick { font: inherit; font-weight: 700; min-height: 40px; padding: 0 16px; border-radius: var(--radius-full); border: 1.5px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+.survey-pick .pick[aria-pressed=true] { border-color: var(--selected-border); background: var(--selected-fill); color: var(--primary); }
+.screen.roster > #subjects, .screen.surveys > #survey-list { grid-area: list; }
+.screen.surveys > #survey-filter { grid-area: filter; }
+.screen.surveys > #surveys-empty { grid-area: empty; }
+.actions { grid-area: actions; display: flex; flex-direction: column; gap: .6rem; }
+.actions .btn { width: 100%; }
+.actions-row { display: flex; flex-direction: column; gap: .6rem; }
+.actions .msg { min-height: 0; }
 .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 24px; }
-.roster-side { display: flex; flex-direction: column; gap: .7rem; }
-.roster-side .btn { width: 100%; }
 .progress { height: 8px; border-radius: 4px; background: #eef1f0; overflow: hidden; }
 .progress span { display: block; height: 100%; width: 0; background: var(--primary); }
 .subjects { display: flex; flex-direction: column; gap: 10px; }
@@ -107,6 +120,8 @@ main:has(> .device), main:has(.device) { padding: 0; max-width: none; margin: 0;
 .subject:disabled { opacity: .6; cursor: not-allowed; }
 .subject:disabled:hover { border-color: var(--border); box-shadow: none; }
 .subject .tag.sealed, .subject .tag.given { border-color: var(--selected-border); background: var(--selected-fill); color: var(--primary); }
+.subject .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subject.current { border-color: var(--selected-border); background: var(--selected-fill); }
 
 /* Capture */
 .step-about { display: flex; flex-direction: column; height: calc(100dvh - var(--chrome)); min-height: 520px; padding: 12px 24px; }
@@ -152,12 +167,16 @@ main:has(> .device), main:has(.device) { padding: 0; max-width: none; margin: 0;
 .hold[aria-disabled=true] { background: var(--border); }
 .hold[aria-disabled=true] .hold-fill { display: none; }
 
-/* Bottom: latest result, security log, device details */
-.devfoot { padding: 4px 24px 8px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 4px 24px; align-items: flex-start; }
-.latest { margin: 0; flex: 1 1 28rem; min-height: 1.4em; padding-top: 6px; color: var(--ink-2); font-size: .9rem; }
+/* Details: the status line, the security log and the device's own details, behind one control */
+.details-menu > summary { list-style: none; cursor: pointer; }
+.details-menu > summary::-webkit-details-marker { display: none; }
+.details-menu > summary.flagged::after { content: " !"; color: var(--amount); }
+.details-menu[open] > summary { background: #f5f7f6; color: var(--ink); }
+.details-body { position: absolute; z-index: 30; left: 0; right: 0; top: 100%; max-height: calc(100dvh - 160px); overflow: auto; padding: 12px 24px 16px; background: #fff; border: 1px solid var(--border); border-radius: 0 0 var(--radius-xl) var(--radius-xl); box-shadow: 0 12px 24px rgba(23,33,31,.14); }
+.details-body .chip { margin: 0 0 .5rem; }
+.latest { margin: 0 0 .5rem; min-height: 1.4em; color: var(--ink-2); font-size: .9rem; }
 .latest.bad { color: var(--amount); }
-.devfoot .more { margin: 0; }
-.devfoot .more[open] { flex-basis: 100%; }
+.details-body .more { margin: .25rem 0; }
 .steps { padding-left: 1.4rem; margin: .4rem 0; max-height: 18rem; overflow: auto; }
 .steps li.ok { color: var(--primary); }
 .steps li.fail { color: var(--amount); font-weight: 700; }
@@ -168,9 +187,90 @@ dd { margin: 0; word-break: break-word; }
 #form-clear { display: flex; flex-direction: column; gap: .5rem; max-width: 20rem; margin-top: .6rem; }
 
 @media (max-width: 900px) {
-  .screen.roster, .review-grid { grid-template-columns: 1fr; }
-  .device { --chrome: 330px; }
+  .screen.roster { grid-template-columns: 1fr; grid-template-areas: "head" "list" "actions"; grid-template-rows: none; }
+  .review-grid { grid-template-columns: 1fr; }
   .step { padding: 16px; }
   .devbar { padding: 8px 16px; }
+  .details-body { padding: 12px 16px 16px; }
 }
 main:has(.device) > .banner { margin: 12px 24px 0; }
+
+/* A phone: the page is exactly the window. The header, banner, step bar and footer are slim, the
+   current screen takes the rest, and only a long list (the people, the answers) scrolls inside its
+   own area, so the title and the primary action stay in view. */
+@media (max-width: 700px) {
+  html:has(.device) { height: 100%; }
+  body:has(.device) { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+  body:has(.device) > .appbar { height: 44px; padding: 0 12px; gap: 8px; flex: none; }
+  body:has(.device) .mark { width: 28px; height: 28px; }
+  body:has(.device) .mark::before { inset: 5px; }
+  body:has(.device) .mark::after { inset: 10px; }
+  body:has(.device) .wordmark { font-size: 16px; }
+  body:has(.device) nav.pipeline a { min-height: 32px; padding: 0 12px 0 6px; font-size: 14px; }
+  body:has(.device) nav.pipeline a::before { width: 22px; height: 22px; font-size: 11px; }
+  body:has(.device) > .foot { flex: none; padding: 4px 16px; font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body:has(.device) > .foot a { display: none; }
+  body:has(.device) > main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  main:has(.device) > .banner { margin: 4px 12px 0; padding: 2px 10px; border-radius: var(--radius-md); font-size: 11px; line-height: 14px; flex: none; }
+  .device { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .device h1 { font-size: 1.45rem; }
+  .device .lead { font-size: 1rem; margin-bottom: .5rem; }
+  .devbar { min-height: 44px; padding: 2px 12px; flex-wrap: nowrap; gap: .5rem; flex: none; }
+  .pills { flex-wrap: nowrap; gap: .3rem; }
+  /* Only the current step has its name; the others are their numbers. */
+  .pills li { min-height: 34px; padding: 0 5px; font-size: 0; }
+  .pills li::before { font-size: .8rem; }
+  .pills li[aria-current] { padding: 0 12px 0 5px; font-size: .9rem; }
+  .device .step { flex: 1; min-height: 0; padding: 8px 16px; display: flex; flex-direction: column; }
+  .device .step[hidden] { display: none; }
+  .device .screen:not([hidden]) { flex: 1; min-height: 0; }
+  .screen.center { margin: 0 auto; width: 100%; gap: .6rem; justify-content: center; }
+  .screen.center.pin-screen { margin-top: 0; border: 0; padding: 0; gap: .4rem; }
+  .pad { gap: 8px; grid-template-columns: repeat(3, 68px); }
+  .pad button { height: 52px; font-size: 1.3rem; }
+  .lock-badge { width: 44px; height: 44px; }
+  .device .btn-primary { min-height: 52px; }
+  .device .btn-quiet { min-height: 40px; }
+  /* The list screens: head, the list (the only part that scrolls), then the actions. */
+  .screen.roster, .screen.surveys { display: flex; flex-direction: column; gap: 10px; max-width: none; margin: 0; width: 100%; }
+  .roster-head { padding: 10px 16px; border-radius: var(--radius-lg); }
+  .roster-head h1 { font-size: 1.25rem; margin: 0; }
+  .roster-head .lead { margin: 0 0 .25rem; font-size: .9rem; }
+  .roster-head .note { margin: .2rem 0 0; font-size: .85rem; }
+  .survey-pick { margin-top: 6px; gap: 6px; }
+  .survey-pick .pick { min-height: 36px; padding: 0 12px; }
+  .screen.roster > #subjects, .screen.surveys > #survey-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .screen-head .lead { margin: 0; }
+  .subject { min-height: 64px; padding: 8px 14px; }
+  .subject .seat { width: 38px; height: 38px; }
+  .actions { flex: none; gap: .4rem; }
+  .actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+  .actions-row .btn { padding: 0 10px; font-size: .9rem; }
+  .actions .btn-primary { min-height: 52px; }
+  .actions .btn-secondary { min-height: 44px; }
+  /* Capture: the subject and the way out above, the form filling the rest. */
+  .step-about { height: auto; min-height: 0; padding: 4px 12px 6px; }
+  .capture { gap: 4px; }
+  .capture-bar { min-height: 44px; gap: .5rem; }
+  .capture-title { display: none; }
+  .capture-bar .btn-primary { min-height: 40px; padding: 0 16px; font-size: .95rem; }
+  .capture-bar .btn-quiet { min-height: 40px; }
+  #close-confirm { flex-wrap: wrap; font-size: .85rem; }
+  .verdicts { max-height: 6rem; }
+  #frame { border-radius: var(--radius-md); }
+  /* Review: the answers scroll above; the seal action stays in view below. */
+  .screen.review { display: flex; flex-direction: column; }
+  .review-grid { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
+  .review-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 16px; }
+  .review-list h1 { font-size: 1.1rem; line-height: 1.4rem; }
+  .review-list .row { padding: 6px 0; }
+  .seal-card { position: static; flex: none; padding: 12px 16px; gap: .5rem; }
+  .seal-card h2 { display: none; }
+  .hold { min-height: 56px; }
+  .seal-card .note { margin: 0; font-size: .8rem; }
+  .seal-card .more { margin: 0; }
+  .seal-card .more > summary { min-height: 40px; }
+  .seal-extra { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+  .details-body { max-height: calc(100dvh - 130px); }
+  .clear-box { margin-top: .5rem; }
+}

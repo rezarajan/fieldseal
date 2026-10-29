@@ -1,38 +1,129 @@
 # Presentation only (ADR 0033), in the compact dialect (ADR 0040): partitions the survey, never reorders it.
+# A compact window is a phone, so each step shows at most four questions and fits the screen
+# without scrolling (INS-210): the about-the-pupil questions are split into short steps, and each
+# food is a step of its own, placed by its questions. The two lines that introduce the foods
+# have a step to themselves, so that no food step is taller than a phone screen.
 layout: {name: school-meals-baseline-compact, instrument: ../instrument.yaml, window: compact}
 steps:
-- id: about-the-pupil
-  title: About the pupil
+- id: who
+  title: Who
   contents:
-  - card:
-      id: who
-      title: Who
-      contents:
-      - show: [about.school, about.name, about.class, about.age, about.sex]
-  - card:
-      id: measurements
-      title: Measurements
-      contents:
-      - show: [about.weight, about.height]
-  - card:
-      id: school-shop
-      title: School shop
-      contents:
-      - show: [about.uses_shop, about.shop_weekly, about.shop_buys]
-  - card:
-      id: school-meals
-      title: School meals
-      contents:
-      - show: [about.meal_programme, about.meal_which]
-- id: main-foods
-  title: Main foods
+  - show: [about.school, about.name, about.class, about.age]
+- id: sex
+  title: Sex
+  contents:
+  - show: [about.sex]
+- id: weight
+  title: Weight
+  contents:
+  - show: [about.weight]
+- id: height
+  title: Height
+  contents:
+  - show: [about.height]
+- id: school-shop
+  title: School shop
+  contents:
+  - show: [about.uses_shop, about.shop_weekly]
+- id: shop-items
+  title: At the shop
+  contents:
+  - show: [about.shop_buys]
+- id: school-meals
+  title: School meals
+  contents:
+  - show: [about.meal_programme, about.meal_which]
+- id: foods-and-drinks
+  title: Foods and drinks
   navigation: free
   contents:
   - show: [diet.diet_intro, diet.diet_instructions]
-  - repeat: diet.counted.plate
-- id: foods-and-drinks-by-weight-or-volume
-  title: Foods and drinks by weight or volume
+- id: counted-bread-and-cereals
+  title: Bread and cereals
   navigation: free
   contents:
-  - repeat: diet.weighed.extras
+  - show: [diet.counted.plate.bread_and_cereals.freq, diet.counted.plate.bread_and_cereals.amount, diet.counted.plate.bread_and_cereals.yesterday]
+- id: counted-rice-and-pasta
+  title: Rice and pasta
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.rice_and_pasta.freq, diet.counted.plate.rice_and_pasta.amount, diet.counted.plate.rice_and_pasta.yesterday]
+- id: counted-vegetables
+  title: Vegetables
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.vegetables.freq, diet.counted.plate.vegetables.amount, diet.counted.plate.vegetables.yesterday]
+- id: counted-fruit
+  title: Fruit
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.fruit.freq, diet.counted.plate.fruit.amount, diet.counted.plate.fruit.yesterday]
+- id: counted-eggs
+  title: Eggs
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.eggs.freq, diet.counted.plate.eggs.amount, diet.counted.plate.eggs.yesterday]
+- id: counted-beans-and-lentils
+  title: Beans and lentils
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.beans_and_lentils.freq, diet.counted.plate.beans_and_lentils.amount, diet.counted.plate.beans_and_lentils.yesterday]
+- id: counted-other-name
+  title: Name the food
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.other.other]
+- id: counted-other
+  title: Another food
+  navigation: free
+  contents:
+  - show: [diet.counted.plate.other.freq, diet.counted.plate.other.amount, diet.counted.plate.other.yesterday]
+- id: weighed-meat-and-fish
+  title: Meat and fish
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.meat_and_fish.freq, diet.weighed.extras.meat_and_fish.amount, diet.weighed.extras.meat_and_fish.yesterday]
+- id: weighed-nuts
+  title: Nuts
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.nuts.freq, diet.weighed.extras.nuts.amount, diet.weighed.extras.nuts.yesterday]
+- id: weighed-milk-and-yoghurt
+  title: Milk and yoghurt
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.milk_and_yoghurt.freq, diet.weighed.extras.milk_and_yoghurt.amount, diet.weighed.extras.milk_and_yoghurt.yesterday]
+- id: weighed-sweets
+  title: Sweets
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.sweets.freq, diet.weighed.extras.sweets.amount, diet.weighed.extras.sweets.yesterday]
+- id: weighed-snacks
+  title: Snacks
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.snacks.freq, diet.weighed.extras.snacks.amount, diet.weighed.extras.snacks.yesterday]
+- id: weighed-sweet-drinks
+  title: Sweet drinks
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.sweet_drinks.freq, diet.weighed.extras.sweet_drinks.amount, diet.weighed.extras.sweet_drinks.yesterday]
+- id: weighed-water
+  title: Water
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.water.freq, diet.weighed.extras.water.amount, diet.weighed.extras.water.yesterday]
+- id: weighed-other-name
+  title: Name the food or drink
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.other.other]
+- id: weighed-other
+  title: Another food or drink
+  navigation: free
+  contents:
+  - show: [diet.weighed.extras.other.freq, diet.weighed.extras.other.amount, diet.weighed.extras.other.yesterday]
+- id: finished
+  title: Finished
+  contents:
   - element: thanks

@@ -71,6 +71,7 @@ fn roster(r: &Roster) -> HeldRoster {
         cohort: r.cohort.clone(),
         version: r.version,
         generation: u64::from(r.generation.0),
+        consent_covers: r.consent_covers.clone(),
         address: Digest::from(*fieldseal_kernel::id::ContentAddress::of(&r.encode()).as_bytes()),
         subjects: r
             .entries
@@ -94,10 +95,6 @@ impl BundleOpener for FileBundleOpener<'_> {
             .verify(file, &ImportState { tenancy: self.tenancy, now: (self.now)(), held: HeldState::default() })
             .map_err(|r| rejected(&r))?;
         let content = verified.content;
-        let mut instruments = content.instruments.into_iter();
-        let (Some(instrument), None) = (instruments.next(), instruments.next()) else {
-            return Err(BundleOpenError::Rejected("this runtime holds exactly one instrument per bundle".into()));
-        };
         let registration = match &content.certificate {
             None => None,
             Some(cert) => {
@@ -143,10 +140,11 @@ impl BundleOpener for FileBundleOpener<'_> {
                 address: sha256(&content.time_token.encode()),
                 authority_time: content.time_token.authority_time,
             }],
-            instrument,
+            instruments: content.instruments,
             layouts: content.layouts,
             policy: content.policy,
             rosters: content.rosters.iter().map(roster).collect(),
+            assignments: content.assignments,
             withdrawals: content.withdrawals,
         })
     }

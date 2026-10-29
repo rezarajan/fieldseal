@@ -96,3 +96,50 @@ fn dis_063_every_finding_is_reported_not_only_the_first() {
         assert!(found.iter().any(|p| p == expected), "{expected} in {found:?}");
     }
 }
+
+#[test]
+fn dis_063_consent_covers_names_the_surveys_a_granted_consent_covers() {
+    let none = check_issue_form(form(vec![subject("hh-1")])).expect("well formed");
+    assert_eq!(none.consent_covers, None, "a file that says nothing leaves it to the factory");
+    let declared = with(form(vec![subject("hh-1")]), "consent-covers", Value::Array(vec![text("water"), text("meals")]));
+    let a = check_issue_form(declared.clone()).expect("well formed");
+    assert_eq!(a.consent_covers, Some(vec!["meals".to_owned(), "water".to_owned()]), "sorted");
+    assert_ne!(a.digest(), none.digest());
+    assert_eq!(check_issue_form(cbor::decode(&a.encode()).expect("decodes")).expect("reads back"), a);
+    // A declared list wins over what is assigned; an undeclared one takes what is assigned.
+    let assigned = vec!["tomorrow".to_owned()];
+    assert_eq!(a.clone().into_roster(fieldseal_kernel::id::Generation(1), &assigned).consent_covers, ["meals", "water"]);
+    assert_eq!(none.into_roster(fieldseal_kernel::id::Generation(1), &assigned).consent_covers, ["tomorrow"]);
+    let empty = check_issue_form(with(form(vec![subject("hh-1")]), "consent-covers", Value::Array(vec![]))).expect("an empty list is a declaration");
+    assert_eq!(empty.into_roster(fieldseal_kernel::id::Generation(1), &assigned).consent_covers, Vec::<String>::new());
+}
+
+#[test]
+fn dis_063_consent_covers_is_checked() {
+    let with_covers = |v: Value| with(form(vec![subject("hh-1")]), "consent-covers", v);
+    assert_eq!(paths(with_covers(text("water"))), ["consent-covers"]);
+    assert_eq!(paths(with_covers(Value::Array(vec![Value::Int(1)]))), ["consent-covers[1]"]);
+    assert_eq!(paths(with_covers(Value::Array(vec![text("two words")]))), ["consent-covers[1]"]);
+    assert_eq!(paths(with_covers(Value::Array(vec![text("water"), text("water")]))), ["consent-covers[2]"]);
+}
+
+#[test]
+fn wire_095_a_roster_carries_the_surveys_its_consent_covers() {
+    use fieldseal_distribution::domain::Roster;
+    let issued = check_issue_form(with(form(vec![subject("hh-1")]), "consent-covers", Value::Array(vec![text("water")]))).expect("well formed");
+    let roster = issued.into_roster(fieldseal_kernel::id::Generation(2), &[]);
+    let back = Roster::from_value(cbor::decode(&roster.encode()).expect("decodes")).expect("reads back");
+    assert_eq!(back, roster);
+    assert!(back.covers("water") && !back.covers("meals"));
+    // A roster that covers nothing leaves the key out, so it encodes as it did before coverage.
+    let none = check_issue_form(form(vec![subject("hh-1")])).expect("well formed").into_roster(fieldseal_kernel::id::Generation(2), &[]);
+    let Value::Map(m) = none.to_value() else { unreachable!("a roster is a map") };
+    assert!(!m.contains_key("consent_covers"));
+    // The reader is strict: an empty, unsorted, repeating or non-text list is refused.
+    let wire = |v: Value| Roster::from_value(with(roster.to_value(), "consent_covers", v));
+    assert!(wire(Value::Array(vec![])).is_err());
+    assert!(wire(Value::Array(vec![text("b"), text("a")])).is_err());
+    assert!(wire(Value::Array(vec![text("a"), text("a")])).is_err());
+    assert!(wire(Value::Array(vec![Value::Int(1)])).is_err());
+    assert!(wire(text("a")).is_err());
+}

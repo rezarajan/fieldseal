@@ -27,7 +27,7 @@ use crate::oidc_login::{self, SignInError};
 use crate::json;
 use crate::messages::msg;
 use crate::outcome::{Outcome, exit};
-use crate::roster_check::{check_roster_form, compare_roster};
+use crate::roster_check::{compare_roster, coverage_findings};
 use crate::support::{Res, fail, parse_uint, read, run_command, setting, usage};
 
 /// Runs `roster <verb>`; `None` if the verb is not one of these.
@@ -97,8 +97,8 @@ fn check(args: &Args, out: &mut Outcome) -> Res {
             return Ok(());
         }
     };
-    let roster = match check_roster_form(value) {
-        Ok(r) => r,
+    let form = match check_issue_form(value) {
+        Ok(form) => form,
         Err(findings) => {
             for f in findings {
                 out.raw_finding("DIS-063", "error", path, &f.path, &f.message);
@@ -106,6 +106,10 @@ fn check(args: &Args, out: &mut Outcome) -> Res {
             return Ok(());
         }
     };
+    for f in coverage_findings(form.consent_covers.as_deref(), &instruments) {
+        out.raw_finding("DIS-063", "error", path, &f.path, &f.message);
+    }
+    let roster = form.clone().into_roster(fieldseal_kernel::id::Generation(1), &[]);
     // An error counts against any instrument; a note only when no instrument reads the field.
     let per_instrument: Vec<_> = instruments.iter().map(|i| compare_roster(&roster, i)).collect();
     for f in per_instrument.iter().flatten().filter(|f| f.severity == Severity::Error) {
@@ -124,7 +128,20 @@ fn check(args: &Args, out: &mut Outcome) -> Res {
     out.set("version", Value::Int(i128::from(roster.version)));
     out.set("subjects", int(roster.entries.len()));
     out.set("consent", consent_value(&counts));
+    out.lines.push(coverage_line(form.consent_covers.as_deref()));
+    out.set("consentCovers", Value::Array(roster.consent_covers.iter().map(|s| text(s)).collect()));
+    out.set("consentCoversDeclared", Value::Bool(form.consent_covers.is_some()));
     Ok(())
+}
+
+/// What a roster's consent covers, as `check` says it: the surveys the file names, or that the
+/// factory will record the ones assigned to the cohort when it issues the roster.
+fn coverage_line(declared: Option<&[String]>) -> String {
+    match declared {
+        None => "consent covers: not declared; the factory records the surveys assigned to the cohort when the roster is issued".to_owned(),
+        Some([]) => "consent covers: no survey".to_owned(),
+        Some(names) => format!("consent covers: {}", names.join(", ")),
+    }
 }
 
 // ---- diff -------------------------------------------------------------------------------------
@@ -242,6 +259,12 @@ fn diff(args: &Args, out: &mut Outcome) -> Res {
     for ((from, to), n) in &consent {
         out.lines.push(format!("consent changes: {from} -> {to}: {n}"));
     }
+    let covers = |r: &Roster| if r.consent_covers.is_empty() { "no survey".to_owned() } else { r.consent_covers.join(", ") };
+    if a.roster.consent_covers == b.roster.consent_covers {
+        out.lines.push("consent coverage: unchanged".to_owned());
+    } else {
+        out.lines.push(format!("consent coverage: {} -> {}", covers(&a.roster), covers(&b.roster)));
+    }
     out.lines.push(format!("prior_status changes: {prior}"));
     out.lines.push(format!("changed fields: {}", if fields.is_empty() { "none".to_owned() } else { fields.iter().cloned().collect::<Vec<_>>().join(", ") }));
 
@@ -259,6 +282,7 @@ fn diff(args: &Args, out: &mut Outcome) -> Res {
                 .collect(),
         ),
     );
+    out.set("consentCoverageChanged", Value::Bool(a.roster.consent_covers != b.roster.consent_covers));
     out.set("priorStatusChanges", int(prior));
     out.set("changedFields", Value::Array(fields.iter().map(|f| text(f)).collect()));
 
@@ -413,7 +437,12 @@ fn issue(args: &Args, out: &mut Outcome) -> Res {
                 continue;
             }
         };
-        let roster = form.clone().into_roster(fieldseal_kernel::id::Generation(1));
+        let roster = form.clone().into_roster(fieldseal_kernel::id::Generation(1), &[]);
+        if !instruments.is_empty() {
+            for f in coverage_findings(form.consent_covers.as_deref(), &instruments) {
+                out.raw_finding("DIS-063", "error", path, &f.path, &f.message);
+            }
+        }
         for instrument in &instruments {
             for f in compare_roster(&roster, instrument).iter().filter(|f| f.severity == Severity::Error) {
                 out.finding(path, f);
