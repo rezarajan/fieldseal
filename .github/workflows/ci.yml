@@ -5,13 +5,10 @@
 name: ci
 
 on:
+  # CI runs only for a release tag or a manual start, to save Actions minutes.
+  # Pushes to main and pull requests do not trigger it.
   push:
-    branches: [main]
-  pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "!docs/reference/spec/**"
+    tags: ["v*"]
   workflow_dispatch:
 
 concurrency:
