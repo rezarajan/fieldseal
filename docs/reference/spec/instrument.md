@@ -430,6 +430,13 @@ An extension adds data to what an instrument may refer to. It never adds behavio
 - **INS-257** Every rendering of an instrument for people (the HTML adapter, the web device and every runtime renderer) MUST conform to WCAG 2.2 Level AA, on every step, tab and page at the compact and expanded window classes, including: no focused element entirely hidden by sticky content (2.4.11); targets of at least 24 by 24 CSS pixels or with the spacing exception (2.5.8); reflow at 320 CSS pixels without two-dimensional scrolling (1.4.10); no loss of content under text-spacing overrides (1.4.12). Conformance MUST be tested by the axe-core rules for WCAG 2.0, 2.1 and 2.2 A and AA plus checks for those four criteria (`just a11y`), and a release MUST NOT ship with a finding.
 
 
+### 5.26 Survey folders and translation catalogues (ADR 0041)
+
+- **INS-258** A survey is one folder: `instrument.yaml`, `layouts/<window>.yaml` and `i18n/<lang>.po`, with an optional `README.md`. The folder name MUST equal `survey.name`, and a layout file's stem MUST equal the `window` it declares. A titled layout step or card MUST have an `id:` that is unique in its layout. A file in the folder that is none of these MUST be reported as a warning and never silently ignored. One resolver reads the folder; no other code knows its shape.
+- **INS-259** A survey has one catalogue per language, `i18n/<lang>.po`, holding the instrument's texts and every layout's titles. A `msgctxt` MUST be `instrument/<path>` (the text's path in the instrument) or `layout/<window>/<authored id>`, and `msgid` is the English text. A `msgctxt` is never a position.
+- **INS-260** A translation report lists, for each catalogue, the source texts that are missing (no entry, or an empty `msgstr`), the entries that are orphaned (their `msgctxt` matches no source text) or stale (their `msgid` differs from the current English text), and each language declared under `translations:` that has no catalogue. A stale entry MUST be treated as missing when the document is expanded: the English text is used and the stale `msgstr` is not applied. The report is built once per survey over the instrument and layout texts together. All four findings are warnings, and a strict check makes them errors.
+- **INS-261** A layout `id:` is authoring-only: it keys a title in the catalogues and MUST NOT be part of the expanded, signed layout, so adding ids changes no layout fingerprint.
+
 ## 6. Resources and formats
 
 ### 6.1 Instrument
@@ -688,6 +695,7 @@ entries:
 | Standard catalogue: pinned, household entries carry no factor | INS-231–INS-238 | `fieldseal unit list`, `fieldseal instrument validate` over invalid fixtures |
 | Extensions: schema, additive-only, references, offline compile, versions | INS-239–INS-251 | `fieldseal extension validate`, `fieldseal extension diff`, `fieldseal instrument compile` over golden bundles |
 | Constraints refused at entry by every UI | INS-252–INS-256 | `fieldseal conformance run --suite ins-ui-constraints`; each platform's UI suite |
+| Survey folders, catalogue contexts and the translation report | INS-258–INS-261 | `cargo test -p fieldseal-adapters-authoring` (`survey_resolver`, `po_entries`, `translation_report`) |
 | Interaction rules on a platform UI | INS-020–INS-024, INS-026, INS-027 | Platform UI test suite, with traces checked by `fieldseal export inspect` |
 
 ## 9. Open questions

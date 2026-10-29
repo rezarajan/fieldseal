@@ -1054,6 +1054,7 @@ static SHAPES: &[Shape] = &[
         key("language", TEXT, "The language the titles are written in; `en` when omitted."),
     ]),
     closed("layout.step", "One step of a layout.", &[
+        key("id", TEXT, "The step's id: the key of its title in the translation catalogues. Never part of the signed layout."),
         req("title", TEXT, "The step's title."),
         key("navigation", TEXT, "How the step is navigated; `linear` when omitted."),
         req("contents", CONTENTS, "What the step shows."),
@@ -1076,6 +1077,7 @@ static SHAPES: &[Shape] = &[
     closed("layout.content.card", "A card.", &[req("card", TITLED, "The card.")]),
     closed("layout.content.tabs", "Tabs.", &[req("tabs", Ty::List(&TITLED), "The tabs.")]),
     closed("layout.titled", "A card or a tab.", &[
+        key("id", TEXT, "The id: the key of its title in the translation catalogues. Never part of the signed layout."),
         req("title", TEXT, "The title."),
         key("icon", TEXT, "The icon."),
         req("contents", CONTENTS, "What it shows."),

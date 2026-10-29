@@ -1,0 +1,7 @@
+# A number where a step id is text.
+# expect: TypeMismatch /steps/0/id
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- id: 5
+  title: Step
+  contents: []

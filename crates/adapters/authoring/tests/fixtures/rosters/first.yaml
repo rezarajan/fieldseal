@@ -1,0 +1,5 @@
+# The file name says nothing: the cohort and version are read from the content.
+cohort: village-a
+version: 1
+subjects:
+- {subject: p-1, display: First}

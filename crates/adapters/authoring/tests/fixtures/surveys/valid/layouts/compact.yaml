@@ -1,0 +1,10 @@
+layout: {name: valid-compact, instrument: ../instrument.yaml, window: compact}
+steps:
+- id: household
+  title: The household
+  contents:
+  - card:
+      id: who-lives-here
+      title: Who lives here
+      contents:
+      - show: [water.source]

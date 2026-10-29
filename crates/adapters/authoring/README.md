@@ -19,9 +19,21 @@ Crate root (`src/lib.rs`):
 - `Position { line, column }` and `LocatedFinding { file, pointer, position, kind, message }` (`kind` is one of the six WIRE-211 kinds, `fieldseal_kernel::schema::SchemaErrorKind`; `Display` prints `file:line:column: kind: pointer: message`).
 - Re-exports `Value`, `AuthoringError { kind, line, column, message, position, findings }` and `ErrorKind` (non-exhaustive: `Encoding`, `Syntax`, `EmptyDocument`, `MultipleDocuments`, `DuplicateKey`, `NonStringKey`, `Null`, `Float`, `Number`, `AmbiguousBoolean`, `Alias`, `Anchor`, `MergeKey`, `Tag`, `Binary`, `NotNfc`, `TooDeep`, `Compact`).
 
-`pub mod compact` (ADR 0040): `Catalogues` (`BTreeMap<lang, BTreeMap<path, text>>`), `is_compact(&Value)`, `expand(Value)`, `expand_with(Value, &Catalogues)`, `slug(&str)`, `parse_po(&str)`.
+`pub mod compact` (ADR 0040): `Catalogues` (`BTreeMap<lang, BTreeMap<path, text>>`), `is_compact(&Value)`, `expand(Value)`, `expand_with(Value, &Catalogues)` (the legacy catalogue form), `expand_with_entries(Value, &EntryCatalogues)` (the survey-folder form), `slug(&str)`, and `parse_po(&str)`, which stays as an adapter over `po::parse_po` and returns `msgctxt` to `msgstr` without the empty entries.
 
-Private modules: `yaml` (event-based decoder over `saphyr-parser`), `json` (hand-written RFC 8259 parser), `scalar` (number, NFC and depth rules), `spans`, `error`. Both decoders track the JSON Pointer of the node they read.
+`pub mod po` (ADR 0041): `PoEntry { msgctxt, msgid, msgstr, line }`, `EntryCatalogues` (language, then `msgctxt`), `parse_po(&str)` (keeps an empty `msgstr` as missing, rejects a repeated `msgctxt` with the line of the second one, accepts any `msgctxt`) and `check_context(&str) -> Result<ContextKind, String>`, the `msgctxt` grammar: `instrument/<path>` or `layout/<window>/<authored id>`. Only the resolver calls `check_context`.
+
+`pub mod survey` (ADR 0041), the only code that knows the survey folder shape (`instrument.yaml`, `layouts/<window>.yaml`, `i18n/<lang>.po`, `README.md`):
+
+- `SurveyTree::open(root)` lists the survey folders (a name that begins with a dot is not one); `survey(name) -> SurveyRef` lists a folder's files and the stray ones; `SurveyRef::load() -> LoadedSurvey { instrument, layouts, translation_report, warnings }` decodes and expands every document with the folder's catalogues and applies the folder rules. `LoadedSurvey::strict()` turns the warnings and findings into errors.
+- `ResolveError { file, pointer, line, column, kind, message }` with `ResolveKind` `io`, `no-instrument`, `name-mismatch`, `window-mismatch`, `missing-layout-id`, `duplicate-layout-id`, `stray-file`, `po-syntax`, `po-duplicate-context`, `po-bad-context`, the six schema kinds passed through, `decode` for a syntax error, and `translation` under `strict()`.
+- `Finding { kind, language, file, line, msgctxt, old_msgid, new_text }` with `FindingKind` `Missing`, `Orphaned`, `Stale` and `NoCatalogue`. A stale entry (its `msgid` is not the current English text) is treated as missing at expansion: the English text is used and the stale `msgstr` is not applied. The report is built once per survey over the instrument and layout texts together.
+- `RosterSet::open(dir)` reads the roster files directly in `dir` (no recursion) for their `cohort` and `version`, never for their file name; `latest(cohort)` and `cohorts()`.
+- `legacy_translation_report` reports on the catalogues of the unmigrated `examples/` tree. It goes with them in Phase 4.
+
+Layout steps, cards and tabs may carry an `id:` (the schema key is optional until Phase 4; the resolver requires it on steps and cards). An id keys the title as `layout/<window>/<id>` and never reaches the expanded document.
+
+Private modules (besides `po` and `survey` above): `yaml` (event-based decoder over `saphyr-parser`), `json` (hand-written RFC 8259 parser), `scalar` (number, NFC and depth rules), `spans`, `error`. Both decoders track the JSON Pointer of the node they read.
 
 ## Invariants
 
@@ -37,8 +49,8 @@ Private modules: `yaml` (event-based decoder over `saphyr-parser`), `json` (hand
 ## Side Effects
 
 - `decode` and `decode_raw` are pure.
-- `decode_path` reads the document file and, for a compact document, lists and reads `*.po` files in `<dir>/i18n/<stem>/` (sorted by name). Unreadable files are reported as `ErrorKind::Encoding` with line 0, column 0 and `position: None`; the message names the file. No writes, network or clock.
+- `decode_path` reads the document file and, for a compact document, lists and reads `*.po` files in `<dir>/i18n/<stem>/` (sorted by name). `SurveyTree`, `SurveyRef::load` and `RosterSet` list directories and read the files of a survey folder or roster directory; they write nothing and print nothing. Unreadable files are reported as `ErrorKind::Encoding` with line 0, column 0 and `position: None`; the message names the file. No writes, network or clock.
 
 ## Verification
 
-- Run: `cargo test -p fieldseal-adapters-authoring` (repo-wide: `just test`). `tests/schema_differential.rs` checks the decoder and the generated JSON Schema (a dev-dependency, `jsonschema`) accept and reject the same documents: every example, mutations of every declared key, and the invalid-document corpus `tests/schema-corpus/` (WIRE-213). `tests/error_positions.rs` checks the reported line and column against `tests/fixtures/errors/`. The `strict-schema` conformance suite runs the corpus too: `fieldseal conformance run --suite strict-schema`.
+- Run: `cargo test -p fieldseal-adapters-authoring` (repo-wide: `just test`). `tests/schema_differential.rs` checks the decoder and the generated JSON Schema (a dev-dependency, `jsonschema`) accept and reject the same documents: every example, mutations of every declared key, and the invalid-document corpus `tests/schema-corpus/` (WIRE-213). `tests/error_positions.rs` checks the reported line and column against `tests/fixtures/errors/`. `tests/survey_resolver.rs`, `tests/translation_report.rs` and `tests/po_entries.rs` cover the resolver, the report and the catalogue entries on `tests/fixtures/surveys/` and `tests/fixtures/rosters/`; `ins_260_the_example_catalogues_have_no_stale_entries` runs the report over the current examples. The `strict-schema` conformance suite runs the corpus too: `fieldseal conformance run --suite strict-schema`.

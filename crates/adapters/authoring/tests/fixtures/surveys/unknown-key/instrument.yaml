@@ -1,0 +1,7 @@
+survey: {name: unknown-key, version: 1.0.0}
+titel: Water at home
+sections:
+- water:
+    group: Water
+    elements:
+    - source: {type: text, prefix: '1', label: Where does the water come from?}

@@ -1,0 +1,16 @@
+# A small survey for the resolver tests: one list of three items and one question.
+survey: {name: valid, version: 1.0.0}
+language: en
+title: Water at home
+translations:
+  es: {method: human}
+lists:
+  sources:
+  - {label: Piped water, code: piped}
+  - {label: A well, code: well}
+  - {label: Rainwater, code: rain}
+sections:
+- water:
+    group: Water
+    elements:
+    - source: {type: choice, list: sources, prefix: '1', label: Where does the water come from?}

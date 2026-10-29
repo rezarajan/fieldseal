@@ -1,0 +1,5 @@
+layout: {name: missing-layout-id-compact, instrument: ../instrument.yaml, window: compact}
+steps:
+- title: Water
+  contents:
+  - show: [water.source]

@@ -1,0 +1,5 @@
+cohort: village-a
+version: 2
+subjects:
+- {subject: p-1, display: First}
+- {subject: p-2, display: Second}

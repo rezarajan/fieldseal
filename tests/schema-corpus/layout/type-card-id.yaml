@@ -1,0 +1,7 @@
+# A number where a card id is text.
+# expect: TypeMismatch /steps/0/contents/0/card/id
+layout: {name: corpus, instrument: ../instruments/corpus.yaml, window: compact}
+steps:
+- title: One
+  contents:
+  - card: {id: 7, title: Card, contents: []}

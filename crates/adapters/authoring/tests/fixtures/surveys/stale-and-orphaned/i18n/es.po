@@ -1,0 +1,21 @@
+# The question text changed after this was translated, and the item `rain` was deleted.
+
+msgctxt "instrument/title"
+msgid "Water at home"
+msgstr "Agua en casa"
+
+msgctxt "instrument/water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "instrument/water.source"
+msgid "Where does the water come from?"
+msgstr "De dónde viene el agua?"
+
+msgctxt "instrument/lists.sources.rain"
+msgid "Rainwater"
+msgstr "Agua de lluvia"
+
+msgctxt "layout/compact/water"
+msgid "Water"
+msgstr "Agua"

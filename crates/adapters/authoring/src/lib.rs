@@ -170,4 +170,9 @@ pub fn decode_path(path: &std::path::Path) -> Result<Value, AuthoringError> {
 }
 
 pub mod compact;
+pub mod po;
+pub mod survey;
+
+pub use po::{EntryCatalogues, PoEntry};
+pub use survey::{Finding, LoadedSurvey, ResolveError, SurveyRef, SurveyTree};
 

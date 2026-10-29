@@ -1,0 +1,5 @@
+# A later version, kept in a subdirectory: the roster set does not recurse.
+cohort: village-a
+version: 3
+subjects:
+- {subject: p-1, display: First}

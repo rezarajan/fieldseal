@@ -1,0 +1,10 @@
+layout: {name: duplicate-layout-id-compact, instrument: ../instrument.yaml, window: compact}
+steps:
+- id: water
+  title: Water
+  contents:
+  - card:
+      id: water
+      title: The source
+      contents:
+      - show: [water.source]

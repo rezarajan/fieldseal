@@ -1,0 +1,33 @@
+# Spanish for valid 1.0.0.
+
+msgctxt "instrument/title"
+msgid "Water at home"
+msgstr "Agua en casa"
+
+msgctxt "instrument/water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "instrument/water.source"
+msgid "Where does the water come from?"
+msgstr "De dónde viene el agua?"
+
+msgctxt "instrument/lists.sources.piped"
+msgid "Piped water"
+msgstr "Agua entubada"
+
+msgctxt "instrument/lists.sources.well"
+msgid "A well"
+msgstr "Un pozo"
+
+msgctxt "instrument/lists.sources.rain"
+msgid "Rainwater"
+msgstr "Agua de lluvia"
+
+msgctxt "layout/compact/household"
+msgid "The household"
+msgstr "El hogar"
+
+msgctxt "layout/compact/who-lives-here"
+msgid "Who lives here"
+msgstr "Quién vive aquí"

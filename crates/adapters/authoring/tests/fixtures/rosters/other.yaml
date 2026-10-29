@@ -1,0 +1,4 @@
+roster: {cohort: town-b, version: 1}
+columns: [subject, display]
+rows:
+- [p-9, Ninth]

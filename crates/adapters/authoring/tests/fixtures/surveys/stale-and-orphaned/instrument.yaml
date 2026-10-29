@@ -1,0 +1,9 @@
+survey: {name: stale-and-orphaned, version: 1.0.0}
+title: Water at home
+translations:
+  es: {method: human}
+sections:
+- water:
+    group: Water
+    elements:
+    - source: {type: text, prefix: '1', label: Where does the water come from now?}

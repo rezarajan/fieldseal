@@ -9,14 +9,18 @@
 //! sequence of single-key maps, because a map's order is not kept (WIRE-001).
 //!
 //! The source language is written inline; other languages come from gettext catalogues
-//! (`i18n/<lang>.po`, `msgctxt` = the text's path), merged by [`expand_with`].
+//! (`i18n/<lang>.po`), merged by [`expand_with`] (the legacy form: `msgctxt` = the text's path) or
+//! by [`expand_with_entries`] (the survey-folder form: `instrument/<path>` and
+//! `layout/<window>/<id>`, applied only while the entry's `msgid` is the current English text).
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use fieldseal_kernel::schema::{self, DocKind, Reader, SchemaError, SchemaErrorKind, ShapeId};
 use fieldseal_kernel::value::{Decimal, Value};
 
 use crate::error::{LocatedFinding, Position};
+use crate::po::EntryCatalogues;
 use crate::spans::Spans;
 use crate::{AuthoringError, ErrorKind};
 
@@ -54,10 +58,105 @@ pub fn expand_with(doc: Value, catalogues: &Catalogues) -> Res<Value> {
     expand_in(doc, catalogues, None, None)
 }
 
+/// Expands a compact document with the catalogue entries of a survey folder. An entry applies only
+/// while its `msgid` is the current English text; a stale or empty entry is treated as missing.
+/// Contexts are `instrument/<path>` for a survey and `layout/<window>/<id>` for a layout step or
+/// card that has an `id:`. A language declared under `translations:` that has no catalogue is not
+/// an error here: the resolver reports it.
+///
+/// # Errors
+///
+/// As [`expand_with`].
+pub fn expand_with_entries(doc: Value, catalogues: &EntryCatalogues) -> Res<Value> {
+    expand_seen(doc, &Texts::entries(catalogues), None, None).map(|(v, _)| v)
+}
+
 /// [`expand_with`], with the positions of `doc` in its file when they are known.
 pub(crate) fn expand_in(doc: Value, catalogues: &Catalogues, spans: Option<&Spans>, file: Option<&str>) -> Res<Value> {
+    expand_seen(doc, &Texts::legacy(catalogues), spans, file).map(|(v, _)| v)
+}
+
+/// One translatable text the expander met: its catalogue key, its English text and, when the
+/// expander knew it, the JSON Pointer of the text in the source document.
+#[derive(Debug, Clone)]
+pub(crate) struct Seen {
+    pub key: String,
+    pub text: String,
+    pub pointer: Option<String>,
+}
+
+/// The catalogues the expander reads, in one of two forms, and the texts it asked for. Both forms
+/// feed one expander; only the legacy one has no `msgid`, so only the other can see a stale entry.
+pub(crate) struct Texts<'c> {
+    legacy: Option<&'c Catalogues>,
+    entries: Option<&'c EntryCatalogues>,
+    /// Whether keys are the survey-folder contexts (`instrument/<path>`).
+    prefix: bool,
+    seen: RefCell<Vec<Seen>>,
+}
+
+impl<'c> Texts<'c> {
+    pub(crate) fn legacy(c: &'c Catalogues) -> Self {
+        Self { legacy: Some(c), entries: None, prefix: false, seen: RefCell::new(Vec::new()) }
+    }
+
+    pub(crate) fn entries(c: &'c EntryCatalogues) -> Self {
+        Self { legacy: None, entries: Some(c), prefix: true, seen: RefCell::new(Vec::new()) }
+    }
+
+    /// Entries keyed the legacy way (the text's path), to report on catalogues not yet migrated.
+    pub(crate) fn legacy_entries(c: &'c EntryCatalogues) -> Self {
+        Self { legacy: None, entries: Some(c), prefix: false, seen: RefCell::new(Vec::new()) }
+    }
+
+    fn languages(&self) -> Vec<&'c String> {
+        match (self.legacy, self.entries) {
+            (Some(c), _) => c.keys().collect(),
+            (_, Some(c)) => c.keys().collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    fn has_language(&self, lang: &str) -> bool {
+        match (self.legacy, self.entries) {
+            (Some(c), _) => c.contains_key(lang),
+            (_, Some(c)) => c.contains_key(lang),
+            _ => false,
+        }
+    }
+
+    /// Whether keys carry the survey-folder prefix.
+    fn prefixed(&self) -> bool {
+        self.prefix
+    }
+
+    /// The translation of `text` in language `lang` under `key`, if there is one to apply.
+    fn translation(&self, lang: &str, key: &str, text: &str) -> Option<&'c str> {
+        match (self.legacy, self.entries) {
+            (Some(c), _) => c.get(lang)?.get(key).map(String::as_str),
+            (_, Some(c)) => c.get(lang)?.get(key).filter(|e| !e.msgstr.is_empty() && e.msgid == text).map(|e| e.msgstr.as_str()),
+            _ => None,
+        }
+    }
+
+    /// `{ <source>: text, <lang>: translation, … }`, noting that `key` was asked for.
+    fn value(&self, source: &str, key: &str, text: &str, pointer: Option<String>) -> Value {
+        self.seen.borrow_mut().push(Seen { key: key.to_owned(), text: text.to_owned(), pointer });
+        let mut m = Map::new();
+        m.insert(source.to_owned(), t(text));
+        for lang in self.languages() {
+            if let Some(s) = self.translation(lang, key, text) {
+                m.insert(lang.clone(), t(s));
+            }
+        }
+        Value::Map(m)
+    }
+}
+
+/// [`expand_in`] over either catalogue form; also returns the texts the expander asked for.
+pub(crate) fn expand_seen(doc: Value, texts: &Texts<'_>, spans: Option<&Spans>, file: Option<&str>) -> Res<(Value, Vec<Seen>)> {
     let Some(kind) = DocKind::detect(&doc) else {
-        return Ok(doc);
+        return Ok((doc, Vec::new()));
     };
     let errors = schema::check(&doc, kind);
     if !errors.is_empty() {
@@ -65,11 +164,11 @@ pub(crate) fn expand_in(doc: Value, catalogues: &Catalogues, spans: Option<&Span
     }
     let m = doc.as_map().expect("a compact document is a map");
     let expanded = match kind {
-        DocKind::Survey => Survey::new(catalogues).expand(m),
-        DocKind::Layout => layout(m, catalogues),
+        DocKind::Survey => Survey::new(texts).expand(m),
+        DocKind::Layout => layout(m, texts),
         DocKind::Roster => roster(m),
     };
-    expanded.map_err(|e| locate(e, spans))
+    expanded.map(|v| (v, texts.seen.take())).map_err(|e| locate(e, spans))
 }
 
 /// A schema failure as one error that holds every finding, in the order they appear in the file.
@@ -215,7 +314,7 @@ fn unit(name: &str) -> (String, Option<String>) {
 // ---- surveys ---------------------------------------------------------------------------------
 
 struct Survey<'c> {
-    catalogues: &'c Catalogues,
+    texts: &'c Texts<'c>,
     source: String,
     languages: Vec<String>,
     lists: BTreeMap<String, Value>,
@@ -227,19 +326,13 @@ struct Survey<'c> {
 
 /// A text in the source language plus every catalogue's translation of `ctx`.
 impl Survey<'_> {
-    fn new(catalogues: &Catalogues) -> Survey<'_> {
-        Survey { catalogues, source: "en".into(), languages: vec![], lists: BTreeMap::new(), questions: BTreeMap::new(), other_max: None, disabled_display: None }
+    fn new<'c>(texts: &'c Texts<'c>) -> Survey<'c> {
+        Survey { texts, source: "en".into(), languages: vec![], lists: BTreeMap::new(), questions: BTreeMap::new(), other_max: None, disabled_display: None }
     }
 
     fn lt(&self, ctx: &str, source: &str) -> Value {
-        let mut m = Map::new();
-        m.insert(self.source.clone(), t(source));
-        for (lang, cat) in self.catalogues {
-            if let Some(s) = cat.get(ctx) {
-                m.insert(lang.clone(), t(s));
-            }
-        }
-        Value::Map(m)
+        let key = if self.texts.prefixed() { format!("instrument/{ctx}") } else { ctx.to_owned() };
+        self.texts.value(&self.source, &key, source, None)
     }
 
     fn expand(mut self, top: &Map) -> Res<Value> {
@@ -249,7 +342,7 @@ impl Survey<'_> {
         if let Some(l) = o.text("language") {
             self.source = l.to_owned();
         }
-        self.languages = std::iter::once(self.source.clone()).chain(self.catalogues.keys().filter(|l| **l != self.source).cloned()).collect();
+        self.languages = std::iter::once(self.source.clone()).chain(self.texts.languages().into_iter().filter(|l| **l != self.source).cloned()).collect();
         let mut spec = Map::new();
         spec.insert("schema".into(), t("^1.0"));
         for key in ["title", "description", "purpose"] {
@@ -274,7 +367,11 @@ impl Survey<'_> {
             let mut tr = Map::new();
             for (lang, meta) in v {
                 // A declared translation needs its catalogue: never drop a language silently.
-                if !self.catalogues.contains_key(lang) {
+                if !self.texts.has_language(lang) {
+                    if self.texts.entries.is_some() {
+                        // The translation report has a `no catalogue` finding for it.
+                        continue;
+                    }
                     return Err(err(&format!("/translations/{lang}"), format!("no catalogue for `{lang}`: expected i18n/<survey>/{lang}.po beside the survey (copy it with the survey)")));
                 }
                 let mo = read(meta, "survey.translation");
@@ -1027,7 +1124,7 @@ fn scale(v: &Value, path: &str, lt: &dyn Fn(&str, &str) -> Value) -> Res<Value> 
 /// element), `{ card: { title, icon?, contents } }` or `{ tabs: [ { title, icon?, contents } ] }`.
 /// Titles are in the source language; translations come from the catalogues (`msgctxt` = the
 /// title's position, for example `steps.0.contents.1.card`).
-fn layout(top: &Map, catalogues: &Catalogues) -> Res<Value> {
+fn layout(top: &Map, texts: &Texts<'_>) -> Res<Value> {
     let o = Reader::new(top, ShapeId("layout"));
     let lo = read(required(o.raw("layout")), "layout.id");
     let name = required(lo.text("name"));
@@ -1035,16 +1132,7 @@ fn layout(top: &Map, catalogues: &Catalogues) -> Res<Value> {
     let instrument = required(lo.text("instrument"));
     let window = required(lo.text("window"));
     let source = lo.text("language").unwrap_or("en");
-    let lt = |ctx: &str, text: &str| -> Value {
-        let mut m = Map::new();
-        m.insert(source.to_owned(), t(text));
-        for (lang, cat) in catalogues {
-            if let Some(s) = cat.get(ctx) {
-                m.insert(lang.clone(), t(s));
-            }
-        }
-        Value::Map(m)
-    };
+    let titles = Titles { texts, window, source };
     let mut steps = Vec::new();
     for (i, s) in required(o.list("steps")).iter().enumerate() {
         let p = format!("/steps/{i}");
@@ -1052,8 +1140,8 @@ fn layout(top: &Map, catalogues: &Catalogues) -> Res<Value> {
         let so = read(s, "layout.step");
         let title = required(so.text("title"));
         let navigation = so.text("navigation").unwrap_or("linear");
-        let contents = layout_contents(required(so.raw("contents")), &format!("{p}/contents"), &format!("{ctx}.contents"), &lt)?;
-        steps.push(map([("title", lt(&ctx, title)), ("navigation", t(navigation)), ("contents", Value::Array(contents))]));
+        let contents = layout_contents(required(so.raw("contents")), &format!("{p}/contents"), &format!("{ctx}.contents"), &titles)?;
+        steps.push(map([("title", titles.title(&ctx, so.text("id"), title, &p)), ("navigation", t(navigation)), ("contents", Value::Array(contents))]));
     }
     Ok(map([
         ("apiVersion", t("fieldseal.dev/v1alpha1")),
@@ -1063,7 +1151,22 @@ fn layout(top: &Map, catalogues: &Catalogues) -> Res<Value> {
     ]))
 }
 
-fn layout_contents(v: &Value, p: &str, ctx: &str, lt: &dyn Fn(&str, &str) -> Value) -> Res<Vec<Value>> {
+/// How a layout's titles are translated. A step, card or tab with an `id:` is keyed
+/// `layout/<window>/<id>`; one without keeps its position (`steps.0.contents.1.card`).
+struct Titles<'a> {
+    texts: &'a Texts<'a>,
+    window: &'a str,
+    source: &'a str,
+}
+
+impl Titles<'_> {
+    fn title(&self, ctx: &str, id: Option<&str>, text: &str, pointer: &str) -> Value {
+        let key = id.map_or_else(|| ctx.to_owned(), |id| format!("layout/{}/{id}", self.window));
+        self.texts.value(self.source, &key, text, Some(format!("{pointer}/title")))
+    }
+}
+
+fn layout_contents(v: &Value, p: &str, ctx: &str, lt: &Titles<'_>) -> Res<Vec<Value>> {
     let mut out = Vec::new();
     for (i, item) in seq(v, p)?.iter().enumerate() {
         let ip = format!("{p}/{i}");
@@ -1093,10 +1196,10 @@ fn layout_contents(v: &Value, p: &str, ctx: &str, lt: &dyn Fn(&str, &str) -> Val
 }
 
 /// A card or tab: `{ title, icon?, contents }`.
-fn titled(v: &Value, p: &str, ctx: &str, lt: &dyn Fn(&str, &str) -> Value) -> Res<Value> {
+fn titled(v: &Value, p: &str, ctx: &str, lt: &Titles<'_>) -> Res<Value> {
     let o = read(v, "layout.titled");
     let mut m = Map::new();
-    m.insert("title".into(), lt(ctx, required(o.text("title"))));
+    m.insert("title".into(), lt.title(ctx, o.text("id"), required(o.text("title")), p));
     if let Some(icon) = o.text("icon") {
         m.insert("icon".into(), t(icon));
     }
@@ -1142,67 +1245,12 @@ fn roster(top: &Map) -> Res<Value> {
     Ok(map([("cohort", t(cohort)), ("version", version), ("subjects", Value::Array(subjects))]))
 }
 
-/// Parses a gettext catalogue strictly: `msgctxt`, `msgid` and `msgstr` lines with quoted text
-/// (`\"`, `\\` and `\n` escapes), comments, blank lines; entries with an empty `msgstr` are left out.
+/// Parses a gettext catalogue strictly (see [`crate::po::parse_po`]) into `msgctxt` to `msgstr`;
+/// entries with an empty `msgstr` are left out. This is the legacy form that [`expand_with`] takes.
 ///
 /// # Errors
 ///
 /// An [`AuthoringError`] with the line of the first malformed entry.
 pub fn parse_po(text: &str) -> Res<BTreeMap<String, String>> {
-    let mut out = BTreeMap::new();
-    let (mut ctx, mut id, mut s): (Option<String>, Option<String>, Option<String>) = (None, None, None);
-    let mut flush = |ctx: &mut Option<String>, id: &mut Option<String>, s: &mut Option<String>, line: usize| -> Res<()> {
-        if let (Some(c), Some(_), Some(v)) = (ctx.take(), id.take(), s.take())
-            && !v.is_empty()
-            && out.insert(c.clone(), v).is_some()
-        {
-            return Err(AuthoringError::new(ErrorKind::Compact, line, 1, format!("msgctxt \"{c}\" appears twice")));
-        }
-        Ok(())
-    };
-    let unquote = |rest: &str, line: usize| -> Res<String> {
-        let r = rest.trim();
-        let inner = r.strip_prefix('"').and_then(|x| x.strip_suffix('"')).ok_or_else(|| AuthoringError::new(ErrorKind::Compact, line, 1, "expected a quoted string"))?;
-        let mut o = String::new();
-        let mut it = inner.chars();
-        while let Some(c) = it.next() {
-            if c == '\\' {
-                match it.next() {
-                    Some('n') => o.push('\n'),
-                    Some('"') => o.push('"'),
-                    Some('\\') => o.push('\\'),
-                    _ => return Err(AuthoringError::new(ErrorKind::Compact, line, 1, "unknown escape")),
-                }
-            } else {
-                o.push(c);
-            }
-        }
-        Ok(o)
-    };
-    for (n, raw) in text.lines().enumerate() {
-        let line = n + 1;
-        let l = raw.trim();
-        if l.is_empty() || l.starts_with('#') {
-            continue;
-        }
-        if let Some(r) = l.strip_prefix("msgctxt ") {
-            flush(&mut ctx, &mut id, &mut s, line)?;
-            ctx = Some(unquote(r, line)?);
-        } else if let Some(r) = l.strip_prefix("msgid ") {
-            id = Some(unquote(r, line)?);
-        } else if let Some(r) = l.strip_prefix("msgstr ") {
-            s = Some(unquote(r, line)?);
-        } else if l.starts_with('"') {
-            let more = unquote(l, line)?;
-            match (&mut s, &mut id) {
-                (Some(v), _) => v.push_str(&more),
-                (None, Some(v)) => v.push_str(&more),
-                _ => return Err(AuthoringError::new(ErrorKind::Compact, line, 1, "a continuation line outside an entry")),
-            }
-        } else {
-            return Err(AuthoringError::new(ErrorKind::Compact, line, 1, "expected msgctxt, msgid, msgstr, a quoted continuation or a comment"));
-        }
-    }
-    flush(&mut ctx, &mut id, &mut s, text.lines().count())?;
-    Ok(out)
+    Ok(crate::po::parse_po(text)?.into_iter().filter(|e| !e.msgstr.is_empty()).map(|e| (e.msgctxt, e.msgstr)).collect())
 }

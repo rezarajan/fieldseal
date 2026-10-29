@@ -1,0 +1,7 @@
+# The file is expanded.yaml and the layout says compact.
+layout: {name: window-mismatch-compact, instrument: ../instrument.yaml, window: compact}
+steps:
+- id: water
+  title: Water
+  contents:
+  - show: [water.source]

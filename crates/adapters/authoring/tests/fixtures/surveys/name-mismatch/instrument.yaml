@@ -1,0 +1,8 @@
+# The folder is name-mismatch and the survey says otherwise.
+survey: {name: some-other-name, version: 1.0.0}
+title: Water at home
+sections:
+- water:
+    group: Water
+    elements:
+    - source: {type: text, prefix: '1', label: Where does the water come from?}
