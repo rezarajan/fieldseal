@@ -12,7 +12,7 @@ if [ -f "$LOCAL/.env.secrets" ]; then
   down() { compose --profile demo down "$@"; }
 else
   export KC_BOOTSTRAP_ADMIN_PASSWORD=unused FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET=unused FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET=unused
-  down() { "${COMPOSE[@]}" -f "$LOCAL/compose.yaml" --profile demo down "$@"; }
+  down() { "${COMPOSE[@]}" "${COMPOSE_FILES[@]}" --profile demo down "$@"; }
 fi
 if [ "${1:-}" = --purge ]; then
   down -v --remove-orphans

@@ -16,7 +16,7 @@ cmd="${1:-demo}"
 # Files the walkthrough hands you (fetched artefacts, rendered instruments) land here.
 mkdir -p "$LOCAL/.out" && chmod 0777 "$LOCAL/.out"
 status=0
-"${COMPOSE[@]}" -f "$LOCAL/compose.yaml" --env-file "$LOCAL/.env.secrets" \
+"${COMPOSE[@]}" "${COMPOSE_FILES[@]}" --env-file "$LOCAL/.env.secrets" \
   --profile demo run --no-deps --rm -T demo "$@" || status=$?
 [ "$status" = 0 ] && [ "$cmd" = resume ] || exit "$status"
 

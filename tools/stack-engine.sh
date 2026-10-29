@@ -81,5 +81,10 @@ stage_report() {
     }' "$TIMING_TSV" | tee "$(dirname "$TIMING_TSV")/stack-timing.txt"
 }
 
+# The compose files: the stack's, plus FIELDSEAL_STACK_OVERRIDE when set (an extra compose file
+# that changes the stack locally, for example to serve it on another hostname).
+COMPOSE_FILES=(-f "$LOCAL/compose.yaml")
+[ -z "${FIELDSEAL_STACK_OVERRIDE:-}" ] || COMPOSE_FILES+=(-f "$FIELDSEAL_STACK_OVERRIDE")
+
 # compose <args>: the stack's compose project, with the generated secrets as its environment.
-compose() { "${COMPOSE[@]}" -f "$LOCAL/compose.yaml" --env-file "$LOCAL/.env.secrets" "$@"; }
+compose() { "${COMPOSE[@]}" "${COMPOSE_FILES[@]}" --env-file "$LOCAL/.env.secrets" "$@"; }

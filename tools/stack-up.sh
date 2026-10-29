@@ -8,12 +8,14 @@
 #   tools/stack-up.sh                 (normally: just up)
 #
 # Environment: FIELDSEAL_CONTAINER_ENGINE=docker|podman, FIELDSEAL_BIN (a fieldseal CLI to use instead of building one),
-#              FIELDSEAL_SKIP_IMAGE_BUILD=1 (reuse the images already loaded).
+#              FIELDSEAL_SKIP_IMAGE_BUILD=1 (reuse the images already loaded),
+#              FIELDSEAL_STACK_MANIFEST (another manifest), FIELDSEAL_STACK_OVERRIDE (an extra compose file).
 set -euo pipefail
 # shellcheck source=stack-engine.sh
 . "$(dirname "${BASH_SOURCE[0]}")/stack-engine.sh"
 
-MANIFEST="$ROOT/examples/deployments/local-stack.yaml"
+# FIELDSEAL_STACK_MANIFEST: another manifest to render, for a local variant of the stack.
+MANIFEST="${FIELDSEAL_STACK_MANIFEST:-$ROOT/examples/deployments/local-stack.yaml}"
 GEN="$LOCAL/.generated"
 ENV_SECRETS="$LOCAL/.env.secrets"
 mkdir -p "$GEN"; : > "$GEN/stack-timing.tsv"; : > "$GEN/stack-timing.txt"

@@ -44,6 +44,9 @@ USER = "product-owner"
 
 
 KEYCLOAK = os.environ.get("FIELDSEAL_KEYCLOAK_URL", "http://localhost:8180")
+# The host:port of each, as the pages below are matched against them.
+AT_PORTAL = re.escape(urllib.parse.urlsplit(PORTAL).netloc)
+AT_KEYCLOAK = re.escape(urllib.parse.urlsplit(KEYCLOAK).netloc)
 SECRETS = os.environ.get("FIELDSEAL_SECRETS_FILE") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "deploy", "local", ".env.secrets")
 
 
@@ -191,7 +194,7 @@ async def run(chromium, show_token, on_token, emit_json, open_url=None):
                 """First sign-in at the portal: the username, then the passkey registration."""
                 step("first sign-in: username, then register a passkey")
                 await goto(f"{PORTAL}/sign-in")
-                await wait_for(r"localhost:8180.*", "redirected to Keycloak")
+                await wait_for(AT_KEYCLOAK + ".*", "redirected to Keycloak")
                 await js(f"document.getElementById('username').value = {json.dumps(USER)}; document.querySelector('form').submit()")
                 await settle()
                 t = await wait_for(r"(?i)passkey|security key|register", "the passkey registration page")
@@ -206,7 +209,7 @@ async def run(chromium, show_token, on_token, emit_json, open_url=None):
                 t = await text() or ""
                 if re.search(r"(?i)label", t) and await js("!!document.querySelector('input[name=authenticatorLabel]')"):
                     await js("document.querySelector('form').submit()")
-                t = await wait_for(r"localhost:8080", "back at the portal after registering", 30)
+                t = await wait_for(AT_PORTAL, "back at the portal after registering", 30)
                 creds = (await c("WebAuthn.getCredentials", {"authenticatorId": auth["authenticatorId"]}))["credentials"]
                 if len(creds) != 1:
                     raise SystemExit(f"FAIL: expected one passkey in the virtual authenticator, found {len(creds)}")
@@ -231,7 +234,7 @@ async def run(chromium, show_token, on_token, emit_json, open_url=None):
                 await js("setTimeout(() => { const b = document.getElementById('authenticateWebAuthnButton') || document.querySelector('[id*=uthenticate]'); b && b.click(); }, 50); true")
                 # The redirect lands on the CLI's listener (http://127.0.0.1:<port>/...), which
                 # answers when it has the code; wait until the browser has left Keycloak.
-                await wait_for(r"^(?!.*localhost:8180)", "the redirect back to the CLI's listener", 30)
+                await wait_for("^(?!.*" + AT_KEYCLOAK + ")", "the redirect back to the CLI's listener", 30)
                 print("   signed in; the CLI has its authorisation code")
                 print("OK")
                 pump.cancel()
@@ -260,7 +263,7 @@ async def run(chromium, show_token, on_token, emit_json, open_url=None):
             await settle()
             await wait_for(r"(?i)passkey|authenticate|sign in", "the passkey prompt")
             await js("setTimeout(() => { const b = document.getElementById('authenticateWebAuthnButton') || document.querySelector('[id*=uthenticate]'); b && b.click(); }, 50); true")
-            await wait_for(r"localhost:8080", "back at the portal after the passkey", 30)
+            await wait_for(AT_PORTAL, "back at the portal after the passkey", 30)
             await asyncio.sleep(1)
             print("   portal says:", (await text()).replace("\n", " | ")[:300])
 
