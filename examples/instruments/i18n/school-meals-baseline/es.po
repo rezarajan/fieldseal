@@ -1,0 +1,441 @@
+# Spanish for school-meals-baseline 1.0.0, written for this project. msgctxt is the text's path in the survey.
+
+msgctxt "about.age"
+msgid "Age in years"
+msgstr "Edad en años"
+
+msgctxt "about.class"
+msgid "Class"
+msgstr "Clase"
+
+msgctxt "about"
+msgid "General information"
+msgstr "Información general"
+
+msgctxt "about.height.guidance"
+msgid "Measure twice, without shoes."
+msgstr "Mida dos veces, sin zapatos."
+
+msgctxt "about.height"
+msgid "Height"
+msgstr "Estatura"
+
+msgctxt "about.meal_programme"
+msgid "Does the school serve meals?"
+msgstr "¿La escuela sirve comidas?"
+
+msgctxt "about.meal_which"
+msgid "Which meals does the pupil eat at school?"
+msgstr "¿Qué comidas toma el alumno en la escuela?"
+
+msgctxt "about.name"
+msgid "Pupil"
+msgstr "Alumno"
+
+msgctxt "about.school"
+msgid "School"
+msgstr "Escuela"
+
+msgctxt "about.sex"
+msgid "Is the pupil a girl or a boy?"
+msgstr "¿El alumno es una niña o un niño?"
+
+msgctxt "about.shop_buys"
+msgid "What would the pupil buy at the school shop? Choose up to four."
+msgstr "¿Qué compraría el alumno en la tienda de la escuela? Elija hasta cuatro."
+
+msgctxt "about.shop_weekly"
+msgid "About how much does the pupil spend there in a week?"
+msgstr "¿Más o menos cuánto gasta el alumno ahí en una semana?"
+
+msgctxt "about.uses_shop"
+msgid "Does the pupil buy anything at the school shop?"
+msgstr "¿El alumno compra algo en la tienda de la escuela?"
+
+msgctxt "about.weight.guidance"
+msgid "Weigh the pupil twice. The two readings must agree."
+msgstr "Pese al alumno dos veces. Las dos lecturas deben coincidir."
+
+msgctxt "about.weight"
+msgid "Weight"
+msgstr "Peso"
+
+msgctxt "checks.unusual-age.roster-is-correct"
+msgid "Roster is correct"
+msgstr "La lista es correcta"
+
+msgctxt "checks.unusual-age.roster-is-wrong"
+msgid "Roster is wrong"
+msgstr "La lista tiene un error"
+
+msgctxt "checks.unusual-age"
+msgid "This age is unusual for a school pupil. Check the roster."
+msgstr "Esta edad es poco común para un alumno. Revise la lista."
+
+msgctxt "consent.bases.form-seen"
+msgid "Signed form seen"
+msgstr "Formulario firmado a la vista"
+
+msgctxt "consent.bases.told-aloud"
+msgid "Consent given aloud"
+msgstr "Consentimiento dado de palabra"
+
+msgctxt "consent.statement"
+msgid "I confirm that consent was given for this pupil."
+msgstr "Confirmo que se dio el consentimiento para este alumno."
+
+msgctxt "description"
+msgid "A short interview with a pupil about the foods and drinks they have in a usual week and a usual day."
+msgstr "Una entrevista breve con un alumno sobre los alimentos y bebidas que toma en una semana y en un día normales."
+
+msgctxt "diet.counted.large-amount.confirmed-with-the-pupil"
+msgid "Confirmed with the pupil"
+msgstr "Confirmado con el alumno"
+
+msgctxt "diet.counted.large-amount.estimated"
+msgid "Estimated"
+msgstr "Estimado"
+
+msgctxt "diet.counted.large-amount"
+msgid "That is a large amount for one serving. Please confirm it."
+msgstr "Es una cantidad grande para una sola porción. Confírmela, por favor."
+
+msgctxt "diet.counted"
+msgid "Main foods"
+msgstr "Alimentos principales"
+
+msgctxt "diet.counted.never-but-yesterday.not-sure"
+msgid "Not sure"
+msgstr "No está seguro"
+
+msgctxt "diet.counted.never-but-yesterday"
+msgid "Said never, but had it yesterday. Ask again."
+msgstr "Dijo que nunca, pero lo tomó ayer. Pregunte de nuevo."
+
+msgctxt "diet.counted.never-but-yesterday.unusual-day"
+msgid "Unusual day"
+msgstr "Día fuera de lo normal"
+
+msgctxt "diet.counted.periods.0"
+msgid "In a usual week"
+msgstr "En una semana normal"
+
+msgctxt "diet.counted.plate.amount"
+msgid "Amount eaten each time"
+msgstr "Cantidad que come cada vez"
+
+msgctxt "diet.counted.plate.amount.unit"
+msgid "each"
+msgstr "unidades"
+
+msgctxt "diet.counted.plate.beans_and_lentils.amount.unit"
+msgid "spoonfuls"
+msgstr "cucharadas"
+
+msgctxt "diet.counted.plate.bread_and_cereals.amount.unit"
+msgid "slices"
+msgstr "rebanadas"
+
+msgctxt "diet.counted.plate.freq"
+msgid "How often?"
+msgstr "¿Con qué frecuencia?"
+
+msgctxt "diet.counted.plate"
+msgid "On the plate"
+msgstr "En el plato"
+
+msgctxt "diet.counted.plate.rice_and_pasta.amount.unit"
+msgid "cups"
+msgstr "tazas"
+
+msgctxt "diet.counted.plate.vegetables.amount.unit"
+msgid "cups"
+msgstr "tazas"
+
+msgctxt "diet.counted.plate.yesterday"
+msgid "Had it yesterday?"
+msgstr "¿Lo tomó ayer?"
+
+msgctxt "diet.diet_instructions"
+msgid "Ask about each item in turn. Record the amount of one serving."
+msgstr "Pregunte por cada alimento por turno. Anote la cantidad de una porción."
+
+msgctxt "diet.diet_intro"
+msgid "These questions are about what the pupil eats and drinks in a usual week and a usual day."
+msgstr "Estas preguntas son sobre lo que el alumno come y bebe en una semana y en un día normales."
+
+msgctxt "diet"
+msgid "Foods and drinks"
+msgstr "Alimentos y bebidas"
+
+msgctxt "diet.weighed.extras.amount"
+msgid "Amount eaten or drunk each time"
+msgstr "Cantidad que come o bebe cada vez"
+
+msgctxt "diet.weighed.extras"
+msgid "By weight or volume"
+msgstr "Por peso o volumen"
+
+msgctxt "diet.weighed.extras.freq"
+msgid "How often?"
+msgstr "¿Con qué frecuencia?"
+
+msgctxt "diet.weighed.extras.milk_and_yoghurt.amount.unit"
+msgid "ml"
+msgstr "ml"
+
+msgctxt "diet.weighed.extras.sweet_drinks.amount.unit"
+msgid "ml"
+msgstr "ml"
+
+msgctxt "diet.weighed.extras.water.amount.unit"
+msgid "ml"
+msgstr "ml"
+
+msgctxt "diet.weighed.extras.yesterday"
+msgid "Had it yesterday?"
+msgstr "¿Lo tomó ayer?"
+
+msgctxt "diet.weighed"
+msgid "Foods and drinks by weight or volume"
+msgstr "Alimentos y bebidas por peso o volumen"
+
+msgctxt "diet.weighed.large-amount.confirmed-with-the-pupil"
+msgid "Confirmed with the pupil"
+msgstr "Confirmado con el alumno"
+
+msgctxt "diet.weighed.large-amount.estimated"
+msgid "Estimated"
+msgstr "Estimado"
+
+msgctxt "diet.weighed.large-amount"
+msgid "That is a large amount for one serving. Please confirm it."
+msgstr "Es una cantidad grande para una sola porción. Confírmela, por favor."
+
+msgctxt "diet.weighed.never-but-yesterday.not-sure"
+msgid "Not sure"
+msgstr "No está seguro"
+
+msgctxt "diet.weighed.never-but-yesterday"
+msgid "Said never, but had it yesterday. Ask again."
+msgstr "Dijo que nunca, pero lo tomó ayer. Pregunte de nuevo."
+
+msgctxt "diet.weighed.never-but-yesterday.unusual-day"
+msgid "Unusual day"
+msgstr "Día fuera de lo normal"
+
+msgctxt "diet.weighed.periods.0"
+msgid "In a usual day"
+msgstr "En un día normal"
+
+msgctxt "field-checks.too-quick"
+msgid "This interview was very short. Check the record."
+msgstr "Esta entrevista fue muy corta. Revise el registro."
+
+msgctxt "field-checks.weight-drift"
+msgid "Weights are rising steadily. Check the scale."
+msgstr "Los pesos suben de forma constante. Revise la balanza."
+
+msgctxt "lists.extras.meat_and_fish"
+msgid "Meat and fish"
+msgstr "Carne y pescado"
+
+msgctxt "lists.extras.milk_and_yoghurt"
+msgid "Milk and yoghurt"
+msgstr "Leche y yogur"
+
+msgctxt "lists.extras.nuts"
+msgid "Nuts"
+msgstr "Frutos secos"
+
+msgctxt "lists.extras.other"
+msgid "Another food or drink"
+msgstr "Otro alimento o bebida"
+
+msgctxt "lists.extras.snacks"
+msgid "Snacks"
+msgstr "Aperitivos"
+
+msgctxt "lists.extras.sweet_drinks"
+msgid "Sweet drinks"
+msgstr "Bebidas azucaradas"
+
+msgctxt "lists.extras.sweets"
+msgid "Sweets"
+msgstr "Dulces"
+
+msgctxt "lists.extras.water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "lists.freq-day.d2"
+msgid "2/day"
+msgstr "2 al día"
+
+msgctxt "lists.freq-day.d3"
+msgid "3/day"
+msgstr "3 al día"
+
+msgctxt "lists.freq-day.d4"
+msgid "4/day"
+msgstr "4 al día"
+
+msgctxt "lists.freq-day.d5"
+msgid "5/day"
+msgstr "5 al día"
+
+msgctxt "lists.freq-day.d6"
+msgid "6/day"
+msgstr "6 al día"
+
+msgctxt "lists.freq-day.d7"
+msgid "7/day"
+msgstr "7 al día"
+
+msgctxt "lists.freq-day.d_gt7"
+msgid ">7/day"
+msgstr ">7 al día"
+
+msgctxt "lists.freq-day.d_le1"
+msgid "≤ 1 per day"
+msgstr "≤ 1 al día"
+
+msgctxt "lists.freq-day.never"
+msgid "Never"
+msgstr "Nunca"
+
+msgctxt "lists.freq-week.never"
+msgid "Never"
+msgstr "Nunca"
+
+msgctxt "lists.freq-week.w2"
+msgid "2/week"
+msgstr "2 a la semana"
+
+msgctxt "lists.freq-week.w3"
+msgid "3/week"
+msgstr "3 a la semana"
+
+msgctxt "lists.freq-week.w4"
+msgid "4/week"
+msgstr "4 a la semana"
+
+msgctxt "lists.freq-week.w5"
+msgid "5/week"
+msgstr "5 a la semana"
+
+msgctxt "lists.freq-week.w6"
+msgid "6/week"
+msgstr "6 a la semana"
+
+msgctxt "lists.freq-week.w7"
+msgid "7/week"
+msgstr "7 a la semana"
+
+msgctxt "lists.freq-week.w_gt7"
+msgid ">7/week"
+msgstr ">7 a la semana"
+
+msgctxt "lists.freq-week.w_le1"
+msgid "≤ 1 per week"
+msgstr "≤ 1 a la semana"
+
+msgctxt "lists.meals.breakfast_and_lunch"
+msgid "Breakfast and lunch"
+msgstr "Desayuno y almuerzo"
+
+msgctxt "lists.meals.breakfast"
+msgid "Breakfast"
+msgstr "Desayuno"
+
+msgctxt "lists.meals.lunch"
+msgid "Lunch"
+msgstr "Almuerzo"
+
+msgctxt "lists.plate.beans_and_lentils"
+msgid "Beans and lentils"
+msgstr "Frijoles y lentejas"
+
+msgctxt "lists.plate.bread_and_cereals"
+msgid "Bread and cereals"
+msgstr "Pan y cereales"
+
+msgctxt "lists.plate.eggs"
+msgid "Eggs"
+msgstr "Huevos"
+
+msgctxt "lists.plate.fruit"
+msgid "Fruit"
+msgstr "Fruta"
+
+msgctxt "lists.plate.other"
+msgid "Another food"
+msgstr "Otro alimento"
+
+msgctxt "lists.plate.rice_and_pasta"
+msgid "Rice and pasta"
+msgstr "Arroz y pasta"
+
+msgctxt "lists.plate.vegetables"
+msgid "Vegetables"
+msgstr "Verduras"
+
+msgctxt "lists.sex.boy"
+msgid "Boy"
+msgstr "Niño"
+
+msgctxt "lists.sex.girl"
+msgid "Girl"
+msgstr "Niña"
+
+msgctxt "lists.sex.prefer_not_to_say"
+msgid "Prefer not to say"
+msgstr "Prefiere no decirlo"
+
+msgctxt "lists.shop-items.biscuits"
+msgid "Biscuits"
+msgstr "Galletas"
+
+msgctxt "lists.shop-items.crisps"
+msgid "Crisps"
+msgstr "Papas fritas de bolsa"
+
+msgctxt "lists.shop-items.fruit"
+msgid "Fruit"
+msgstr "Fruta"
+
+msgctxt "lists.shop-items.milk"
+msgid "Milk"
+msgstr "Leche"
+
+msgctxt "lists.shop-items.other"
+msgid "Something else"
+msgstr "Otra cosa"
+
+msgctxt "lists.shop-items.sandwiches"
+msgid "Sandwiches"
+msgstr "Sándwiches"
+
+msgctxt "lists.shop-items.sweet_drinks"
+msgid "Sweet drinks"
+msgstr "Bebidas azucaradas"
+
+msgctxt "lists.shop-items.sweets"
+msgid "Sweets"
+msgstr "Dulces"
+
+msgctxt "lists.shop-items.water"
+msgid "Water"
+msgstr "Agua"
+
+msgctxt "purpose"
+msgid "To plan the meals a school offers."
+msgstr "Planificar las comidas que ofrece una escuela."
+
+msgctxt "thanks"
+msgid "Thank you."
+msgstr "Gracias."
+
+msgctxt "title"
+msgid "School meals baseline survey"
+msgstr "Encuesta inicial sobre comidas escolares"

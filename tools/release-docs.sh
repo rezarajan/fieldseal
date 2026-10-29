@@ -22,7 +22,7 @@ release="$("$FS" deployment release "$manifest" --publication "$address" \
   "${sign[@]}" --environment "$environment" --out "$out/release.cbor" --json | jq -r 'select(.release and .ok) | .release')"
 [ -n "$release" ] || { echo "release-docs: no release address" >&2; exit 1; }
 "$FS" docs build "$manifest" --environment "$environment" --release "$release" -o "$out/docs" \
-  --instrument "$ROOT/examples/instruments/food-intake-baseline.yaml" \
+  --instrument "$ROOT/examples/instruments/school-meals-baseline.yaml" \
   --instrument "$ROOT/examples/instruments/household-water-access.yaml" \
   --policy "$ROOT/examples/deployments/policy/deployment-default.yaml"
 printf 'tag %s\nmanifest %s\nrelease %s\nsigning %s\n' "$tag" "$address" "$release" "${sign[0]#--}" | tee "$out/release.txt"

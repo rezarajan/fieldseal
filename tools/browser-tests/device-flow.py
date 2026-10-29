@@ -6,7 +6,7 @@ Loads BASE/device, evaluates device-flow.js (which defines `window.flow`, a list
 reached. A step with `shot` also gets a 1280x820 screenshot saved into SHOTS.
 Exits 0 when every check passes, 1 otherwise.
 
-    BASE=http://127.0.0.1:18110 SHOTS=/tmp/shots INSTRUMENT=food-intake-baseline device-flow.py
+    BASE=http://127.0.0.1:18110 SHOTS=/tmp/shots INSTRUMENT=school-meals-baseline device-flow.py
 """
 import asyncio
 import base64

@@ -434,22 +434,20 @@ An extension adds data to what an instrument may refer to. It never adds behavio
 
 ### 6.1 Instrument
 
-An excerpt of the first real instrument, a food-frequency and diet-quality questionnaire: part of its demographics, and one food category of thirteen. The full port is in #45.
+An excerpt of the `school-meals-baseline` example, a food-frequency questionnaire written for this project: part of its demographics, and one food category.
 
 ```yaml
 apiVersion: fieldseal.dev/v1alpha1
 kind: Instrument
 metadata:
-  name: food-intake-baseline
+  name: school-meals-baseline
   version: 1.0.0
 spec:
   schema: "^1.0"
-  title: { en: "Baseline food, snack and drink survey" }
+  title: { en: "School meals baseline survey" }
   administration: interviewer
   publisher: Example Authority
-  copyright: { notice: "© The instrument's authors", licence: LicenseRef-authority-use }
-  derivedFrom:
-    - { title: Diet Quality Questionnaire, citation: "Global Diet Quality Project, DQQ" }
+  copyright: { notice: "© 2026 Fieldseal contributors", licence: Apache-2.0 }
   languages: [en]
   defaultLanguage: en
   nonresponse: [dont-know]
@@ -477,9 +475,9 @@ spec:
       ordered: false
       other: { code: other, label: { en: Other staple }, maxLength: 40 }
       codes:
-        - { code: bread,   label: { en: Bread },   description: { en: "White, wholewheat, hops, coconut bake" }, media: bread }
-        - { code: cassava, label: { en: Cassava }, description: { en: "Boiled, fried, in soup" } }
-        - { code: rice,    label: { en: Rice },    description: { en: "White, pelau, fried rice" } }
+        - { code: bread,   label: { en: Bread },   description: { en: "White, wholewheat, rolls" }, media: bread }
+        - { code: potatoes, label: { en: Potatoes }, description: { en: "Boiled, baked, mashed" } }
+        - { code: rice,    label: { en: Rice },    description: { en: "White, brown, fried" } }
         - { code: other,   label: { en: Other staple } }
     sex:
       ordered: false
@@ -522,13 +520,13 @@ spec:
           label: { en: How much money do you get to spend each day? }
           when: '$about.money_gets == true'
           disabledDisplay: protected
-          control: { type: money, currency: TTD, min: 0, max: 200, step: 5 }
+          control: { type: money, currency: USD, min: 0, max: 200, step: 5 }
           data: { type: money }
 
     - kind: display
       id: diet_intro
       role: instruction
-      text: { en: "These questions are about foods and drinks over the past month or week, and yesterday." }
+      text: { en: "These questions are about foods and drinks over the past month, and yesterday." }
 
     - kind: group
       id: staples
@@ -570,7 +568,7 @@ spec:
       message: { en: "Weights are rising steadily. Check the scale." }
 ```
 
-`staples.bread.freq`, `staples.bread.amount` and `staples.bread.yesterday` are the instance paths of the first row. The soft rule is written once and expands to one rule per food (INS-047). The fingerprint is computed by `fieldseal instrument hash food-intake-baseline.yaml`.
+`staples.bread.freq`, `staples.bread.amount` and `staples.bread.yesterday` are the instance paths of the first row. The soft rule is written once and expands to one rule per food (INS-047). The fingerprint is computed by `fieldseal instrument hash school-meals-baseline.yaml`.
 
 ### 6.2 Layout
 
@@ -580,11 +578,11 @@ The grouping from the wireframes: demographics as cards on one step, and foods b
 apiVersion: fieldseal.dev/v1alpha1
 kind: Layout
 metadata:
-  name: food-intake-baseline-expanded
+  name: school-meals-baseline-expanded
   version: 1.0.0
 spec:
   schema: "^1.0"
-  instrument: ./food-intake-baseline.yaml   # replaced by the fingerprint when canonicalised
+  instrument: ./school-meals-baseline.yaml   # replaced by the fingerprint when canonicalised
   windowClass: expanded
   steps:
     - title: { en: About you }

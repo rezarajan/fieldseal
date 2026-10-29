@@ -43,7 +43,7 @@ registry address="":
 
 # Walkthrough 4: download a published artefact by name or address (sha256:…), verify it, and
 # render an instrument to deploy/local/.out. A name shared by several artefacts is refused.
-fetch artefact="food-intake-baseline":
+fetch artefact="school-meals-baseline":
     tools/stack-run.sh fetch {{artefact}}
 
 # Walkthrough 5a: register a device headless (virtual passkey, words confirmed for you).
@@ -110,12 +110,14 @@ lint:
 check:
     for c in clippy tests architecture; do nix build "path:.#checks.x86_64-linux.$c" --no-link --print-build-logs; done
 
-# Workspace tests (in parallel, within the 20 s budget), clippy and the architecture check.
+# Workspace tests (in parallel, within the 20 s budget), clippy, the architecture check and the example licence check.
 test:
     python3 tools/test-inventory.py --check
     tools/test-budget.sh
     cargo clippy --workspace --all-targets --locked -- -D warnings
     python3 tools/check-architecture.py
+    python3 tools/check-example-licences.py
+    python3 tools/check-example-licences.py --self-test
 
 # A release, locally: the per-release service images (loaded and tagged, not pushed) and the
 # signed release record with its documentation bundle in release-docs/ (CI does the same on v*).

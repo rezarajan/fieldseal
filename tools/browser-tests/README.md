@@ -12,7 +12,7 @@ PATH (the shell wrappers obtain both from Nix when missing). Parent: [tools](../
 
 | File | Purpose and usage |
 |---|---|
-| `wcag.sh [web-base-url]` | Renders the food-intake (compact and expanded layouts) and water-access (`es`) instruments with the `fieldseal` CLI (`FIELDSEAL_BIN`, default `target/debug/fieldseal`, built if missing), then runs `axe_run.py` at 1280 and 390 px and `wcag22.py`. With a URL it also checks `/instruments`, `/instruments/food-intake-baseline`, `/publishing`, `/registration`, `/device`, `/intake`. Exit 0 only with no finding. Run as `just a11y [url]`. |
+| `wcag.sh [web-base-url]` | Renders the school-meals (compact and expanded layouts) and water-access (`es`) instruments with the `fieldseal` CLI (`FIELDSEAL_BIN`, default `target/debug/fieldseal`, built if missing), then runs `axe_run.py` at 1280 and 390 px and `wcag22.py`. With a URL it also checks `/instruments`, `/instruments/school-meals-baseline`, `/publishing`, `/registration`, `/device`, `/intake`. Exit 0 only with no finding. Run as `just a11y [url]`. |
 | `axe_run.py WIDTHxHEIGHT url...` | Runs axe-core (WCAG 2.0, 2.1, 2.2 A and AA) on each page, walking steps and tabs so hidden panels are checked. Exports class `B`, the browser driver. |
 | `wcag22.py url...` | Checks axe cannot make: 2.4.11 focus not obscured, 2.5.8 target size, 1.4.10 reflow at 320 px, 1.4.12 text spacing. |
 | `constraints.py FOOD.html WATER.html` | Checks constraint enforcement in rendered pages (INS-025, INS-027, INS-133): multi-choice maximum, steppers, money maximum, exclusive options. Exit 0 if all pass. |

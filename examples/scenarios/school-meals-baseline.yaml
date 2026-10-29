@@ -1,0 +1,81 @@
+# The school meals instrument with consent, for `fieldseal device simulate`.
+#
+#   fieldseal device simulate --script examples/scenarios/school-meals-baseline.yaml --review
+#
+# Covers: consent needed before capture (COL-031), consent attested with an evidence image
+# sealed only into the journal (COL-040–COL-043), roster-granted consent (COL-041), a
+# don't-know nonresponse (INS-141), a soft rule confirmed with a reason (COL-035), a hard
+# verdict that blocks sealing (INS-026), a correction made as a resurvey (COL-037), the
+# expanded layout, review, and a clear before any receipt that keeps the sealed copies
+# (ADR 0029). The pupils and their details are invented.
+pin: "135790"
+seed: 5
+instrument: ../instruments/school-meals-baseline.yaml
+layouts: [../layouts/school-meals-baseline.compact.yaml, ../layouts/school-meals-baseline.expanded.yaml]
+window: expanded
+rosters:
+  - cohort: class-2b
+    version: 4
+    subjects:
+      - { subject: p-001, consent: unknown, display: { name: Dana }, attributes: { school: Hill School, class: 2B, age: 12 } }
+      - { subject: p-002, consent: granted, display: { name: Eli }, attributes: { school: Hill School, class: 2B, age: 11 } }
+steps:
+  # No consent on the roster: it must be attested first.
+  - capture: { subject: p-001, mode: first }
+    expect: consent needed
+  - consent: { subject: p-001, basis: form-seen, statement: 1, evidence: true }
+  - capture:
+      subject: p-001
+      mode: first
+      set:
+        about.sex: girl
+        about.weight: [38.0, 38.1]
+        about.height: [152.0, 152.4]
+        about.uses_shop: true
+        about.shop_weekly: 6.5
+        about.shop_buys: [sandwiches, other]
+        about.shop_buys.other: Yoghurt drinks
+        about.meal_programme: false
+        diet.counted.plate.bread_and_cereals.freq: never
+        diet.counted.plate.bread_and_cereals.yesterday: true
+        diet.counted.plate.rice_and_pasta.freq: w4
+        diet.counted.plate.rice_and_pasta.amount: 1.5
+        diet.counted.plate.rice_and_pasta.yesterday: true
+        diet.weighed.extras.water.freq: d5
+        diet.weighed.extras.water.amount: 250
+        diet.weighed.extras.water.yesterday: true
+      nonresponse: { about.height: dont-know }
+      override: { diet.counted.plate.bread_and_cereals.never-but-yesterday: unusual-day }
+      acknowledge: true
+      then: seal
+  - wait: 100
+  # Readings further apart than the tolerance: a hard verdict blocks sealing.
+  - capture:
+      subject: p-002
+      mode: first
+      set: { about.sex: boy, about.weight: [41.0, 42.0] }
+      then: pause
+    expect: hard verdict
+  - capture:
+      subject: p-002
+      mode: first
+      set: { about.sex: boy, about.weight: [41.0, 41.1], about.uses_shop: false, about.meal_programme: true, about.meal_which: lunch }
+      acknowledge: true
+      then: seal
+  # A correction: only the changed item is written.
+  - capture:
+      subject: p-002
+      mode: correction
+      set: { about.meal_which: breakfast_and_lunch }
+      then: seal
+  # A resurvey of the first visit: only what changed is written (COL-032).
+  - wait: 3600
+  - unlock: {}
+  - capture:
+      subject: p-001
+      mode: resurvey
+      set: { about.weight: [38.6, 38.7] }
+      then: seal
+  - review: {}
+  - clear: { through: 9 }
+  - review: {}

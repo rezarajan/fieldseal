@@ -16,6 +16,6 @@ for s in "${steps[@]}"; do
   eval "$s" || { echo "acceptance: FAILED at: $s" >&2; exit 1; }
 done
 # The rendered instrument the tutorial asks you to open exists and carries the enforcement script.
-html=(deploy/local/.out/food-intake-baseline-*.html)
+html=(deploy/local/.out/school-meals-baseline-*.html)
 [ -s "${html[0]}" ] || { echo "acceptance: the rendered instrument is missing" >&2; exit 1; }
 printf '\nacceptance: all %d tutorial steps passed\n' "${#steps[@]}"

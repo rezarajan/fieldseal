@@ -5,21 +5,20 @@ use fieldseal_kernel::Value;
 use super::doc;
 
 /// The excerpt of `docs/reference/spec/instrument.md` §6.1, transcribed field for field.
-/// The media placeholders (`"…"`) are replaced by a WebP header and a well-formed digest,
-/// and question 10a is reworded to keep setting-specific words out of the tests.
+/// The media placeholders (`"…"`) are replaced by a WebP header and a well-formed digest.
+/// It is a reduced `school-meals-baseline`: the same kinds of items, not the whole survey.
 pub fn spec_example() -> Value {
     doc(r#"
 {
   apiVersion: fieldseal.dev/v1alpha1,
   kind: Instrument,
-  metadata: { name: food-intake-baseline, version: 1.0.0 },
+  metadata: { name: school-meals-baseline, version: 1.0.0 },
   spec: {
     schema: "^1.0",
-    title: { en: "Baseline food, snack and drink survey" },
+    title: { en: "School meals baseline survey" },
     administration: interviewer,
     publisher: Example Authority,
-    copyright: { notice: "© The instrument's authors", licence: LicenseRef-authority-use },
-    derivedFrom: [ { title: Diet Quality Questionnaire, citation: "Global Diet Quality Project, DQQ" } ],
+    copyright: { notice: "© 2026 Fieldseal contributors", licence: Apache-2.0 },
     languages: [en],
     defaultLanguage: en,
     nonresponse: [dont-know],
@@ -48,9 +47,9 @@ pub fn spec_example() -> Value {
         ordered: false,
         other: { code: other, label: { en: Other staple }, maxLength: 40 },
         codes: [
-          { code: bread, label: { en: Bread }, description: { en: "White, wholewheat, hops, coconut bake" }, media: bread },
-          { code: cassava, label: { en: Cassava }, description: { en: "Boiled, fried, in soup" } },
-          { code: rice, label: { en: Rice }, description: { en: "White, pelau, fried rice" } },
+          { code: bread, label: { en: Bread }, description: { en: "White, wholewheat, rolls" }, media: bread },
+          { code: potatoes, label: { en: Potatoes }, description: { en: "Boiled, baked, mashed" } },
+          { code: rice, label: { en: Rice }, description: { en: "White, brown, fried" } },
           { code: other, label: { en: Other staple } },
         ],
       },
@@ -85,11 +84,11 @@ pub fn spec_example() -> Value {
           {
             kind: question, path: money_per_day, prefix: 10b, label: { en: How much money do you get to spend each day? },
             when: '$about.money_gets == true', disabledDisplay: protected,
-            control: { type: money, currency: TTD, min: 0, max: 200, step: 5 }, data: { type: money },
+            control: { type: money, currency: USD, min: 0, max: 200, step: 5 }, data: { type: money },
           },
         ],
       },
-      { kind: display, id: diet_intro, role: instruction, text: { en: "These questions are about foods and drinks over the past month or week, and yesterday." } },
+      { kind: display, id: diet_intro, role: instruction, text: { en: "These questions are about foods and drinks over the past month, and yesterday." } },
       {
         kind: group, id: staples, label: { en: Staples }, referencePeriod: { en: in the last month },
         repeat: { over: staples },

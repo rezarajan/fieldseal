@@ -48,7 +48,7 @@ fn ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_brows
     let state = AppState { examples_dir: examples(), ..AppState::default() };
     let dir = std::env::temp_dir().join(format!("fieldseal-browser-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let food = page(&state, "/instruments/food-intake-baseline/render?lang=en&window=compact", &dir, "food.html");
+    let food = page(&state, "/instruments/school-meals-baseline/render?lang=en&window=compact", &dir, "food.html");
     let water = page(&state, "/instruments/household-water-access/render?lang=en&window=expanded", &dir, "water.html");
 
     let mut cmd = match std::env::var("FIELDSEAL_CHROMIUM_PYTHON") {

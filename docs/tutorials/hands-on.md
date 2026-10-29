@@ -59,7 +59,7 @@ just publish   # step
 
 This publishes two instruments and the deployment's publishing policy through the real publishing flow (PUB):
 - the household water sample;
-- the food-intake survey.
+- the school meals survey.
 
 Each artefact goes through these steps:
 1. Provenance, with the builder's signature and two reviewers (one for Spanish).
@@ -87,7 +87,7 @@ just registry sha256:…
 ## 5. Download an instrument, open it and answer it
 
 ```sh
-just fetch food-intake-baseline   # step
+just fetch school-meals-baseline   # step
 ```
 
 `fetch` takes a name or an address. Names are not unique: another version, or another kind of artefact, may share one. A name that matches more than one artefact is refused, and the matches are listed with their addresses. Fetch by address to be exact, copying one from `just registry`:
@@ -96,10 +96,10 @@ just fetch food-intake-baseline   # step
 just fetch sha256:…
 ```
 
-The step downloads the published food survey from the register and verifies it as a device does. It writes three files to `deploy/local/.out/`, named after the artefact and its version:
+The step downloads the published school meals survey from the register and verifies it as a device does. It writes three files to `deploy/local/.out/`, named after the artefact and its version:
 - the publication;
 - the instrument document;
-- a rendering in the compact layout, `food-intake-baseline-1.0.0.html`.
+- a rendering in the compact layout, `school-meals-baseline-1.0.0.html`.
 
 Open the HTML file in your browser and answer the survey. The page checks every answer with the same rules the core applies. Try to break it:
 - **Question 11a:** choose a fifth snack. It is refused, with "4 of 4 chosen".
@@ -163,7 +163,7 @@ It is sealed to the registered device's agreement key. The step then verifies it
 just capture   # step
 ```
 
-The registered device opens its bundle and captures the food survey for two pupils (`examples/scenarios/stack-capture-food-intake-baseline.yaml`; set `FIELDSEAL_DEMO_SURVEY=household-water-access` for the water survey). Each answer is checked by the core before it is stored. The device then seals the records into its journal and builds a signed export with parity.
+The registered device opens its bundle and captures the school meals survey for two pupils (`examples/scenarios/stack-capture-school-meals-baseline.yaml`; set `FIELDSEAL_DEMO_SURVEY=household-water-access` for the water survey). Each answer is checked by the core before it is stored. The device then seals the records into its journal and builds a signed export with parity.
 
 ## 9. Upload and receipts
 

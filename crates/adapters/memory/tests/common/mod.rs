@@ -100,8 +100,8 @@ pub struct World {
     pub random: SeededRandom,
     pub water: Instrument,
     pub water_fp: Fingerprint,
-    pub food: Instrument,
-    pub food_fp: Fingerprint,
+    pub meals: Instrument,
+    pub meals_fp: Fingerprint,
 }
 
 impl World {
@@ -123,11 +123,11 @@ impl World {
         let mut views: Vec<TenancyView> = devices.iter().map(|d| TenancyView::new(d.tenancy, d.handle, vec![d.public_key()])).collect();
         f(&mut views);
         let water = load("household-water-access");
-        let food = load("food-intake-baseline");
-        let (water_fp, food_fp) = (fingerprint_of(&water), fingerprint_of(&food));
+        let meals = load("school-meals-baseline");
+        let (water_fp, meals_fp) = (fingerprint_of(&water), fingerprint_of(&meals));
         let instruments = MemoryInstrumentSource::new();
         instruments.add(water_fp, water.clone());
-        instruments.add(food_fp, food.clone());
+        instruments.add(meals_fp, meals.clone());
         let rosters = MemoryRosterHistory::new();
         for dev in &devices {
             rosters.record(
@@ -158,8 +158,8 @@ impl World {
             random: SeededRandom::new(99),
             water,
             water_fp,
-            food,
-            food_fp,
+            meals,
+            meals_fp,
         }
     }
 
@@ -336,7 +336,7 @@ pub fn nothing_landed(w: &World, device: &PracticeDevice) -> bool {
     use fieldseal_intake::ports::DataPlatform;
     w.platform.envelopes(&device.tenancy).expect("read").is_empty()
         && w.platform.observations(&w.water_fp).expect("read").is_empty()
-        && w.platform.observations(&w.food_fp).expect("read").is_empty()
+        && w.platform.observations(&w.meals_fp).expect("read").is_empty()
         && w.platform.consent_cases().expect("read").is_empty()
         && w.platform.losses().expect("read").is_empty()
         && w.platform.findings().expect("read").is_empty()

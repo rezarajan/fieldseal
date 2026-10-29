@@ -1,0 +1,91 @@
+section.step
+  section.card
+    div.q about.school
+    div.q about.name
+    div.q about.class
+    div.q about.age
+    fieldset.q about.sex
+  section.card
+    fieldset.q about.weight
+    fieldset.q about.height
+  section.card
+    fieldset.q about.uses_shop
+    div.q about.shop_weekly
+    fieldset.q about.shop_buys
+    div.q about.shop_buys.other
+  section.card
+    fieldset.q about.meal_programme
+    fieldset.q about.meal_which
+section.step
+  div.display diet.diet_intro
+  div.display diet.diet_instructions
+  div.tabs
+    section.tabpanel
+      section.card diet.counted
+        section.list diet.counted.plate
+          article.card diet.counted.plate.bread_and_cereals
+            fieldset.q diet.counted.plate.bread_and_cereals.freq
+            div.q diet.counted.plate.bread_and_cereals.amount
+            fieldset.q diet.counted.plate.bread_and_cereals.yesterday
+          article.card diet.counted.plate.rice_and_pasta
+            fieldset.q diet.counted.plate.rice_and_pasta.freq
+            div.q diet.counted.plate.rice_and_pasta.amount
+            fieldset.q diet.counted.plate.rice_and_pasta.yesterday
+          article.card diet.counted.plate.vegetables
+            fieldset.q diet.counted.plate.vegetables.freq
+            div.q diet.counted.plate.vegetables.amount
+            fieldset.q diet.counted.plate.vegetables.yesterday
+          article.card diet.counted.plate.fruit
+            fieldset.q diet.counted.plate.fruit.freq
+            div.q diet.counted.plate.fruit.amount
+            fieldset.q diet.counted.plate.fruit.yesterday
+          article.card diet.counted.plate.eggs
+            fieldset.q diet.counted.plate.eggs.freq
+            div.q diet.counted.plate.eggs.amount
+            fieldset.q diet.counted.plate.eggs.yesterday
+          article.card diet.counted.plate.beans_and_lentils
+            fieldset.q diet.counted.plate.beans_and_lentils.freq
+            div.q diet.counted.plate.beans_and_lentils.amount
+            fieldset.q diet.counted.plate.beans_and_lentils.yesterday
+          article.card diet.counted.plate.other
+            div.q diet.counted.plate.other.other
+            fieldset.q diet.counted.plate.other.freq
+            div.q diet.counted.plate.other.amount
+            fieldset.q diet.counted.plate.other.yesterday
+    section.tabpanel
+      section.card diet.weighed
+        section.list diet.weighed.extras
+          article.card diet.weighed.extras.meat_and_fish
+            fieldset.q diet.weighed.extras.meat_and_fish.freq
+            div.q diet.weighed.extras.meat_and_fish.amount
+            fieldset.q diet.weighed.extras.meat_and_fish.yesterday
+          article.card diet.weighed.extras.nuts
+            fieldset.q diet.weighed.extras.nuts.freq
+            div.q diet.weighed.extras.nuts.amount
+            fieldset.q diet.weighed.extras.nuts.yesterday
+          article.card diet.weighed.extras.milk_and_yoghurt
+            fieldset.q diet.weighed.extras.milk_and_yoghurt.freq
+            div.q diet.weighed.extras.milk_and_yoghurt.amount
+            fieldset.q diet.weighed.extras.milk_and_yoghurt.yesterday
+          article.card diet.weighed.extras.sweets
+            fieldset.q diet.weighed.extras.sweets.freq
+            div.q diet.weighed.extras.sweets.amount
+            fieldset.q diet.weighed.extras.sweets.yesterday
+          article.card diet.weighed.extras.snacks
+            fieldset.q diet.weighed.extras.snacks.freq
+            div.q diet.weighed.extras.snacks.amount
+            fieldset.q diet.weighed.extras.snacks.yesterday
+          article.card diet.weighed.extras.sweet_drinks
+            fieldset.q diet.weighed.extras.sweet_drinks.freq
+            div.q diet.weighed.extras.sweet_drinks.amount
+            fieldset.q diet.weighed.extras.sweet_drinks.yesterday
+          article.card diet.weighed.extras.water
+            fieldset.q diet.weighed.extras.water.freq
+            div.q diet.weighed.extras.water.amount
+            fieldset.q diet.weighed.extras.water.yesterday
+          article.card diet.weighed.extras.other
+            div.q diet.weighed.extras.other.other
+            fieldset.q diet.weighed.extras.other.freq
+            div.q diet.weighed.extras.other.amount
+            fieldset.q diet.weighed.extras.other.yesterday
+  div.display thanks

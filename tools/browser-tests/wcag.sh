@@ -10,11 +10,11 @@ here="$(cd "$(dirname "$0")" && pwd)"; root="$here/../.."
 out="$(mktemp -d)"
 FS="${FIELDSEAL_BIN:-$root/target/debug/fieldseal}"
 [ -x "$FS" ] || (cd "$root" && cargo build -p fieldseal-cli --locked -q)
-for c in compact expanded; do "$FS" instrument preview "$root/examples/instruments/food-intake-baseline.yaml" --layout "$root/examples/layouts/food-intake-baseline.$c.yaml" --window "$c" -o "$out/food-$c.html" >/dev/null; done
+for c in compact expanded; do "$FS" instrument preview "$root/examples/instruments/school-meals-baseline.yaml" --layout "$root/examples/layouts/school-meals-baseline.$c.yaml" --window "$c" -o "$out/food-$c.html" >/dev/null; done
 "$FS" instrument preview "$root/examples/instruments/household-water-access.yaml" --lang es -o "$out/water-es.html" >/dev/null
 pages=("file://$out/food-compact.html" "file://$out/food-expanded.html" "file://$out/water-es.html")
 if [ -n "${1:-}" ]; then
-  for p in /instruments /instruments/food-intake-baseline /publishing /registration /device /intake; do pages+=("$1$p"); done
+  for p in /instruments /instruments/school-meals-baseline /publishing /registration /device /intake; do pages+=("$1$p"); done
 fi
 # shellcheck disable=SC2016  # a Nix expression, not shell
 py="$(nix build --no-link --print-out-paths --impure --expr '(builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}.python3.withPackages (p: [p.websockets])')"

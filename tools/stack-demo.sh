@@ -22,8 +22,8 @@ export FIELDSEAL_TRANSLOG_URL="${FIELDSEAL_TRANSLOG_URL:-http://translog:8080}"
 export FIELDSEAL_LOG_ORIGIN="${FIELDSEAL_LOG_ORIGIN:-fieldseal.local/log}"
 export FIELDSEAL_FACTORY_URL="${FIELDSEAL_FACTORY_URL:-http://localhost:8080}"
 INTAKE="${FIELDSEAL_INTAKE_URL:-http://upload:8480}"
-# The survey the device collects: the food survey (the stack assigns its roster's cohort).
-SURVEY="${FIELDSEAL_DEMO_SURVEY:-food-intake-baseline}"
+# The survey the device collects: the school meals survey (the stack assigns its roster's cohort).
+SURVEY="${FIELDSEAL_DEMO_SURVEY:-school-meals-baseline}"
 SCENARIO="stack-capture-$SURVEY.yaml"
 [ "$SURVEY" = household-water-access ] && SCENARIO=stack-capture.yaml
 mkdir -p "$HOME" "$W" "$FIELDSEAL_STATE_DIR" /clistate/published
@@ -93,7 +93,7 @@ YAML
   export FIELDSEAL_TRUST_BUNDLE="$TB" FIELDSEAL_POLICY="$d/deployment-policy.yaml"
   publish_artefact household-water-access "$EX/instruments/household-water-access.yaml"
   INSTRUMENT_STATE="$PUBLISHED"; INSTRUMENT_ADDRESS="$ADDRESS"
-  publish_artefact food-intake-baseline "$EX/instruments/food-intake-baseline.yaml"
+  publish_artefact school-meals-baseline "$EX/instruments/school-meals-baseline.yaml"
   publish_artefact deployment-policy "$d/deployment-policy.yaml"
   POLICY_STATE="$PUBLISHED"
   unset FIELDSEAL_TRUST_BUNDLE FIELDSEAL_POLICY
@@ -143,7 +143,7 @@ bundle() {
   rm -rf "$W/bundle"
   run bundle build --stack --device-dir /device --trust-bundle "$TB" --custody /authority/online \
     --publication "/published/$SURVEY.published" --policy-publication /published/deployment-policy.published \
-    --roster "$EX/rosters/food-intake-baseline.yaml" --roster "$EX/rosters/household-water-access.yaml" --tenancy-dir /factory-state --state /clistate \
+    --roster "$EX/rosters/school-meals-baseline.yaml" --roster "$EX/rosters/household-water-access.yaml" --tenancy-dir /factory-state --state /clistate \
     --issued-dir /published/rosters --out-dir "$W/bundle" --allow-unattested
   local fsbs=("$W"/bundle/*.fsb) fsb
   fsb="${fsbs[0]}"
@@ -246,7 +246,7 @@ step_registry() {
 # renders an instrument. A name that is not unique (another version, another kind) is refused
 # with the candidates listed; give the address then.
 step_fetch() {
-  local wanted="${1:-food-intake-baseline}" json name version kind base layout
+  local wanted="${1:-school-meals-baseline}" json name version kind base layout
   stage "Download $wanted from the register, verify it and open it"
   mkdir -p "$OUT"
   rm -f "$OUT/.fetch.published" "$OUT/.fetch.yaml"

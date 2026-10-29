@@ -7,7 +7,7 @@
 //! fieldseal device simulate --scenario <name> [--review] [--json]
 //! ```
 //!
-//! Built-in scenarios: `household-water-access` (alias `capture`), `food-intake-baseline`
+//! Built-in scenarios: `household-water-access` (alias `capture`), `school-meals-baseline`
 //! (alias `consent`), and `clear` (alias `lifecycle`). With `--review`, every review step
 //! prints its subjects and raised field checks. Output never contains names, roster
 //! contents or item values (CLI-008): only subject IDs, record kinds, counts and checks.
@@ -70,16 +70,16 @@ use fieldseal_kernel::record::read_journal;
 
 const SCENARIOS: &[(&str, &str, &str)] = &[
     ("household-water-access", "capture", include_str!("../../../../examples/scenarios/household-water-access.yaml")),
-    ("food-intake-baseline", "consent", include_str!("../../../../examples/scenarios/food-intake-baseline.yaml")),
+    ("school-meals-baseline", "consent", include_str!("../../../../examples/scenarios/school-meals-baseline.yaml")),
     ("clear", "lifecycle", include_str!("../../../../examples/scenarios/clear.yaml")),
 ];
 
 const EMBEDDED: &[(&str, &str)] = &[
     ("household-water-access.yaml", include_str!("../../../../examples/instruments/household-water-access.yaml")),
-    ("food-intake-baseline.yaml", include_str!("../../../../examples/instruments/food-intake-baseline.yaml")),
+    ("school-meals-baseline.yaml", include_str!("../../../../examples/instruments/school-meals-baseline.yaml")),
     ("household-water-access.compact.yaml", include_str!("../../../../examples/layouts/household-water-access.compact.yaml")),
-    ("food-intake-baseline.compact.yaml", include_str!("../../../../examples/layouts/food-intake-baseline.compact.yaml")),
-    ("food-intake-baseline.expanded.yaml", include_str!("../../../../examples/layouts/food-intake-baseline.expanded.yaml")),
+    ("school-meals-baseline.compact.yaml", include_str!("../../../../examples/layouts/school-meals-baseline.compact.yaml")),
+    ("school-meals-baseline.expanded.yaml", include_str!("../../../../examples/layouts/school-meals-baseline.expanded.yaml")),
 ];
 
 /// Checks `device` arguments strictly (CLI-022): the words `device simulate`, the valued flags
@@ -201,13 +201,23 @@ impl Source {
                 EMBEDDED.iter().find(|(n, _)| *n == name).map(|(_, t)| t.as_bytes().to_vec()).ok_or_else(|| format!("{reference}: not embedded"))?
             }
         };
-        // The embedded water survey carries its Spanish catalogue too (ADR 0040).
+        // The embedded surveys carry their Spanish catalogues too (ADR 0040).
         let mut catalogues = fieldseal_adapters_authoring::compact::Catalogues::new();
-        if reference.ends_with("household-water-access.yaml") {
-            let es = fieldseal_adapters_authoring::compact::parse_po(include_str!("../../../../examples/instruments/i18n/household-water-access/es.po")).map_err(|e| e.to_string())?;
-            catalogues.insert("es".into(), es);
+        let po = if reference.ends_with("household-water-access.yaml") {
+            Some(include_str!("../../../../examples/instruments/i18n/household-water-access/es.po"))
         } else if reference.ends_with("household-water-access.compact.yaml") {
-            let es = fieldseal_adapters_authoring::compact::parse_po(include_str!("../../../../examples/layouts/i18n/household-water-access.compact/es.po")).map_err(|e| e.to_string())?;
+            Some(include_str!("../../../../examples/layouts/i18n/household-water-access.compact/es.po"))
+        } else if reference.ends_with("school-meals-baseline.yaml") {
+            Some(include_str!("../../../../examples/instruments/i18n/school-meals-baseline/es.po"))
+        } else if reference.ends_with("school-meals-baseline.compact.yaml") {
+            Some(include_str!("../../../../examples/layouts/i18n/school-meals-baseline.compact/es.po"))
+        } else if reference.ends_with("school-meals-baseline.expanded.yaml") {
+            Some(include_str!("../../../../examples/layouts/i18n/school-meals-baseline.expanded/es.po"))
+        } else {
+            None
+        };
+        if let Some(po) = po {
+            let es = fieldseal_adapters_authoring::compact::parse_po(po).map_err(|e| e.to_string())?;
             catalogues.insert("es".into(), es);
         }
         let raw = fieldseal_adapters_authoring::decode_raw(&bytes, Format::Yaml).map_err(|e| format!("{reference}: {e}"))?;

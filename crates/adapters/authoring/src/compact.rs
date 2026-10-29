@@ -319,7 +319,8 @@ impl Survey<'_> {
         }
         if let Some(s) = o.get("scales") {
             for (k, v) in s.as_map().ok_or_else(|| err("/scales", "expected a map of scales"))? {
-                self.lists.insert(k.clone(), scale(v, &format!("/scales/{k}"))?);
+                let sc = scale(v, &format!("/scales/{k}"), &|code, label| self.lt(&format!("lists.{k}.{code}"), label))?;
+                self.lists.insert(k.clone(), sc);
             }
         }
         if let Some(tb) = o.get("tables") {
@@ -994,12 +995,12 @@ impl Survey<'_> {
 }
 
 /// A frequency scale from structured steps (ADR 0040): codes, labels and per-day values generated.
-fn scale(v: &Value, path: &str) -> Res<Value> {
+fn scale(v: &Value, path: &str, lt: &dyn Fn(&str, &str) -> Value) -> Res<Value> {
     let mut codes = Vec::new();
     for (i, step) in seq(v, path)?.iter().enumerate() {
         let p = format!("{path}/{i}");
         if step.as_text() == Some("never") {
-            codes.push(map([("code", t("never")), ("label", map([("en", t("Never"))])), ("value", Value::Int(0))]));
+            codes.push(map([("code", t("never")), ("label", lt("never", "Never")), ("value", Value::Int(0))]));
             continue;
         }
         let mut o = Obj::new(step, &p)?;
@@ -1013,7 +1014,7 @@ fn scale(v: &Value, path: &str) -> Res<Value> {
         let int = |o: &mut Obj<'_>, k: &'static str| -> Res<Option<i128>> {
             Ok(match o.number(k)? { Some(Value::Int(n)) if n > 0 => Some(n), Some(_) => return Err(err(&o.at(k), "expected a positive whole number")), None => None })
         };
-        let mut push = |code: String, label: String, value: Value| codes.push(map([("code", t(&code)), ("label", map([("en", t(&label))])), ("value", value)]));
+        let mut push = |code: String, label: String, value: Value| codes.push(map([("code", t(&code)), ("label", lt(&code, &label)), ("value", value)]));
         if let Some(n) = int(&mut o, "at-most")? {
             push(format!("{u}_le{n}"), format!("≤ {n} per {per}"), per_day(n, days));
         } else if let Some(n) = int(&mut o, "exactly")? {

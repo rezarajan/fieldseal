@@ -1,0 +1,31 @@
+# Presentation only (ADR 0033), in the compact dialect (ADR 0040): partitions the survey, never reorders it.
+layout: {name: school-meals-baseline-compact, instrument: ./school-meals-baseline.survey.yaml, window: compact}
+steps:
+- title: About the pupil
+  contents:
+  - card:
+      title: Who
+      contents:
+      - show: [about.school, about.name, about.class, about.age, about.sex]
+  - card:
+      title: Measurements
+      contents:
+      - show: [about.weight, about.height]
+  - card:
+      title: School shop
+      contents:
+      - show: [about.uses_shop, about.shop_weekly, about.shop_buys]
+  - card:
+      title: School meals
+      contents:
+      - show: [about.meal_programme, about.meal_which]
+- title: Main foods
+  navigation: free
+  contents:
+  - show: [diet.diet_intro, diet.diet_instructions]
+  - repeat: diet.counted.plate
+- title: Foods and drinks by weight or volume
+  navigation: free
+  contents:
+  - repeat: diet.weighed.extras
+  - element: thanks

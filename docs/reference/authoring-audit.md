@@ -1,6 +1,6 @@
 # Authoring audit (input to ADR 0039, Proposed, incomplete)
 
-Paths are relative to the repository root. "Orig" is `examples/instruments/food-intake-baseline.yaml`. Impact is H, M or L.
+Paths are relative to the repository root. "Orig" is the first example instrument, a long food-frequency questionnaire in the canonical form. It was removed from the repository and replaced by the original `examples/instruments/school-meals-baseline.yaml`; the line numbers below refer to the removed file and are kept as this audit's record. Impact is H, M or L.
 
 | # | Construct | Example | Why unintuitive or error-prone | Best in class | Fix | Impact |
 |---|---|---|---|---|---|---|
@@ -16,7 +16,7 @@ Paths are relative to the repository root. "Orig" is `examples/instruments/food-
 | 10 | Nonresponse repeated | Orig:275-324 `nonresponse: []` x4, `[dont-know, refused]` x2 | Empty list on read-only items is noise | DDI/Blaise project-wide DK/RF | Inherit; roster items imply none | M |
 | 11 | Units and currency | Orig:315 `"[lb_av]"` plus `unitLabel`; `{each}`; currency per control | UCUM syntax leaks; labels duplicated; annotation units banned by ADR 0037 | Catalogue aliases | Aliases (`lb`), catalogue labels, `defaults` | M |
 | 12 | Rule expression syntax | Orig:353 `'$about.money_gets == true'`, 424 `'@freq != "never"'` | Two sigils; quoting; string-typed codes unchecked; `== true` | Lexical names; Elm-style checks | Bare names, checked codes | H |
-| 13 | Layouts restate paths | `layouts/food-intake-baseline.compact.yaml:12-16` | Same lists in two layouts; hand-kept in step | HCL `for_each`; modules | `in:`, ranges, `forEach children()`, fragments | M |
+| 13 | Layouts restate paths | `layouts/school-meals-baseline.compact.yaml:12-16` | Same lists in two layouts; hand-kept in step | HCL `for_each`; modules | `in:`, ranges, `forEach children()`, fragments | M |
 | 14 | 830-line instrument | Orig | Review cost, merge conflicts | Modularisation | See all | H |
 | 15 | `other` stated twice | Orig:48 and 53 (17 lists) | Same label twice, must agree (INS-137) | Declare once | `other: {maxLength}` | M |
 | 16 | Soft-rule reasons repeated | Orig:429-435, x13 | Identical blocks | Defaults | Instrument `reasons` | M |
@@ -31,7 +31,7 @@ Paths are relative to the repository root. "Orig" is `examples/instruments/food-
 | 25 | Quoting hazards | `prefix: "1"`, `'$...'` | Number-like text must be quoted | Typed schema | Remove sources | L |
 | 26 | Layout step titles restate group labels | compact layout:20-50 | 13 titles x 2 layouts | Inherit | Title defaults to label | M |
 | 27 | Layout `instrument:` path coupling | layout:9 | Path string | Manifest | Manifest binds | L |
-| 28 | Scenario full paths | `scenarios/food-intake-baseline.yaml:34-45` | Verbose | `in:` | Defer | L |
+| 28 | Scenario full paths | `scenarios/school-meals-baseline.yaml:34-45` | Verbose | `in:` | Defer | L |
 | 29 | Optional texts implicit | `help`, `guidance` inline | Presence is data | Declared slots | `texts: [help]` | L |
 | 30 | No expansion view | spec `instrument compile` only | Hidden dependencies after templating | Terraform plan, `helm template` | `instrument expand` | M |
 | 31 | `${}` in YAML flow context needs quoting | new | Flow collisions | n/a | Document quoting; lint | L |

@@ -6,10 +6,8 @@ Sample resources, authored strictly to the [specs](../docs/reference/spec/README
 
 | File | What it is | Why it is here |
 |---|---|---|
-| [`instruments/food-intake-baseline.yaml`](./instruments/food-intake-baseline.yaml) | A full port of a paper baseline food, snack and drink questionnaire: general information, then thirteen food categories, each a repeat over a code list with a frequency scale, an amount and a one-day recall. | The first real instrument. It exercises repeats, per-food unit overrides, the two nine-step frequency scales with numeric values, a soft rule written once and expanded per food, measurement pairs with an entry unit, `money`, conditional questions, roster-read items, display elements, field checks and consent. |
-| [`instruments/household-water-access.yaml`](./instruments/household-water-access.yaml) | A short household water, sanitation and hygiene visit, in English and Spanish. | A different domain on purpose, to keep the implementation general. It uses what the first one does not: an exclusive "none of these" code, `date` and `text`, a second currency, `refused` as a nonresponse, concept codes, a lookup table, a derived value, a roster variable inside a label, nested groups and a second complete language. |
-
-The food instrument is deployment content: it names the deployment's own places, foods and programmes, which the specs, code and tools never do. Its copyright notice and licence are placeholders, because the paper form carries a copyright sign but does not name a holder.
+| [`instruments/school-meals-baseline.yaml`](./instruments/school-meals-baseline.yaml) | An original school meals survey, written for this project in English and Spanish: general information read from the roster, then how often a pupil has each of a set of generic food groups, in a usual week and a usual day, with an amount and a one-day recall. | The first real instrument. It exercises repeats over a code list, per-item unit overrides, the two nine-step frequency scales with numeric values, a soft rule written once and expanded per item, measurement pairs with an entry unit, `money`, conditional questions, roster-read items, display elements, field checks and consent. |
+| [`instruments/household-water-access.yaml`](./instruments/household-water-access.yaml) | A short household water, sanitation and hygiene visit, in English and Spanish. | A different domain on purpose, to keep the implementation general. It uses what the first one does not: an exclusive "none of these" code, `date` and `text`, a second currency, `refused` as a nonresponse, concept codes, a lookup table, a derived value, a roster variable inside a label, nested groups. |
 
 Neither instrument is a validated survey tool, and neither is a template to copy blindly. When the Instrument domain lands, `fieldseal instrument validate` runs over both, and the spec notes in the pull request that added them list the places where the spec was ambiguous.
 
@@ -19,8 +17,8 @@ Layouts arrange an instrument's questions for presentation and never change cont
 
 | File | Window class | Arrangement |
 |---|---|---|
-| [`layouts/food-intake-baseline.expanded.yaml`](./layouts/food-intake-baseline.expanded.yaml) | expanded | Demographics as cards on step 1; the thirteen categories as free tabs of `list` repeats on step 2. |
-| [`layouts/food-intake-baseline.compact.yaml`](./layouts/food-intake-baseline.compact.yaml) | compact | The same cards, then one step per category. |
+| [`layouts/school-meals-baseline.expanded.yaml`](./layouts/school-meals-baseline.expanded.yaml) | expanded | General information as cards on step 1; the two food blocks as free tabs on step 2. |
+| [`layouts/school-meals-baseline.compact.yaml`](./layouts/school-meals-baseline.compact.yaml) | compact | The same cards, then one step per food block. |
 | [`layouts/household-water-access.compact.yaml`](./layouts/household-water-access.compact.yaml) | compact | Three steps of cards, with titles in both languages. |
 
 ## Rosters
@@ -30,7 +28,7 @@ Rosters list the subjects of one cohort for a bundle (`fieldseal bundle build --
 | File | For |
 |---|---|
 | [`rosters/household-water-access.yaml`](./rosters/household-water-access.yaml) | The water instrument: three households, one per consent state. |
-| [`rosters/food-intake-baseline.yaml`](./rosters/food-intake-baseline.yaml) | The food instrument: two participants, one with a carried-over status. |
+| [`rosters/school-meals-baseline.yaml`](./rosters/school-meals-baseline.yaml) | The school meals instrument: two participants, one with a carried-over status. |
 
 ## Reading and checking them
 
@@ -39,13 +37,13 @@ The authoring adapter (`crates/adapters/authoring`) decodes both under strict ru
 Check them with `fieldseal` (build it with `cargo build -p fieldseal-cli`; the binary is `target/debug/fieldseal`). Every command takes `--json` for one machine-readable result, and exits `1` when there is an error finding:
 
 ```sh
-fieldseal instrument validate examples/instruments/food-intake-baseline.yaml
+fieldseal instrument validate examples/instruments/school-meals-baseline.yaml
 fieldseal instrument lint     examples/instruments/household-water-access.yaml
-fieldseal instrument hash     examples/instruments/food-intake-baseline.yaml   # sha256:… content address
-fieldseal instrument compile  examples/instruments/food-intake-baseline.yaml   # the expanded tree, as JSON
+fieldseal instrument hash     examples/instruments/school-meals-baseline.yaml   # sha256:… content address
+fieldseal instrument compile  examples/instruments/school-meals-baseline.yaml   # the expanded tree, as JSON
 
-fieldseal layout validate examples/layouts/food-intake-baseline.expanded.yaml --instrument examples/instruments/food-intake-baseline.yaml
-fieldseal layout lint     examples/layouts/food-intake-baseline.compact.yaml  --instrument examples/instruments/food-intake-baseline.yaml
+fieldseal layout validate examples/layouts/school-meals-baseline.expanded.yaml --instrument examples/instruments/school-meals-baseline.yaml
+fieldseal layout lint     examples/layouts/school-meals-baseline.compact.yaml  --instrument examples/instruments/school-meals-baseline.yaml
 fieldseal layout compile  examples/layouts/household-water-access.compact.yaml --instrument examples/instruments/household-water-access.yaml --lang es
 ```
 
@@ -56,10 +54,10 @@ A layout names its instrument by a path relative to the layout file (`spec.instr
 `fieldseal instrument preview` draws the render plan as one self-contained HTML page: no network requests, inline style, and a small script that only switches steps and tabs. Open the file in any browser.
 
 ```sh
-fieldseal instrument preview examples/instruments/food-intake-baseline.yaml \
-  --layout examples/layouts/food-intake-baseline.expanded.yaml -o dist/preview/food-intake-baseline.expanded.html
-fieldseal instrument preview examples/instruments/food-intake-baseline.yaml \
-  --layout examples/layouts/food-intake-baseline.compact.yaml -o dist/preview/food-intake-baseline.compact.html
+fieldseal instrument preview examples/instruments/school-meals-baseline.yaml \
+  --layout examples/layouts/school-meals-baseline.expanded.yaml -o dist/preview/school-meals-baseline.expanded.html
+fieldseal instrument preview examples/instruments/school-meals-baseline.yaml \
+  --layout examples/layouts/school-meals-baseline.compact.yaml -o dist/preview/school-meals-baseline.compact.html
 fieldseal instrument preview examples/instruments/household-water-access.yaml \
   --layout examples/layouts/household-water-access.compact.yaml --lang es -o dist/preview/household-water-access.es.html
 ```
@@ -79,6 +77,6 @@ Scenarios drive `fieldseal device simulate --script <file>` (the simulated devic
 | File | What it does |
 |---|---|
 | [`scenarios/household-water-access.yaml`](./scenarios/household-water-access.yaml) | A day with the water instrument: compact layout, Spanish, a refused nonresponse, a soft rule, pause and resume, a resurvey, review, a receipt, a clear and closing. |
-| [`scenarios/food-intake-baseline.yaml`](./scenarios/food-intake-baseline.yaml) | The food instrument with consent attested by the collector. |
+| [`scenarios/school-meals-baseline.yaml`](./scenarios/school-meals-baseline.yaml) | The school meals instrument with consent attested by the collector. |
 | [`scenarios/clear.yaml`](./scenarios/clear.yaml) | Clearing with the PIN entered twice, before and after a receipt. |
 | [`scenarios/connected-flow.yaml`](./scenarios/connected-flow.yaml) | The device's leg of the connected flow: capture, resurvey, nonresponse, an export file through the in-process intake gate, background upload, the receipt and the clear. `tools/demo-pipeline.sh` runs it after publishing, registering and building a bundle with the real commands. |

@@ -4,7 +4,7 @@
 Opens rendered instrument pages in headless Chromium over the DevTools protocol and drives
 them like a collector:
 
-  food page   - question 11a (multi-choice, max 4): a fifth option cannot be ticked, the count
+  food page   - the shop question (multi-choice, max 4): a fifth option cannot be ticked, the count
                 reads "4 of 4 chosen", unticking frees the rest; keyboard works; "amount eaten
                 each time" (stepper, 0.5..20): typed 100 is refused, "+" stops at 20; money
                 typed above its maximum is flagged and has no canonical value.
@@ -131,8 +131,8 @@ def q_of(suffix):
 
 
 async def food(b, path):
-    # ---- 11a: multi-choice, max 4 -------------------------------------------------------
-    q = q_of("money_buys")
+    # ---- shop items: multi-choice, max 4 -------------------------------------------------------
+    q = q_of("shop_buys")
     await b.open(path, q)
     info = await b.ev(f"""(function(){{var q={q};var l=q.querySelector('.options');
       return {{max:l.dataset.max,boxes:l.querySelectorAll('input[type=checkbox]').length,
@@ -200,7 +200,7 @@ async def food(b, path):
     st = await b.ev(f"({{v:{amount()}.value,c:{amount()}.getAttribute('data-canonical'),m:{sq}.querySelector('.field-error').textContent,"
                     f"h:{sq}.querySelector('.field-error').hidden}})")
     check("ins_027 typing 100 into a field that stops at 20 is refused", st["c"] != "100" and st["v"] != "100", st)
-    check("ins_027 the refusal is said inline", st["m"] == "At most 20 oz." and st["h"] is False, st)
+    check("ins_027 the refusal is said inline", st["m"] == "At most 20 slices." and st["h"] is False, st)
     # Typing 2 then 0 is fine; one more 0 would make 200 and is refused.
     await b.ev(f"{amount()}.value='';{amount()}.dispatchEvent(new Event('input',{{bubbles:true}}))")
     await b.type_text("#fs-amount", "2")
@@ -214,7 +214,7 @@ async def food(b, path):
     await b.ev(f"{amount()}.value='';{amount()}.dispatchEvent(new Event('input',{{bubbles:true}}))")
     await b.type_text("#fs-amount", "0")
     st = await b.ev(f"({{c:{amount()}.getAttribute('data-canonical'),i:{amount()}.getAttribute('aria-invalid'),m:{sq}.querySelector('.field-error').textContent}})")
-    check("ins_027 0 (below 0.5) is flagged and has no canonical value", st["c"] is None and st["i"] == "true" and st["m"] == "At least 0.5 oz.", st)
+    check("ins_027 0 (below 0.5) is flagged and has no canonical value", st["c"] is None and st["i"] == "true" and st["m"] == "At least 0.5 slices.", st)
     await b.type_text("#fs-amount", "")
     await b.ev(f"{amount()}.value='0.3';{amount()}.dispatchEvent(new Event('input',{{bubbles:true}}));{amount()}.dispatchEvent(new Event('change',{{bubbles:true}}))")
     st = await b.ev(f"({{v:{amount()}.value,c:{amount()}.getAttribute('data-canonical')}})")
@@ -246,7 +246,7 @@ async def food(b, path):
     await b.type_text("#fs-money", "500")
     await b.ev("document.getElementById('fs-money').dispatchEvent(new Event('change',{bubbles:true}))")
     st = await b.ev(f"({{c:document.getElementById('fs-money').getAttribute('data-canonical'),i:document.getElementById('fs-money').getAttribute('aria-invalid'),m:{mq}.querySelector('.field-error').textContent}})")
-    check("ins_027 money above its maximum has no canonical value and is flagged", st["c"] is None and st["i"] == "true" and "200" in st["m"], st)
+    check("ins_027 money above its maximum has no canonical value and is flagged", st["c"] is None and st["i"] == "true" and "100" in st["m"], st)
     await b.ev("var m=document.getElementById('fs-money');m.value='12.505';m.dispatchEvent(new Event('change',{bubbles:true}))")
     st = await b.ev("document.getElementById('fs-money').getAttribute('data-canonical')")
     check("ins_162 money with too many minor digits has no canonical value", st is None, st)

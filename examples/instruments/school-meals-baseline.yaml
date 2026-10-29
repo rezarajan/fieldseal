@@ -1,0 +1,162 @@
+# A school meals baseline survey, in the compact dialect (ADR 0040). It was written for this
+# project and is not derived from any other questionnaire. English is written here; Spanish is in
+# i18n/school-meals-baseline/es.po.
+survey: {name: school-meals-baseline, version: 1.0.0}
+language: en
+title: School meals baseline survey
+description: A short interview with a pupil about the foods and drinks they have in a usual week and a usual day.
+purpose: To plan the meals a school offers.
+administration: interviewer
+publisher: Example Authority
+copyright: {notice: © 2026 Fieldseal contributors, licence: Apache-2.0}
+translations:
+  es: {method: human, reviewed-by: 1, notes: Written for this project and read by one native speaker.}
+nonresponse: [dont-know]
+defaults:
+  other-text: {max-length: 40}
+  disabled-display: protected
+consent:
+  required: true
+  bases:
+  - form-seen: Signed form seen
+  - told-aloud: Consent given aloud
+  statement: {version: 1, text: I confirm that consent was given for this pupil.}
+  evidence: optional
+lists:
+  sex: [Girl, Boy, Prefer not to say]
+  shop-items:
+    other: Something else
+    items: [Sandwiches, Fruit, Crisps, Sweets, Biscuits, Sweet drinks, Water, Milk]
+  meals: [Breakfast, Lunch, Breakfast and lunch]
+scales:
+  freq-week:
+  - never
+  - {at-most: 1, per: week}
+  - {each: {from: 2, to: 7}, per: week}
+  - {more-than: 7, per: week}
+  freq-day:
+  - never
+  - {at-most: 1, per: day}
+  - {each: {from: 2, to: 7}, per: day}
+  - {more-than: 7, per: day}
+sections:
+- about:
+    group: General information
+    elements:
+    - school: {type: roster, field: school, label: School}
+    - name: {type: roster, field: name, label: Pupil}
+    - class: {type: roster, field: class, label: Class}
+    - age: {type: roster, field: age, value: integer, label: Age in years}
+    - sex: {type: choice, list: sex, label: Is the pupil a girl or a boy?}
+    - weight:
+        type: measure-twice
+        unit: kg
+        also: [lb]
+        min: 10
+        max: 150
+        decimals: 1
+        tolerance: 0.2
+        label: Weight
+        concept: [{system: 'http://loinc.org', code: 29463-7, display: Body weight}]
+        guidance: Weigh the pupil twice. The two readings must agree.
+    - height:
+        type: measure-twice
+        unit: cm
+        also: ['[in_i]']
+        min: 80
+        max: 220
+        decimals: 1
+        tolerance: 1
+        label: Height
+        concept: [{system: 'http://loinc.org', code: 8302-2, display: Body height}]
+        guidance: Measure twice, without shoes.
+    - uses_shop: {type: binary, label: Does the pupil buy anything at the school shop?}
+    - shop_weekly:
+        type: money
+        currency: USD
+        min: 0
+        max: 100
+        step: 0.5
+        presentation: entry
+        label: About how much does the pupil spend there in a week?
+        if: {is: uses_shop}
+    - shop_buys:
+        type: choices
+        list: shop-items
+        max: 4
+        label: What would the pupil buy at the school shop? Choose up to four.
+    - meal_programme: {type: binary, label: Does the school serve meals?}
+    - meal_which: {type: choice, list: meals, label: Which meals does the pupil eat at school?, if: {is: meal_programme}}
+- diet:
+    group: Foods and drinks
+    elements:
+    - diet_intro: {display: These questions are about what the pupil eats and drinks in a usual week and a usual day., role: introduction}
+    - diet_instructions: {display: Ask about each item in turn. Record the amount of one serving., role: instruction}
+    - counted:
+        group: Main foods
+        categories:
+          ask:
+          - freq: {type: scale, scale: freq-week, presentation: segments, label: How often?}
+          - amount: {type: stepper, unit: piece, min: 0.5, max: 20, start: 1, step: 0.5, label: Amount eaten each time, if: {ne: [freq, never]}}
+          - yesterday: {type: binary, presentation: switch, label: Had it yesterday?}
+          checks:
+          - id: never-but-yesterday
+            when: {all: [{eq: [freq, never]}, {is: yesterday}]}
+            soft: Said never, but had it yesterday. Ask again.
+            reasons: [Unusual day, Not sure]
+          - id: large-amount
+            when: {gt: [amount, 10]}
+            soft: That is a large amount for one serving. Please confirm it.
+            reasons: [Confirmed with the pupil, Estimated]
+          blocks:
+          - period: In a usual week
+            categories:
+            - plate:
+                label: On the plate
+                other: Another food
+                foods:
+                - {label: Bread and cereals, ask: {amount: {unit: '{slice}', unit-label: slices}}}
+                - {label: Rice and pasta, ask: {amount: {unit: '[cup_us]', unit-label: cups, max: 6}}}
+                - {label: Vegetables, ask: {amount: {unit: '[cup_us]', unit-label: cups, max: 6}}}
+                - Fruit
+                - Eggs
+                - {label: Beans and lentils, ask: {amount: {unit: '{spoonful}', unit-label: spoonfuls, max: 12}}}
+    - weighed:
+        group: Foods and drinks by weight or volume
+        categories:
+          ask:
+          - freq: {type: scale, scale: freq-day, presentation: segments, label: How often?}
+          - amount: {type: stepper, unit: g, min: 10, max: 1000, start: 100, step: 10, label: Amount eaten or drunk each time, if: {ne: [freq, never]}}
+          - yesterday: {type: binary, presentation: switch, label: Had it yesterday?}
+          checks:
+          - id: never-but-yesterday
+            when: {all: [{eq: [freq, never]}, {is: yesterday}]}
+            soft: Said never, but had it yesterday. Ask again.
+            reasons: [Unusual day, Not sure]
+          - id: large-amount
+            when: {gt: [amount, 800]}
+            soft: That is a large amount for one serving. Please confirm it.
+            reasons: [Confirmed with the pupil, Estimated]
+          blocks:
+          - period: In a usual day
+            categories:
+            - extras:
+                label: By weight or volume
+                other: Another food or drink
+                foods:
+                - Meat and fish
+                - Nuts
+                - {label: Milk and yoghurt, ask: {amount: {unit: mL, unit-label: ml, min: 50, max: 1500, step: 50}}}
+                - Sweets
+                - Snacks
+                - {label: Sweet drinks, ask: {amount: {unit: mL, unit-label: ml, min: 50, max: 1500, step: 50}}}
+                - {label: Water, ask: {amount: {unit: mL, unit-label: ml, min: 50, max: 1500, step: 50}}}
+- thanks: {display: Thank you., role: end}
+checks:
+- id: unusual-age
+  when: {any: [{lt: [age, 5]}, {gt: [age, 19]}]}
+  soft: This age is unusual for a school pupil. Check the roster.
+  reasons: [Roster is correct, Roster is wrong]
+field-checks:
+- {id: weight-drift, type: drift, question: weight, window: 10, threshold: 2.0, message: Weights are rising steadily. Check the scale.}
+- {id: too-quick, type: timing, min-seconds: 120, message: This interview was very short. Check the record.}

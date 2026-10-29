@@ -60,7 +60,7 @@ fn cli_html(instrument: &Path, layout_files: &[PathBuf], lang: &str, window: Win
 fn web_120_instrument_page_matches_preview() {
     let state = AppState { examples_dir: examples(), ..AppState::default() };
     let mut compared = 0;
-    for stem in ["food-intake-baseline", "household-water-access"] {
+    for stem in ["school-meals-baseline", "household-water-access"] {
         let instrument = examples().join(format!("instruments/{stem}.yaml"));
         let mut layout_files: Vec<PathBuf> =
             std::fs::read_dir(examples().join("layouts")).unwrap().map(|e| e.unwrap().path()).filter(|p| p.file_name().unwrap().to_str().unwrap().starts_with(&format!("{stem}."))).collect();

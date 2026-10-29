@@ -2,8 +2,8 @@
   direction: "ltr"
   instrument: {
     administration: "interviewer"
-    name: "food-intake-baseline"
-    title: "Baseline food, snack and drink survey"
+    name: "school-meals-baseline"
+    title: "School meals baseline survey"
     version: "1.0.0"
   }
   language: "en"
@@ -105,7 +105,7 @@
             {
               bind: "about.money_per_day"
               control: {
-                currency: "TTD"
+                currency: "USD"
                 max: 200e0
                 min: 0e0
                 minorDigits: 2
@@ -144,7 +144,7 @@
           id: 9
           kind: "display"
           role: "instruction"
-          text: "These questions are about foods and drinks over the past month or week, and yesterday."
+          text: "These questions are about foods and drinks over the past month, and yesterday."
         }
         {
           children: [
@@ -251,7 +251,7 @@
                         }
                       ]
                       code: "bread"
-                      description: "White, wholewheat, hops, coconut bake"
+                      description: "White, wholewheat, rolls"
                       disabledDisplay: "hidden"
                       id: 13
                       kind: "instance"
@@ -265,10 +265,10 @@
                       referencePeriod: "in the last month"
                     }
                     {
-                      bind: "staples.cassava"
+                      bind: "staples.potatoes"
                       children: [
                         {
-                          bind: "staples.cassava.freq"
+                          bind: "staples.potatoes.freq"
                           column: "freq"
                           control: {
                             steps: [
@@ -322,7 +322,7 @@
                           presentation: "segments"
                         }
                         {
-                          bind: "staples.cassava.amount"
+                          bind: "staples.potatoes.amount"
                           column: "amount"
                           control: {
                             max: 20e0
@@ -345,7 +345,7 @@
                           ]
                         }
                         {
-                          bind: "staples.cassava.yesterday"
+                          bind: "staples.potatoes.yesterday"
                           column: "yesterday"
                           control: {
                             type: "yes-no"
@@ -361,12 +361,12 @@
                           presentation: "switch"
                         }
                       ]
-                      code: "cassava"
-                      description: "Boiled, fried, in soup"
+                      code: "potatoes"
+                      description: "Boiled, baked, mashed"
                       disabledDisplay: "hidden"
                       id: 17
                       kind: "instance"
-                      label: "Cassava"
+                      label: "Potatoes"
                       referencePeriod: "in the last month"
                     }
                     {
@@ -467,7 +467,7 @@
                         }
                       ]
                       code: "rice"
-                      description: "White, pelau, fried rice"
+                      description: "White, brown, fried"
                       disabledDisplay: "hidden"
                       id: 21
                       kind: "instance"

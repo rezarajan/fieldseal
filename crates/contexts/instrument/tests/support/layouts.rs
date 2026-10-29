@@ -15,10 +15,10 @@ pub fn spec_layout() -> Value {
 {
   apiVersion: fieldseal.dev/v1alpha1,
   kind: Layout,
-  metadata: { name: food-intake-baseline-wide, version: 1.0.0 },
+  metadata: { name: school-meals-baseline-wide, version: 1.0.0 },
   spec: {
     schema: "^1.0",
-    instrument: "./food-intake-baseline.yaml",
+    instrument: "./school-meals-baseline.yaml",
     windowClass: expanded,
     steps: [
       {
@@ -42,18 +42,18 @@ pub fn spec_layout() -> Value {
 "#)
 }
 
-/// A reduced food-intake instrument with the structure of `examples/instruments/food-intake-baseline.yaml`:
+/// A reduced school-meals instrument with the structure of `examples/instruments/school-meals-baseline.yaml`:
 /// a demographics group, a diet group of two displays and repeat categories, and a top-level
 /// end display.
-pub fn food_intake() -> Value {
+pub fn school_meals() -> Value {
     doc(r#"
 {
   apiVersion: fieldseal.dev/v1alpha1,
   kind: Instrument,
-  metadata: { name: food-intake-mini, version: 1.0.0 },
+  metadata: { name: school-meals-mini, version: 1.0.0 },
   spec: {
     schema: "^1.0",
-    title: { en: Food survey },
+    title: { en: School meals survey },
     administration: interviewer,
     languages: [en],
     defaultLanguage: en,
@@ -85,7 +85,7 @@ pub fn food_intake() -> Value {
           { kind: question, path: money_gets, label: { en: Do you get spending money? }, control: { type: yes-no }, data: { type: boolean } },
           {
             kind: question, path: money_per_day, label: { en: How much each day? }, when: '$about.money_gets == true', disabledDisplay: protected,
-            control: { type: money, currency: TTD, min: 0, max: 200, step: 5 }, data: { type: money },
+            control: { type: money, currency: USD, min: 0, max: 200, step: 5 }, data: { type: money },
           },
         ],
       },
@@ -116,16 +116,16 @@ pub fn food_intake() -> Value {
 "#)
 }
 
-/// The equivalent of `examples/layouts/food-intake-baseline.expanded.yaml` for [`food_intake`].
-pub fn food_expanded() -> Value {
+/// The equivalent of `examples/layouts/school-meals-baseline.expanded.yaml` for [`school_meals`].
+pub fn school_meals_expanded() -> Value {
     doc(r#"
 {
   apiVersion: fieldseal.dev/v1alpha1,
   kind: Layout,
-  metadata: { name: food-intake-mini-expanded, version: 1.0.0 },
+  metadata: { name: school-meals-mini-expanded, version: 1.0.0 },
   spec: {
     schema: "^1.0",
-    instrument: "../instruments/food-intake-mini.yaml",
+    instrument: "../instruments/school-meals-mini.yaml",
     windowClass: expanded,
     steps: [
       {

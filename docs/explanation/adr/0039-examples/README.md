@@ -1,6 +1,5 @@
-# ADR 0039 worked example (INCOMPLETE)
+# ADR 0039 worked example (withdrawn)
 
-The food instrument rewritten in the proposed dialect. Present: `fieldseal.yaml`, `instrument.yaml` (158 lines), `layouts/` (compact, expanded, shared). Missing (see the ADR, "Unfinished"): the `en` and `es` catalogues, the `.pot`, the line-count table and the construct-by-construct compile walkthrough.
+ADR 0039 was illustrated with a rewrite of a third-party paper questionnaire in the proposed dialect. That questionnaire's copyright holder is not confirmed, so the rewrite (`instrument.yaml` and `layouts/`) is not published. Only the deployment manifest, `fieldseal.yaml`, remains.
 
-Line counts so far: current instrument 830 plus layouts 117 = 947; new structure files 16 + 158 + 54 = 228 before catalogues (wording is unchanged and moves to `i18n/en/*.po`).
-The ladder generator was checked: it reproduces every `value` and all but one code (`d_1` becomes `d1`) of the two current ladders.
+The dialect this ADR proposed became the compact dialect of [ADR 0040](../0040-compact-declarations-and-twelve-factor-config.md). For a worked example of it, see [`../0040-examples/`](../0040-examples/) and the original [`school-meals-baseline`](../../../../examples/instruments/school-meals-baseline.yaml) survey.

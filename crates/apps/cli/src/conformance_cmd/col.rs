@@ -32,7 +32,7 @@ use fieldseal_kernel::{Decimal, Value, cbor};
 
 const PIN: &str = "246810";
 const WATER: &str = "household-water-access";
-const FOOD: &str = "food-intake-baseline";
+const MEALS: &str = "school-meals-baseline";
 
 fn example(path: &str) -> Value {
     let bytes: &[u8] = match path {

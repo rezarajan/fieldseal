@@ -4,7 +4,7 @@
 # without them on the PATH it asks nix for both.
 #
 #   FIELDSEAL_WEB_DEMO_AUTHORITY=true fieldseal-web &      # (see the web crate's README)
-#   BASE=http://127.0.0.1:18110 INSTRUMENT=food-intake-baseline SHOTS=/tmp/shots \
+#   BASE=http://127.0.0.1:18110 INSTRUMENT=school-meals-baseline SHOTS=/tmp/shots \
 #     tools/browser-tests/device-flow.sh
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"

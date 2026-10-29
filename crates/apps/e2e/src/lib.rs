@@ -81,8 +81,8 @@ pub fn profile() -> RuntimeProfile {
 /// flow can exercise attestation), published once per [`Site`]. Languages are `en` and `es`.
 pub fn sample_instrument_document() -> Value {
     let mut doc = example("instruments/household-water-access.yaml");
-    let food = example("instruments/food-intake-baseline.yaml");
-    let consent = food.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|m| m.get("consent")).cloned().expect("food consent block");
+    let meals = example("instruments/school-meals-baseline.yaml");
+    let consent = meals.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|m| m.get("consent")).cloned().expect("school meals consent block");
     // The statement is shown in both languages the instrument is complete in.
     let consent = match consent {
         Value::Map(mut c) => {

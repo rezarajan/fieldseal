@@ -16,7 +16,7 @@ The user reviewed the declarative files and found them far below expectations. N
   - each port appears twice.
 
   It also has an `environments:` block, and `deployment render` turns the file into one env file per service. Twelve-factor's config factor says the opposite: config is whatever varies between deploys, it lives in the environment, and its values are independent controls rather than groups named after environments ([12factor.net/config](https://12factor.net/config)).
-- **Surveys are far too verbose.** The food survey is 830 lines plus 117 lines of layouts. Each of its 13 food categories repeats the same three questions. A question states its type twice (`control` and `data`). Every label is an `{ en: … }` map. Frequency values are typed by hand (`0.143`).
+- **Surveys are far too verbose.** A food-frequency survey in the canonical form ran to about 830 lines plus 117 lines of layouts, because each of its 13 food categories repeated the same three questions. A question states its type twice (`control` and `data`). Every label is an `{ en: … }` map. Frequency values are typed by hand (`0.143`).
 - **ADR 0039 is not compact enough.** It still needs about 160 lines, because it moves the words into catalogues but keeps the nested structure. The user asked for "much much much more compact".
 
 ## Research
@@ -74,7 +74,7 @@ The dialect covers surveys, layouts, policies, rosters, extensions, deployment m
 
 ### 2. Surveys: a question is one line
 
-See `0040-examples/food-intake-baseline.survey.yaml`, the whole food survey, against 830 lines today plus 117 of layouts. Every category and every food carries an emoji.
+See `0040-examples/school-meals-baseline.survey.yaml`, the whole school meals survey in 162 lines, against about 1,600 lines in the canonical form (`fieldseal instrument compile`). Its two food categories each repeat three questions per food, written once.
 
 - **Line shape.** A question is `id: { type: <control>, <the control's own settings>…, if?, label?, help?, sensitive? }`. Its `if` is a condition (§1).
 - **Labels.** The label defaults to the id written as words (`school` → "School"), so many questions need no label.
@@ -94,7 +94,7 @@ See `0040-examples/food-intake-baseline.survey.yaml`, the whole food survey, aga
 | `roster` | **`field`**, `unit` |
 
 - **Lists** are YAML sequences: `sex: [👦 Male, 👧 Female]`.
-  - Codes are generated from the source labels (`Point Lisas` → `point_lisas`). The compiler checks every generated code against the previous published version, so a label edit that would change a code is refused unless the code is pinned (`{ Point Lisas: { code: pl } }`).
+  - Codes are generated from the source labels (`Upper Valley` → `upper_valley`). The compiler checks every generated code against the previous published version, so a label edit that would change a code is refused unless the code is pinned (`{ Point Lisas: { code: pl } }`).
   - An `other` option always asks for text, with its rules set once in `defaults.other-text`.
 - **Scales are generated from structured steps,** such as `{ from: 2, to: 3, per: month }`, `{ more-than: 3, per: day }` and `{ each: { from: 1, to: 7 }, per: week }`. The compiler produces the codes, the plural-correct labels in every language (CLDR), and the definitional per-day values. Nobody types `0.143`.
 - **Repeated question sets are declared once.** In a food block, `ask:` lists the questions asked of every food, and `checks:` lists the rules (`{ when: <condition>, soft: <message>, reasons }`).
@@ -106,9 +106,9 @@ See `0040-examples/food-intake-baseline.survey.yaml`, the whole food survey, aga
 
 ### 3. Layouts: one line per card or tab
 
-See `0040-examples/food-intake-baseline.compact.layout.yaml`.
+See `0040-examples/school-meals-baseline.compact.layout.yaml`.
 
-- **A step is a section and its presentation.** Cards are a mapping from title to a list of question ids, for example `💵 Spending money: [money, per_day, buys, where]`. A food block is `{ tabs: categories, per-page: 3 }`.
+- **A step is a section and its presentation.** Cards are a mapping from title to a list of question ids, for example `🛒 School shop: [uses_shop, shop_weekly, shop_buys]`. A food block is `{ tabs: categories, per-page: 3 }`.
 
 The rule of ADR 0033 is unchanged: a layout partitions the survey and never reorders it. `per-page` feeds the paging the web app uses instead of scrolling.
 

@@ -13,7 +13,7 @@ The first real instrument, a food-frequency and diet-quality questionnaire, was 
 | The questionnaire needs | Draft spec | Gap |
 |---|---|---|
 | The same 3 answers for each of 95 foods | Flat items only | No repeat or template; about 380 hand-written items and 95 copies of each rule |
-| A food row as one unit, with a shared label and description ("White, wholewheat, hops") | Items have one control each; no nesting | No nested groups; no description text |
+| A food row as one unit, with a shared label and description ("White, wholewheat, rolls") | Items have one control each; no nesting | No nested groups; no description text |
 | Two frequency scales, each reused by about 50 items | Options are inline | No named, reusable code lists |
 | Frequencies analysed as times per day | Codes only | No numeric meaning per code |
 | A portion of 0.5 cup; money in steps of 5 | `stepper` has no step size | No `step`; no currency |

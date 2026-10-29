@@ -1,0 +1,38 @@
+# The capture leg of the local stack for the school meals instrument (`just interact`): the device
+# that registered with the factory visits two pupils of the roster in its bundle. The second has no
+# consent on the roster, so consent is attested before its capture (COL-031); the first is
+# granted. Run by `fieldseal device capture --script … --device-dir … --trust-bundle … --bundle …`.
+pin: "135790"
+steps:
+  - capture:
+      subject: p-0001
+      mode: first
+      set:
+        about.sex: girl
+        about.weight: [38.0, 38.1]
+        about.uses_shop: true
+        about.shop_weekly: 6.5
+        about.shop_buys: [sandwiches, fruit]
+        about.meal_programme: false
+        diet.counted.plate.bread_and_cereals.freq: never
+        diet.counted.plate.bread_and_cereals.yesterday: true
+        diet.counted.plate.rice_and_pasta.freq: w4
+        diet.counted.plate.rice_and_pasta.amount: 1.5
+        diet.counted.plate.rice_and_pasta.yesterday: true
+      nonresponse: { about.height: dont-know }
+      override: { diet.counted.plate.bread_and_cereals.never-but-yesterday: unusual-day }
+      acknowledge: true
+      then: seal
+  - consent: { subject: p-0002, basis: form-seen, statement: 1, evidence: false }
+  - capture:
+      subject: p-0002
+      mode: first
+      set: { about.sex: boy, about.weight: [41.0, 41.1], about.uses_shop: false, about.meal_programme: true, about.meal_which: lunch }
+      acknowledge: true
+      then: seal
+  - capture:
+      subject: p-0002
+      mode: correction
+      set: { about.meal_which: breakfast_and_lunch }
+      then: seal
+  - review: {}

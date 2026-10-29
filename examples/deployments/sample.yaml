@@ -21,7 +21,7 @@ spec:
     layers:
       - { ref: policy/deployment-default, digest: "sha256:e2a2c86e21517b946eb84d13c5ec14bfe396227e2955a21fb0c842eef1b50dcb" }
   instruments:
-    - { ref: instrument/food-intake-baseline, channel: development }
+    - { ref: instrument/school-meals-baseline, channel: development }
     - { ref: instrument/household-water-access, channel: development }
   components:
     factory:

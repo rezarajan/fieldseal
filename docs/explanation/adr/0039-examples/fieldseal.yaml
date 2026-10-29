@@ -2,7 +2,7 @@
 # The source manifest: names the files, the languages and where each language's wording lives.
 apiVersion: fieldseal.dev/v1alpha1
 kind: Source
-metadata: { name: food-intake-baseline, version: 1.0.0 }
+metadata: { name: school-meals-baseline, version: 1.0.0 }
 spec:
   schema: "^1.0"
   instrument: instrument.yaml
