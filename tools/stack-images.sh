@@ -12,12 +12,14 @@ STAMPS="$LOCAL/.generated/images-$ENGINE"; mkdir -p "$STAMPS"
 for name in "$@"; do
   tag="fieldseal-$name"
   say "== building $name-image with nix"
-  out="$(nix build "path:$ROOT#$name-image" --no-link --print-out-paths)"
+  out="$(stage "build-$name" nix build "path:$ROOT#$name-image" --no-link --print-out-paths)"
   if [ "$(cat "$STAMPS/$name" 2>/dev/null)" = "$out" ] && "$ENGINE" image inspect "$tag:local" >/dev/null 2>&1; then
     say "   $tag:local is loaded already"
+    mkdir -p "$(dirname "$TIMING_TSV")"; printf 'load-%s\t0.000\n' "$name" >> "$TIMING_TSV"
   else
     say "   loading $tag:local into $ENGINE"
-    "$ENGINE" load < "$out" >/dev/null
+    load_image() { "$ENGINE" load < "$out" >/dev/null || die "could not load $tag:local into $ENGINE"; }
+    stage "load-$name" load_image
     echo "$out" > "$STAMPS/$name"
   fi
 done

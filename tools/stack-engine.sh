@@ -44,5 +44,37 @@ SHIM
 esac
 command -v "$ENGINE" >/dev/null || die "$ENGINE is not on PATH (run through just, or inside: nix develop path:.)"
 
+# stage <name> <command...>: runs the command (or a function of the calling script), appends
+# "<name><TAB><seconds>" to $LOCAL/.generated/stack-timing.tsv and returns the command's status.
+# It prints nothing itself, so out=$(stage <name> <command...>) captures the command's output. The
+# command runs as the condition of an `if`, so `set -e` is off inside a function passed to it:
+# end every step of such a function with `|| die ...`.
+TIMING_TSV="$LOCAL/.generated/stack-timing.tsv"
+stage() {
+  local name="$1" start end ms rc=0
+  shift
+  mkdir -p "$(dirname "$TIMING_TSV")"
+  start="$(date +%s%N)"
+  if "$@"; then rc=0; else rc=$?; fi
+  end="$(date +%s%N)"
+  ms=$(( (end - start) / 1000000 ))
+  printf '%s\t%d.%03d\n' "$name" $((ms / 1000)) $((ms % 1000)) >> "$TIMING_TSV"
+  return "$rc"
+}
+
+# stage_report: prints the recorded stages as an aligned table with the total, and copies the table
+# to $LOCAL/.generated/stack-timing.txt.
+stage_report() {
+  [ -s "$TIMING_TSV" ] || return 0
+  awk -F'\t' '
+    { name[NR] = $1; secs[NR] = $2; total += $2; if (length($1) > width) width = length($1) }
+    END {
+      if (width < 5) width = 5
+      printf "%-*s  %9s\n", width, "stage", "seconds"
+      for (i = 1; i <= NR; i++) printf "%-*s  %9.3f\n", width, name[i], secs[i]
+      printf "%-*s  %9.3f\n", width, "total", total
+    }' "$TIMING_TSV" | tee "$(dirname "$TIMING_TSV")/stack-timing.txt"
+}
+
 # compose <args>: the stack's compose project, with the generated secrets as its environment.
 compose() { "${COMPOSE[@]}" -f "$LOCAL/compose.yaml" --env-file "$LOCAL/.env.secrets" "$@"; }

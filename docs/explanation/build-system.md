@@ -137,6 +137,33 @@ The container produces an **unsigned** APK, because the release signing key neve
 - maturin's automatic SBOM is switched off (`[tool.maturin.sbom]`), because it embeds a random serial number, a timestamp and absolute build paths. **Follow-up:** generate a deterministic SBOM (e.g. `cargo-cyclonedx` with paths and timestamps normalised) and ship it next to the wheel.
 - The container build still downloads Gradle and crate dependencies (pinned by lockfiles and checksums). The next step is a fully offline build, with Gradle dependencies pre-fetched into the Nix store (e.g. with `gradle2nix`).
 
+## Measured baselines
+
+Recorded on 2026-10-28 on an AMD Ryzen 9 7950X (16 cores, 32 threads), 62 GB of memory, Linux, Nix dev shell with Rust 1.95.0. Later changes are compared with these numbers.
+
+**Build cost and tests (measured).**
+
+| Measure | Value |
+|---|---|
+| Distinct normal dependencies (`cargo tree --workspace --edges normal --prefix none \| sort -u \| wc -l`) | 332 |
+| Cold `cargo build --workspace --timings` (empty target directory, dev profile) | 57.4 s |
+| `cargo tree -i arrow` | fails: "did not match any packages" (the passing result) |
+| `cargo tree -i parquet` | fails: "did not match any packages" (the passing result) |
+| `tools/test-budget.sh` (nextest and doc tests, building excluded) | 6.1 s against the 20 s budget |
+| Tests in `docs/reference/test-inventory.md` | 84 tests, 84 requirements |
+
+**`just up` stage tables (not yet measured).** `just up` prints a stage table and writes it to `deploy/local/.generated/stack-timing.txt`; `just images` alone appends its `build-<name>` and `load-<name>` rows to `stack-timing.tsv`. The three runs below need the container stack and were not taken in Phase 0b. Paste each table here when it is run.
+
+| Run | Table |
+|---|---|
+| `just purge && just up` | not measured |
+| `just up` with nothing changed | not measured |
+| `just up` after a one-line Rust change | not measured |
+
+**CI warm-cache durations (not measured).** The `ci` workflow starts only for `v*` tags and manual starts, and the repository's CI minutes were used up when this section was written, so it was not started. Run ids and job durations from two runs on one commit (the second after the first finishes, because `ci.yml` cancels in-progress runs for one ref) go here.
+
+Targets for `just up` and for CI are added here when Open Question 1 is answered.
+
 ## Emulating and testing the app
 
 No single environment exercises everything, because the security features that matter most exist only in real hardware. Testing is layered:
