@@ -140,6 +140,8 @@ fn int_085_numbers_are_never_prefixed_and_text_starting_with_a_formula_character
     rows.push(value(5, "e.codes", "codes", ObservedValue::Codes(vec!["+a".into(), "b".into()])));
     rows.push(value(5, "e.evidence", "evidence", ObservedValue::Text("@evidence".into())));
     rows.push(value(5, "e.fine", "code", ObservedValue::Code("'quoted".into())));
+    rows.push(value(5, "e.tab", "code", ObservedValue::Code("\t=1+1".into())));
+    rows.push(value(5, "e.cr", "code", ObservedValue::Code("\r=1+1".into())));
     let dir = export("guard", rows);
     let csv = csv_rows(&read(&dir, "results.csv"), &[]);
     let cell = |item: &str| csv.iter().find(|r| r["item_path"] == item).expect("row")["value"].clone();
@@ -149,6 +151,8 @@ fn int_085_numbers_are_never_prefixed_and_text_starting_with_a_formula_character
     assert_eq!(cell("e.codes"), "'+a|b");
     assert_eq!(cell("e.evidence"), "'@evidence");
     assert_eq!(cell("e.fine"), "'quoted", "text that starts with a quote is not changed");
+    assert_eq!(cell("e.tab"), "'\t=1+1", "a leading tab is guarded");
+    assert_eq!(cell("e.cr"), "'\r=1+1", "a leading carriage return is guarded");
     let json = jsonl_rows(&read(&dir, "results.jsonl"));
     let text = |item: &str| json.iter().find(|r| r.get("item_path") == &J::Str(item.into())).expect("row").get("value_text").cell();
     assert_eq!(text("e.code"), "=SUM(A1)", "JSON Lines is never guarded");

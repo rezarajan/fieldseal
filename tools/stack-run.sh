@@ -17,15 +17,20 @@ status=0
   --profile demo run --no-deps --rm -T demo "$@" || status=$?
 [ "$status" = 0 ] && [ "$cmd" = resume ] || exit "$status"
 
-# After a restart the upload service must have rebuilt its gate from the persisted submissions
+# After a restart the intake app must have rebuilt its gate from the persisted submissions
 # and recognised the second upload as a duplicate that landed nothing.
-logs="$(compose logs upload 2>&1 || true)"
+logs="$(compose logs intake 2>&1 || true)"
 events="$(printf '%s\n' "$logs" | grep -o '{"event":.*}' || true)"
-printf '\n== upload service events\n'
+printf '\n== intake events\n'
 printf '%s\n' "$events" | tail -5
 last="$(printf '%s\n' "$events" | tail -2)"
 fail() { printf 'stack: %s\n' "$1" >&2; exit 1; }
 printf '%s\n' "$last" | grep -q '"event":"submission".*"new":false' || fail "the last events are not a duplicate submission (\"new\":false)"
 printf '%s\n' "$last" | grep -q '"event":"landed".*"envelopes":0.*"observations":0' || fail "the last events do not show nothing landed"
 printf '%s\n' "$events" | grep '"event":"replayed"' | grep -Eq '"landed":[1-9][0-9]*' || fail "no replayed event with landed > 0: the gate was not rebuilt after the restart"
+# The resume step wrote the results export of the landing (fieldseal intake results) before and
+# after the duplicate upload; the two directories must be identical byte for byte.
+[ -d "$LOCAL/.out/results-before" ] && [ -d "$LOCAL/.out/results-after" ] || fail "the resume step did not write the results exports to deploy/local/.out"
+diff -r "$LOCAL/.out/results-before" "$LOCAL/.out/results-after" || fail "the results export changed across the restart and the duplicate upload"
+echo "ok: the results export is byte-identical before and after"
 echo "ok: duplicate recognised, nothing landed, and the gate was rebuilt from the persisted submissions"

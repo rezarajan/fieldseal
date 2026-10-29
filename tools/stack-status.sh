@@ -8,5 +8,7 @@ probe() { if curl -fsS -o /dev/null --max-time 3 "$2" 2>/dev/null; then printf '
 say; say "endpoints:"
 probe "Keycloak (OIDC)" http://localhost:8180/realms/fieldseal/.well-known/openid-configuration
 probe "factory" http://localhost:8080/readyz
-probe "intake upload" http://localhost:8480/healthz
+probe "web app" http://127.0.0.1:8090/instruments
+probe "intake uploads" http://localhost:8480/healthz
+probe "intake portal" http://localhost:8481/
 probe "transparency log" http://localhost:9001/checkpoint

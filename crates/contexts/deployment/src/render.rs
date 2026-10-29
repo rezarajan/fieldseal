@@ -152,33 +152,7 @@ fn factory_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::C
     env.insert("FIELDSEAL_FACTORY_BIND".into(), spec.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into()));
     env.insert("FIELDSEAL_FACTORY_URL".into(), m.provisioning.factory_url.clone());
     if let Some(idp) = spec.adapters.get("IdentityProvider") {
-        match idp.adapter.as_str() {
-            "oidc" => {
-                env.insert("FIELDSEAL_IDENTITY".into(), "oidc".into());
-                for (key, var) in [
-                    ("issuer", "FIELDSEAL_OIDC_ISSUER"),
-                    ("clientId", "FIELDSEAL_OIDC_CLIENT_ID"),
-                    ("clientSecret", "FIELDSEAL_OIDC_CLIENT_SECRET"),
-                    ("scopes", "FIELDSEAL_OIDC_SCOPES"),
-                    ("rolesClaim", "FIELDSEAL_OIDC_ROLES_CLAIM"),
-                    ("acrValues", "FIELDSEAL_OIDC_ACR_VALUES"),
-                    ("assertedMethods", "FIELDSEAL_OIDC_ASSERTED_METHODS"),
-                    ("phishingResistantAmr", "FIELDSEAL_OIDC_PHISHING_RESISTANT_AMR"),
-                    ("phishingResistantAcr", "FIELDSEAL_OIDC_PHISHING_RESISTANT_ACR"),
-                ] {
-                    if let Some(v) = idp.config.get(key) {
-                        put(env, var, v);
-                    }
-                }
-            }
-            "memory-dev" => {
-                env.insert("FIELDSEAL_IDENTITY".into(), "dev".into());
-                if let Some(v) = idp.config.get("users") {
-                    put(env, "FIELDSEAL_DEV_USERS", v);
-                }
-            }
-            _ => {}
-        }
+        identity_vars(env, idp, true);
     }
     if let Some(signer) = spec.adapters.get("Signer") {
         let custody = if signer.adapter == "memory" { "memory-dev" } else { signer.adapter.as_str() };
@@ -203,19 +177,33 @@ fn factory_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::C
     }
 }
 
-/// The variables the intake upload endpoint reads (`fieldseal-upload-server`): where it
-/// listens, and the public base URL its proof-of-possession tokens may be bound to.
+/// The variables the intake app reads (`crates/apps/intake`, Technical Plan 7.6), derived from
+/// its adapters and the named keys of its component.
 fn intake_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::ComponentSpec, m: &Manifest) {
     if let Some(bind) = &spec.bind {
-        env.insert("FIELDSEAL_UPLOAD_LISTEN".into(), bind.clone());
+        env.insert("FIELDSEAL_INTAKE_BIND".into(), bind.clone());
     }
-    if let Some(url) = &m.provisioning.destination_url {
-        env.insert("FIELDSEAL_UPLOAD_PUBLIC_URLS".into(), url.clone());
+    // The base URLs device tokens may be bound to: `publicUrl`, else the provisioned destination.
+    if let Some(url) = spec.public_url.as_ref().or(m.provisioning.destination_url.as_ref()) {
+        env.insert("FIELDSEAL_INTAKE_PUBLIC_URLS".into(), url.clone());
     }
-    // The endpoint serves the stack's own authority (not the practice one) when it is given
-    // the authority's keys: the record key's directory and the trust bundle (development).
-    if let Some(unsealer) = spec.adapters.get("RecordKeyUnsealer").filter(|a| a.adapter == "file-dev") {
-        env.insert("FIELDSEAL_UPLOAD_AUTHORITY".into(), "stack".into());
+    if let Some(n) = spec.max_body_bytes {
+        env.insert("FIELDSEAL_INTAKE_MAX_BODY".into(), n.to_string());
+    }
+    if let Some(v) = &spec.portal.bind {
+        env.insert("FIELDSEAL_INTAKE_PORTAL_BIND".into(), v.clone());
+    }
+    if let Some(v) = &spec.portal.public_url {
+        env.insert("FIELDSEAL_INTAKE_PORTAL_URL".into(), v.clone());
+    }
+    if let Some(idp) = spec.adapters.get("IdentityProvider") {
+        identity_vars(env, idp, false);
+    }
+    // The authority's keys: a key directory and the trust bundle (development custody), or
+    // keys generated in memory.
+    if let Some(unsealer) = spec.adapters.get("RecordKeyUnsealer") {
+        let custody = if unsealer.adapter == "memory" { "memory-dev" } else { unsealer.adapter.as_str() };
+        env.insert("FIELDSEAL_CUSTODY".into(), custody.into());
         for (key, var) in [("dir", "FIELDSEAL_CUSTODY_DIR"), ("trustBundle", "FIELDSEAL_TRUST_BUNDLE")] {
             if let Some(v) = unsealer.config.get(key) {
                 put(env, var, v);
@@ -226,9 +214,33 @@ fn intake_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::Co
     if let Some(v) = spec.adapters.get("TenancyRegistry").filter(|a| a.adapter == "file-dev").and_then(|a| a.config.get("dir")) {
         put(env, "FIELDSEAL_TENANCY_DIR", v);
     }
-    // Where long-format files land.
-    if let Some(v) = spec.adapters.get("DataPlatform").filter(|a| a.adapter == "landing-files").and_then(|a| a.config.get("dir")) {
-        put(env, "FIELDSEAL_LANDING_DIR", v);
+    // Where long-format files land (DEP-057): `dirs.landing`, else the `DataPlatform` directory.
+    let landing = spec.dirs.landing.clone().or_else(|| {
+        spec.adapters.get("DataPlatform").filter(|a| a.adapter == "landing-files").and_then(|a| a.config.get("dir")).map(ConfigValue::display)
+    });
+    if let Some(v) = landing {
+        env.insert("FIELDSEAL_LANDING_DIR".into(), v);
+    }
+    let binding_dir = |port: &str| spec.adapters.get(port).filter(|a| a.adapter == "file-dev").and_then(|a| a.config.get("dir")).map(ConfigValue::display);
+    if let Some(v) = binding_dir("SubmissionStore") {
+        env.insert("FIELDSEAL_INTAKE_SUBMISSIONS_DIR".into(), v);
+    }
+    if let Some(v) = spec.dirs.published.clone().or_else(|| binding_dir("InstrumentSource")) {
+        env.insert("FIELDSEAL_INTAKE_PUBLISHED_DIR".into(), v);
+    }
+    if let Some(v) = spec.dirs.roster_history.clone().or_else(|| binding_dir("RosterHistory")) {
+        env.insert("FIELDSEAL_INTAKE_ROSTERS_DIR".into(), v);
+    }
+    if let Some(v) = &spec.dirs.export_key {
+        env.insert("FIELDSEAL_EXPORT_KEY_DIR".into(), v.clone());
+    }
+    // The publishing policy instruments are verified under (comma-separated lists).
+    if let Some(engine) = spec.adapters.get("PolicyEngine") {
+        for (key, var) in [("allowedBuilders", "FIELDSEAL_INTAKE_ALLOWED_BUILDERS"), ("allowedSources", "FIELDSEAL_INTAKE_ALLOWED_SOURCES")] {
+            if let Some(v) = engine.config.get(key) {
+                put(env, var, v);
+            }
+        }
     }
 }
 
@@ -255,4 +267,37 @@ fn translog_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::
 /// An environment as a `.env` file: sorted `KEY=value` lines. Values never hold secrets.
 pub fn env_file(env: &BTreeMap<String, String>) -> String {
     env.iter().map(|(k, v)| format!("{k}={v}\n")).collect()
+}
+
+/// The identity variables of a service that signs people in. `memory-dev` renders
+/// `FIELDSEAL_IDENTITY=dev`, with its users only for the factory (the intake app signs in as
+/// one fixed login).
+fn identity_vars(env: &mut BTreeMap<String, String>, idp: &crate::manifest::AdapterBinding, with_users: bool) {
+    match idp.adapter.as_str() {
+        "oidc" => {
+            env.insert("FIELDSEAL_IDENTITY".into(), "oidc".into());
+            for (key, var) in [
+                ("issuer", "FIELDSEAL_OIDC_ISSUER"),
+                ("clientId", "FIELDSEAL_OIDC_CLIENT_ID"),
+                ("clientSecret", "FIELDSEAL_OIDC_CLIENT_SECRET"),
+                ("scopes", "FIELDSEAL_OIDC_SCOPES"),
+                ("rolesClaim", "FIELDSEAL_OIDC_ROLES_CLAIM"),
+                ("acrValues", "FIELDSEAL_OIDC_ACR_VALUES"),
+                ("assertedMethods", "FIELDSEAL_OIDC_ASSERTED_METHODS"),
+                ("phishingResistantAmr", "FIELDSEAL_OIDC_PHISHING_RESISTANT_AMR"),
+                ("phishingResistantAcr", "FIELDSEAL_OIDC_PHISHING_RESISTANT_ACR"),
+            ] {
+                if let Some(v) = idp.config.get(key) {
+                    put(env, var, v);
+                }
+            }
+        }
+        "memory-dev" => {
+            env.insert("FIELDSEAL_IDENTITY".into(), "dev".into());
+            if let Some(v) = idp.config.get("users").filter(|_| with_users) {
+                put(env, "FIELDSEAL_DEV_USERS", v);
+            }
+        }
+        _ => {}
+    }
 }

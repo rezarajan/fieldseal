@@ -7,6 +7,7 @@ The outermost layer: binaries that wire adapters to context use cases (compositi
 ## Subdirectories & Boundaries
 
 - cli: [./cli/README.md](./cli/README.md) - The `fieldseal` binary: reference implementation of every operation, exit codes 0–6, and `fieldseal conformance` ([./cli/src/conformance_cmd/README.md](./cli/src/conformance_cmd/README.md)).
+- intake: [./intake/README.md](./intake/README.md) - `fieldseal-intake`: the upload endpoint with start-up replay and the OIDC-protected results reader, configured from `FIELDSEAL_*` environment variables. Refuses development adapters in production.
 - factory: [./factory/README.md](./factory/README.md) - `fieldseal-factory`: the registration API and portal, configured from `FIELDSEAL_*` environment variables. Refuses development settings in production.
 - translog: [./translog/README.md](./translog/README.md) - `fieldseal-translog`: an append-only, fsynced Merkle transparency-log HTTP server.
 - web: [./web/README.md](./web/README.md) - `fieldseal-web`: a development-only showcase web app (instrument viewer, WASM evaluation, device flow, service proxies). Refuses production.

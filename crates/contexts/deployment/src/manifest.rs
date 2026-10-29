@@ -75,6 +75,30 @@ pub struct AdapterBinding {
     pub config: BTreeMap<String, ConfigValue>,
 }
 
+/// The second listener of a component, such as the intake app's staff portal.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct PortalSpec {
+    /// The address the portal listens on.
+    pub bind: Option<String>,
+    /// The base URL people reach the portal at; the sign-in callback follows it.
+    pub public_url: Option<String>,
+}
+
+/// The directories a component names that no adapter's configuration carries.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct DirsSpec {
+    /// Published instruments (`*.published`).
+    pub published: Option<String>,
+    /// Rosters the factory issued, for intake.
+    pub issued: Option<String>,
+    /// Landing files, when the `DataPlatform` binding does not carry one.
+    pub landing: Option<String>,
+    /// Roster history that intake reads.
+    pub roster_history: Option<String>,
+    /// The directory that holds the export pseudonymisation key.
+    pub export_key: Option<String>,
+}
+
 /// One service component's declaration.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct ComponentSpec {
@@ -84,6 +108,14 @@ pub struct ComponentSpec {
     pub scaling: BTreeMap<String, i128>,
     /// The address the service listens on, if not the default.
     pub bind: Option<String>,
+    /// The base URL devices bind their tokens to, if it is not the provisioned destination.
+    pub public_url: Option<String>,
+    /// The largest upload body in bytes.
+    pub max_body_bytes: Option<i128>,
+    /// The staff portal listener.
+    pub portal: PortalSpec,
+    /// Named directories.
+    pub dirs: DirsSpec,
 }
 
 /// Who manages a platform's devices (DEP-024, ADR 0031).
@@ -389,8 +421,31 @@ fn decode(cx: &mut Cx, value: &Value) -> Option<Manifest> {
                 continue;
             };
             let Some(cm) = cx.map(cv, &path) else { continue };
-            cx.only(cm, &["adapters", "scaling", "bind"], &path);
-            let mut spec_c = ComponentSpec { bind: cx.opt_text(cm, "bind", &path), ..Default::default() };
+            cx.only(cm, &["adapters", "scaling", "bind", "publicUrl", "maxBodyBytes", "portal", "dirs"], &path);
+            let mut spec_c = ComponentSpec { bind: cx.opt_text(cm, "bind", &path), public_url: cx.opt_text(cm, "publicUrl", &path), ..Default::default() };
+            match cm.get("maxBodyBytes") {
+                None => {}
+                Some(v) => match v.as_int() {
+                    Some(n) if n > 0 => spec_c.max_body_bytes = Some(n),
+                    _ => cx.err(&format!("{path}.maxBodyBytes"), "must be a positive integer"),
+                },
+            }
+            if let Some(p) = cm.get("portal").and_then(|v| cx.map(v, &format!("{path}.portal"))) {
+                let pp = format!("{path}.portal");
+                cx.only(p, &["bind", "publicUrl"], &pp);
+                spec_c.portal = PortalSpec { bind: cx.opt_text(p, "bind", &pp), public_url: cx.opt_text(p, "publicUrl", &pp) };
+            }
+            if let Some(d) = cm.get("dirs").and_then(|v| cx.map(v, &format!("{path}.dirs"))) {
+                let dp = format!("{path}.dirs");
+                cx.only(d, &["published", "issued", "landing", "rosterHistory", "exportKey"], &dp);
+                spec_c.dirs = DirsSpec {
+                    published: cx.opt_text(d, "published", &dp),
+                    issued: cx.opt_text(d, "issued", &dp),
+                    landing: cx.opt_text(d, "landing", &dp),
+                    roster_history: cx.opt_text(d, "rosterHistory", &dp),
+                    export_key: cx.opt_text(d, "exportKey", &dp),
+                };
+            }
             if let Some(ads) = cm.get("adapters").and_then(|v| cx.map(v, &format!("{path}.adapters"))) {
                 for (port, bv) in ads {
                     let bp = format!("{path}.adapters.{port}");

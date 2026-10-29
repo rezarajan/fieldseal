@@ -19,6 +19,7 @@ Implementations of the driven ports declared by [`crates/contexts`](../contexts/
 - portal: [./portal/README.md](./portal/README.md) - Portal sessions shared by the HTTP apps: session store, pending sign-ins, session cookie, CSRF check, and the framework-free HTTP request and response types.
 - rekor: [./rekor/README.md](./rekor/README.md) - Sigstore Rekor `TransparencyLog` (hashedrekord entries) over HTTP; checks every answer it gets.
 - translog: [./translog/README.md](./translog/README.md) - Self-hosted RFC 9162 Merkle log store, HTTP client and server handler (the binary is [`crates/apps/translog`](../apps/translog/README.md)).
-- upload-http: [./upload-http/README.md](./upload-http/README.md) - Runtime `UploadTransport` client, the Intake upload HTTP server, and the development `fieldseal-upload-server` binary.
+- results-http: [./results-http/README.md](./results-http/README.md) - The results reader: the intake app's signed-in, role-checked view of the results export, with downloads held in memory.
+- upload-http: [./upload-http/README.md](./upload-http/README.md) - Runtime `UploadTransport` client, the Intake upload HTTP server, and the `fieldseal-upload-practice` binary.
 - web: [./web/README.md](./web/README.md) - Development-only web platform profile: `WebDevice`, browser storage, key, clock and download ports, and the instrument workbench.
 - web-demo: [./web-demo/README.md](./web-demo/README.md) - Development-only in-memory demo authority (factory portal and upload endpoint) for the showcase web app.

@@ -6,6 +6,7 @@ The Deployment bounded context: the `kind: Deployment` manifest model and the pu
 ## Interface
 `lib.rs` exposes `application`, `contract`, `custody`, `docs`, `domain`, `manifest`, `release`, `render`, `validate`, `ports`.
 - `application`: traits `ValidateManifest::validate`, `RenderEnvironment::render`, `BuildDocumentation::build`, all implemented by the unit struct `DeploymentTools`; `ManifestFinding` (`SchemaError`, `UnknownAdapter`, `InlineSecret`, `PolicyFloorViolation`; `requirement`, `kind`, `message`); aliases `ComponentEnvironment`, `EnvironmentSet`.
+- `events`: `development_adapters_event(service, adapters)`, the one `development-adapters` start-up event that the services print (DEP-051).
 - `domain`: `Component` (`Factory`, `Intake`, `Publishing`, `Runtime`, `Cli`; `name`, `parse`), `SecretRef`, `SecretValue` (`new`, `expose`; redacted `Debug`), `StoredBuild`, `DocumentationBundle`, `EnvironmentName`.
 - `manifest`: `Manifest`, `decode_manifest` (unknown fields rejected, DEP-001), `Manifest::resolve(environment)`, `ComponentSpec`, `AdapterBinding`, `EnvironmentSpec`, `PlatformSpec`, `ProvisioningSpec`, `ArtefactRef`, `ConfigValue`, `ManagementMode`, `API_VERSION` (`fieldseal.dev/v1alpha1`).
 - `validate`: `validate_manifest`, `check_manifest`, `check_environment`, `check_policy_layers`, `is_deployment_layer`, `ports`, `key_names_secret`, `looks_like_secret`, `DEVELOPMENT_ADAPTERS`.
@@ -28,3 +29,5 @@ None in this crate. Adapters of `BuildRegistry`, `SecretStore` and `Documentatio
 
 ## Verification
 - Run: `cargo test -p fieldseal-deployment` (repo-wide: `just test`)
+
+The Intake component binds `RecordKeyUnsealer`, `SubmissionStore`, `DataPlatform`, `PolicyEngine`, `TenancyRegistry`, `IdentityProvider` (`oidc`, `memory-dev`), `RosterHistory` and `InstrumentSource` (`file-dev`); its `ComponentSpec` also carries `publicUrl`, `maxBodyBytes`, `portal.{bind,publicUrl}` and `dirs.{published,issued,landing,rosterHistory,exportKey}`, decoded strictly.

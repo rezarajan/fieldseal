@@ -1,5 +1,5 @@
-# The Fieldseal local stack: Keycloak (passkeys), the factory and portal, the practice intake
-# upload endpoint and the self-hosted transparency log. Everything is local: nothing is pushed
+# The Fieldseal local stack: Keycloak (passkeys), the factory and portal, the intake app
+# (device uploads and the results reader) and the self-hosted transparency log. Everything is local: nothing is pushed
 # or pulled except the pinned Keycloak image.
 #
 # Do not run this file directly; `just up` (tools/stack-up.sh) generates what it needs first
@@ -34,16 +34,20 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run just up}
       # Read by the realm import (the client secret placeholder in the realm JSON).
       FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
+      FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET:?run just up}
     volumes:
       - keycloak-data:/opt/keycloak/data
       - ./keycloak/fieldseal-realm.json:/opt/keycloak/data/import/fieldseal-realm.json:ro
-    # The factory and the demo join this container's network namespace (below), so these are
-    # their ports too. Published on the loopback interface only.
+    # The factory, the intake app, the demo and the web app join this container's network
+    # namespace (below), so these are their ports too. Published on the loopback interface only.
     ports:
       - "127.0.0.1:8180:8180"
       - "127.0.0.1:8080:8080"
       # The web app and its browser device (the `web` service shares this network namespace).
       - "127.0.0.1:8090:8090"
+      # The intake app: device uploads (8480) and the results reader portal (8481).
+      - "127.0.0.1:8480:8480"
+      - "127.0.0.1:8481:8481"
     healthcheck:
       test:
         - CMD-SHELL
@@ -89,32 +93,31 @@ services:
       - authority:/authority:ro
       - factory-state:/state/factory
 
-  upload:
-    # The intake upload endpoint (fieldseal-upload-server) on the stack's authority: it unseals
-    # with the online record key and accepts the devices the factory registered.
-    image: fieldseal-upload:local
+  intake:
+    # The intake app (fieldseal-intake): device uploads on :8480 and the results reader portal on
+    # :8481, on the stack's authority. It unseals with the online record key, accepts the devices
+    # the factory registered and lets signed-in readers download the results files. Shares
+    # Keycloak's network namespace like the factory, so the issuer URL a browser uses is the one
+    # the app reaches. The rendered env file carries all other configuration.
+    image: fieldseal-intake:local
     <<: *hardened
+    network_mode: "service:keycloak"
     depends_on:
+      keycloak:
+        condition: service_started
       init:
         condition: service_completed_successfully
     env_file: [.generated/intake.env]
     environment:
-      FIELDSEAL_UPLOAD_PUBLIC_URLS: http://localhost:8480,http://upload:8480
-      # What the gate needs to accept real devices: the published instrument and policy, the
-      # rosters issued with the bundles, and a submission store that survives a restart.
-      FIELDSEAL_INTAKE_PUBLISHED_DIR: /published
-      FIELDSEAL_INTAKE_ROSTERS_DIR: /published/rosters
-      FIELDSEAL_INTAKE_SUBMISSIONS_DIR: /submissions
-      FIELDSEAL_INTAKE_ALLOWED_BUILDERS: https://ci.example.org/builders/fieldseal-publish
-      FIELDSEAL_INTAKE_ALLOWED_SOURCES: https://git.example.org/authority/artefacts
+      # The secret named by FIELDSEAL_OIDC_CLIENT_SECRET_REF=intake-oidc-client-secret.
+      FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET:?run just up}
     volumes:
+      # The authority volume also holds the export key (/authority/export-key), read-only here.
       - authority:/authority:ro
       - factory-state:/factory-state:ro
       - landing:/landing
       - published:/published:ro
       - submissions:/submissions
-    ports:
-      - "127.0.0.1:8480:8480"
 
   translog:
     # The self-hosted transparency log (fieldseal-translog): append-only, Merkle, file-backed.
@@ -134,7 +137,7 @@ services:
     # The end-to-end demo and the browser passkey flow, as one-shot runs:
     #   compose --profile demo run --rm demo demo|seed|resume      (just demo|seed|resume)
     # It shares Keycloak's network namespace: localhost:8180 is Keycloak, localhost:8080 the
-    # factory; the other services are upload:8480 and translog:8080.
+    # factory, localhost:8480 the intake app; the translog is translog:8080.
     image: fieldseal-demo:local
     profiles: [demo]
     read_only: true
@@ -150,7 +153,7 @@ services:
         condition: service_completed_successfully
     environment:
       FIELDSEAL_FACTORY_URL: http://localhost:8080
-      FIELDSEAL_INTAKE_URL: http://upload:8480
+      FIELDSEAL_INTAKE_URL: http://localhost:8480
       FIELDSEAL_TRANSLOG_URL: http://translog:8080
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run just up}
       FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
@@ -183,9 +186,11 @@ services:
       # Which cohort's roster each survey's pages use, until assignments replace this map.
       FIELDSEAL_WEB_SURVEY_COHORTS: "school-meals-baseline=cohort-a,household-water-access=village-a"
       FIELDSEAL_FACTORY_URL: http://localhost:8080
-      FIELDSEAL_UPLOAD_URL: http://upload:8480
+      FIELDSEAL_UPLOAD_URL: http://localhost:8480
       FIELDSEAL_LOG_URL: http://translog:8080
-      FIELDSEAL_WEB_PUBLIC_URL: http://localhost:8090
+      # On 127.0.0.1, not localhost: the browser then keeps the web app apart from the factory and
+      # the intake portal (on localhost) and sends their cookies to localhost only.
+      FIELDSEAL_WEB_PUBLIC_URL: http://127.0.0.1:8090
     volumes:
       - authority:/authority:ro
       - published:/published

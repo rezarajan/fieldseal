@@ -43,17 +43,28 @@ spec:
         # Every new tenancy is assigned the cohorts of both sample rosters.
         TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory, cohorts: "cohort-a:1,village-a:1" } }
       scaling: { replicas: 1 }
-    # DEP-040 asks for the intake component. `just web` does not start it yet (the intake app
-    # arrives with a later phase); the manifest says where it will keep its files.
+    # `just web` runs the intake app natively. Until the development IdP exists (Phase 11) the
+    # results reader signs in as the development identity (`memory-dev`, FIELDSEAL_IDENTITY=dev),
+    # which production refuses.
     intake:
       bind: "127.0.0.1:8480"
+      publicUrl: "http://localhost:8480"
+      portal: { bind: "127.0.0.1:8481", publicUrl: "http://localhost:8481" }
+      dirs: { exportKey: deploy/local/.state/dev-web/authority/export-key }
       adapters:
+        IdentityProvider: { adapter: memory-dev, config: {} }
         RecordKeyUnsealer:
           adapter: file-dev
           config: { dir: deploy/local/.state/dev-web/authority/online, trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle }
-        SubmissionStore: { adapter: memory, config: {} }
+        SubmissionStore: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/submissions } }
+        RosterHistory: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/published/rosters } }
+        InstrumentSource: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/published } }
         DataPlatform: { adapter: landing-files, config: { dir: deploy/local/.state/dev-web/landing } }
-        PolicyEngine: { adapter: built-in, config: {} }
+        PolicyEngine:
+          adapter: built-in
+          config:
+            allowedBuilders: "https://ci.example.org/builders/fieldseal-publish"
+            allowedSources: "https://git.example.org/authority/artefacts"
         TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory } }
       scaling: { replicas: 1 }
     publishing:

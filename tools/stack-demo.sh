@@ -21,7 +21,7 @@ export FIELDSEAL_STATE_DIR=/clistate
 export FIELDSEAL_TRANSLOG_URL="${FIELDSEAL_TRANSLOG_URL:-http://translog:8080}"
 export FIELDSEAL_LOG_ORIGIN="${FIELDSEAL_LOG_ORIGIN:-fieldseal.local/log}"
 export FIELDSEAL_FACTORY_URL="${FIELDSEAL_FACTORY_URL:-http://localhost:8080}"
-INTAKE="${FIELDSEAL_INTAKE_URL:-http://upload:8480}"
+INTAKE="${FIELDSEAL_INTAKE_URL:-http://localhost:8480}"
 # The survey the device collects: the school meals survey (the stack assigns its roster's cohort).
 SURVEY="${FIELDSEAL_DEMO_SURVEY:-school-meals-baseline}"
 SCENARIO="stack-capture-$SURVEY.yaml"
@@ -75,7 +75,7 @@ publish_artefact() {
     printf '%s\n' "$address" > "$mark"
     PUBLISHED=published
   fi
-  # The upload endpoint verifies every *.published in this directory against the trust bundle.
+  # The intake app verifies every *.published in this directory against the trust bundle.
   cat "/clistate/published/$name.published" > "/published/$name.published"
   ADDRESS="$address"
   cd "$W"
@@ -210,6 +210,14 @@ summary() {
   local line; for line in "${SUMMARY[@]}"; do printf ' - %s\n' "$line"; done
 }
 
+# results_export <name>: the results export of the landing, written to /out/<name> (the stack's
+# .out directory on the host), so that tools/stack-run.sh can compare two of them byte for byte.
+results_export() {
+  rm -rf "/out/$1"
+  run intake results --landing /landing --published /published --export-key /authority/export-key/export.key \
+    --trust-bundle "$TB" --out "/out/$1" >/dev/null
+}
+
 # After `just down` and `just up`: the same export goes up again and nothing changes (INT-013).
 resume() {
   stage "Resume: the device registered before the restart uploads the same export again"
@@ -219,11 +227,13 @@ resume() {
   local st; st="$(capture registration status "$TENANCY")"
   printf '%s' "$st" | grep -q registered || { echo "the factory does not report the device as registered" >&2; exit 1; }
   local before after
+  results_export results-before
   before="$(sha256sum /landing/observations.csv | cut -d' ' -f1)"
   upload_export 2
   after="$(sha256sum /landing/observations.csv | cut -d' ' -f1)"
   [ "$before" = "$after" ] || { echo "the landing file changed on a duplicate upload ($before -> $after)" >&2; exit 1; }
   note "/landing/observations.csv is byte-identical after the duplicate upload (sha256 ${after:0:16}...)"
+  results_export results-after
   summary
   printf '\nthe device registered before the restart is still registered and uploaded the same export again, which changed nothing\n'
 }

@@ -3,7 +3,7 @@
 #                                          `toolchain` stage), reused by later builds
 #   ghcr.io/<owner>/<repo>/artifacts:<tag> dist/ as an image (FROM scratch)
 #   ghcr.io/<owner>/<repo>/<service>:<tag>  for a release (v*): the Nix-built service images
-#                                          (factory, upload, translog, web, cli), each signed
+#                                          (factory, intake, translog, web, cli), each signed
 #                                          with cosign (keyless, the workflow's identity), and
 #                                          the release's documentation bundle (DEP, #54)
 # and upload dist/ as a workflow artifact. See docs/reference/toolchain.md, "Continuous integration".

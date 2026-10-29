@@ -39,6 +39,10 @@ Every bounded context MUST be organised in four concentric layers, refining ADR 
 - Some convenience is given up: frameworks' own dependency-injection containers, annotations and models stay at the edge.
 - This refines ADR 0003; it doesn't supersede it.
 
+## Note: the intake composition root
+
+`crates/apps/intake` (`fieldseal-intake-app`, binary `fieldseal-intake`) is the intake composition root: it wires the gate, the landing, the submission store, the start-up replay and the results reader from the environment, as the factory does for registration.
+
 ## Specs
 
 [spec index](../../reference/spec/README.md) · [cli](../../reference/spec/cli.md)

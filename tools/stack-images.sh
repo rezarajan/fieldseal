@@ -2,13 +2,13 @@
 # Builds the stack's images with Nix and loads them into the engine; an image whose store path is
 # already loaded is skipped.
 #
-#   tools/stack-images.sh [name ...]      names: factory upload translog cli web demo (default: all but demo)
+#   tools/stack-images.sh [name ...]      names: factory intake translog cli web demo (default: all but demo)
 set -euo pipefail
 # shellcheck source=stack-engine.sh
 . "$(dirname "${BASH_SOURCE[0]}")/stack-engine.sh"
 command -v nix >/dev/null || die "building the images needs nix"
 STAMPS="$LOCAL/.generated/images-$ENGINE"; mkdir -p "$STAMPS"
-[ "$#" -gt 0 ] || set -- factory upload translog cli web
+[ "$#" -gt 0 ] || set -- factory intake translog cli web
 for name in "$@"; do
   tag="fieldseal-$name"
   say "== building $name-image with nix"

@@ -29,3 +29,7 @@ Records must reach the authority by any route, with honest feedback about what i
 ## Specs
 
 [delivery](../../reference/spec/delivery.md) · [trust](../../reference/spec/trust.md) · [wire-formats](../../reference/spec/wire-formats.md)
+
+## Note: the server binary
+
+The upload endpoint is served by the intake app (`fieldseal-intake`, `crates/apps/intake`). The practice endpoint is the separate binary `fieldseal-upload-practice`; the former `fieldseal-upload-server` is gone.

@@ -7,8 +7,8 @@ license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "fieldseal-upload-server"
-path = "src/bin/server.rs"
+name = "fieldseal-upload-practice"
+path = "src/bin/practice.rs"
 
 [dependencies]
 fieldseal-kernel.workspace = true
@@ -18,8 +18,6 @@ fieldseal-collection.workspace = true
 fieldseal-adapters-memory.workspace = true
 fieldseal-policy.workspace = true
 fieldseal-trust.workspace = true
-fieldseal-adapters-file.workspace = true
-fieldseal-adapters-landing-files.workspace = true
 getrandom = "0.2"
 # The same small synchronous HTTP/1.1 server and blocking client the factory adapter uses.
 # TLS is terminated in front of the endpoint; the client speaks https through rustls.

@@ -10,7 +10,7 @@
 #               Chromium with a virtual authenticator registers a passkey, a device registers,
 #               captures, uploads and verifies the receipts
 #
-# Checks: the log, the upload endpoint and the factory answer their probes; Keycloak serves
+# Checks: the log, the intake app (both listeners) and the factory answer their probes; Keycloak serves
 # OIDC discovery for the realm with the endpoints and the issuer the factory expects; the
 # realm requires the passkey flow; the factory's sign-in redirects to Keycloak with PKCE and
 # asks for acr=phr; Keycloak shows its username form.
@@ -45,7 +45,9 @@ ISSUER="http://localhost:8180/realms/fieldseal"
 echo "== probes"
 check "factory /healthz" curl -fsS --max-time 5 http://localhost:8080/healthz
 check "factory /readyz" curl -fsS --max-time 5 http://localhost:8080/readyz
-check "upload /healthz" curl -fsS --max-time 5 http://localhost:8480/healthz
+check "intake /healthz" curl -fsS --max-time 5 http://localhost:8480/healthz
+check "intake portal GET /" curl -fsS --max-time 5 http://localhost:8481/
+yes_no "intake portal GET /results without a session redirects (302)" test "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8481/results)" = 302
 check "transparency log /checkpoint" curl -fsS --max-time 5 http://localhost:9001/checkpoint
 check "Keycloak ready" curl -fsS --max-time 5 "$ISSUER/.well-known/openid-configuration"
 

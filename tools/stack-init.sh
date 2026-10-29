@@ -8,6 +8,17 @@ set -euo pipefail
 
 A="${FIELDSEAL_AUTHORITY_DIR:-/authority}"
 LOG_ORIGIN="${FIELDSEAL_LOG_ORIGIN:-fieldseal.local/log}"
+
+# The export pseudonymisation key (Technical Plan 6): 32 random bytes, mode 0600, made here and
+# nowhere else (the intake app and the CLI only read it). An existing file is left unchanged, and
+# this step comes before the early exit so that an authority made before this key existed gets one.
+EK="$A/export-key"
+if [ ! -f "$EK/export.key" ]; then
+  mkdir -p "$EK"
+  ( umask 077; head -c 32 /dev/urandom > "$EK/export.key" )
+  chmod 600 "$EK/export.key"
+  echo "export key: $EK/export.key"
+fi
 [ ! -f "$A/.initialised" ] || { echo "authority already initialised"; exit 0; }
 
 FS="${FIELDSEAL_BIN:-fieldseal}"
@@ -16,7 +27,7 @@ yesterday="$(date -u -d 'yesterday' +%F)"
 later="$(date -u -d '+700 days' +%F)"
 echo "== initialising the stack's authority (dates relative to $today)"
 # A half-finished earlier run leaves nothing behind.
-find "$A" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+find "$A" -mindepth 1 -maxdepth 1 ! -name export-key -exec rm -rf {} +
 cd "$A"
 
 cat > "$A/ceremony.yaml" <<YAML

@@ -3,7 +3,7 @@
 #
 #   tools/release-docs.sh <tag> <out-dir>
 #
-# The builds are the Nix-built service images (factory, intake = upload, publishing = translog).
+# The builds are the Nix-built service images (factory, intake, publishing = translog).
 # The release is signed with the key in $FIELDSEAL_RELEASE_SIGNING_KEY_FILE (CI: a secret);
 # without one it is a practice release for development only, which `deployment release` refuses
 # for production (DEP-023). Writes <out-dir>/release.cbor, the documentation bundle and a summary.
@@ -18,7 +18,7 @@ image() { nix build "path:$ROOT#$1-image" --no-link --print-out-paths; }
 address="$("$FS" deployment validate "$manifest" --json | jq -r .address)"
 if [ -n "${FIELDSEAL_RELEASE_SIGNING_KEY_FILE:-}" ]; then sign=(--signing-key-file "$FIELDSEAL_RELEASE_SIGNING_KEY_FILE"); else sign=(--practice); fi
 release="$("$FS" deployment release "$manifest" --publication "$address" \
-  --build "factory=$(image factory)" --build "intake=$(image upload)" --build "publishing=$(image translog)" \
+  --build "factory=$(image factory)" --build "intake=$(image intake)" --build "publishing=$(image translog)" \
   "${sign[@]}" --environment "$environment" --out "$out/release.cbor" --json | jq -r 'select(.release and .ok) | .release')"
 [ -n "$release" ] || { echo "release-docs: no release address" >&2; exit 1; }
 "$FS" docs build "$manifest" --environment "$environment" --release "$release" -o "$out/docs" \

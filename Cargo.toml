@@ -37,6 +37,7 @@ fieldseal-adapters-html = { path = "crates/adapters/html" }
 fieldseal-adapters-web = { path = "crates/adapters/web" }
 fieldseal-adapters-portal = { path = "crates/adapters/portal" }
 fieldseal-adapters-landing-files = { path = "crates/adapters/landing-files" }
+fieldseal-adapters-results-http = { path = "crates/adapters/results-http" }
 fieldseal-adapters-file = { path = "crates/adapters/file" }
 fieldseal-adapters-upload-http = { path = "crates/adapters/upload-http" }
 # Format core (issue #42): pure crates only, no default features that reach the OS.

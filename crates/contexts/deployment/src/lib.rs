@@ -11,6 +11,7 @@ pub mod contract;
 pub mod custody;
 pub mod docs;
 pub mod domain;
+pub mod events;
 pub mod manifest;
 pub mod release;
 pub mod render;

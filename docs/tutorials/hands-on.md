@@ -32,7 +32,7 @@ The first run builds the images with Nix, which takes a few minutes; later runs 
 - **Keycloak** on `:8180`;
 - **the factory and its portal** on `:8080`;
 - **the transparency log** on `:9001`;
-- **the intake upload endpoint** on `:8480`.
+- **the intake app** on `:8480` (device uploads) and `:8481` (the results reader).
 
 Before they start, a one-shot `init` service creates the stack's one authority. That is the root, the purpose keys, the log's key, and the trust bundle that pins the log.
 
@@ -171,7 +171,7 @@ The registered device opens its bundle and captures the school meals survey for 
 just upload   # step
 ```
 
-The export goes to the intake upload endpoint. The flow is:
+The export goes to the intake app. The flow is:
 1. The receiver challenge, then the upload with a proof-of-possession token signed by the device's key.
 2. One signed receipt for each accepted part.
 3. Each receipt is verified against the trust bundle before it is stored.
@@ -183,6 +183,13 @@ just intake   # step
 ```
 
 This shows the data contract, and the long-format observation rows that the gate landed for this device's tenancy. It also shows the loss ledger (`losses.csv`) and the field-check findings (`findings.csv`). The tool computes nothing from the answers; that is the data platform's job.
+
+To read the results as files, open the results reader at <http://localhost:8481>, sign in as `product-owner` with the passkey and download the results files. The same export is available from the command line, against the stack's volumes:
+
+```sh
+fieldseal intake results --landing <landing dir> --published <published dir> \
+  --export-key <export.key> --trust-bundle <trust-bundle.bundle> --out <out dir>
+```
 
 ## Break it on purpose
 

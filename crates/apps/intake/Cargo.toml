@@ -1,0 +1,46 @@
+[package]
+name = "fieldseal-intake-app"
+description = "The Fieldseal intake app: the upload endpoint, start-up replay and the results reader, wired from the environment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "fieldseal_intake_app"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fieldseal-intake"
+path = "src/main.rs"
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-delivery.workspace = true
+fieldseal-collection.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-publishing.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-deployment.workspace = true
+fieldseal-adapters-file.workspace = true
+fieldseal-adapters-landing-files.workspace = true
+fieldseal-adapters-upload-http.workspace = true
+fieldseal-adapters-portal.workspace = true
+fieldseal-adapters-results-http.workspace = true
+fieldseal-adapters-memory.workspace = true
+# `fieldseal-adapters-oidc` is not a workspace dependency (as in the factory's manifest).
+fieldseal-adapters-oidc = { path = "../../adapters/oidc" }
+getrandom = "0.2"
+serde_json = "1"
+tiny_http = "0.12"
+
+[dev-dependencies]
+ureq = { version = "3.5", default-features = false }
+fieldseal-adapters-authoring.workspace = true
+fieldseal-distribution.workspace = true
+
+[lints]
+workspace = true

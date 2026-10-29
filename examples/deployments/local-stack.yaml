@@ -60,16 +60,39 @@ spec:
         TenancyRegistry: { adapter: file-dev, config: { dir: /state/factory, cohorts: "cohort-a:1,village-a:1" } }
       scaling: { replicas: 1 }
     intake:
+      # Both listeners are on all interfaces: the service shares Keycloak's network namespace.
       bind: "0.0.0.0:8480"
+      publicUrl: "http://localhost:8480"
+      portal: { bind: "0.0.0.0:8481", publicUrl: "http://localhost:8481" }
+      dirs: { exportKey: /authority/export-key }
       adapters:
+        # The results reader signs in at the same Keycloak as the factory portal.
+        IdentityProvider:
+          adapter: oidc
+          config:
+            issuer: "http://localhost:8180/realms/fieldseal"
+            clientId: fieldseal-intake
+            clientSecret: { secretRef: intake-oidc-client-secret }
+            acrValues: phr
+            rolesClaim: roles
         # The stack's authority (the same keys and bundle as the factory) and the factory's
         # tenancies, read from its state directory (mounted read-only).
         RecordKeyUnsealer:
           adapter: file-dev
           config: { dir: /authority/online, trustBundle: /authority/trust-bundle.bundle }
-        SubmissionStore: { adapter: memory, config: {} }
+        # Accepted submissions are kept, and run through the gate again at start-up (INT-013a).
+        SubmissionStore: { adapter: file-dev, config: { dir: /submissions } }
+        # Phase 13 moves the roster history to /issued.
+        RosterHistory: { adapter: file-dev, config: { dir: /published/rosters } }
+        InstrumentSource: { adapter: file-dev, config: { dir: /published } }
         DataPlatform: { adapter: landing-files, config: { dir: /landing } }
-        PolicyEngine: { adapter: built-in, config: {} }
+        # The publishing policy that instruments are verified under (Technical Plan 8):
+        # comma-separated lists.
+        PolicyEngine:
+          adapter: built-in
+          config:
+            allowedBuilders: "https://ci.example.org/builders/fieldseal-publish"
+            allowedSources: "https://git.example.org/authority/artefacts"
         TenancyRegistry: { adapter: file-dev, config: { dir: /factory-state } }
       scaling: { replicas: 1 }
     publishing:

@@ -116,11 +116,11 @@ pub fn entries() -> Vec<Entry> {
             });
             let _ = std::fs::remove_dir_all(dir);
         }),
-        external!("intake", "TenancyRegistry", "tenancy_registry_contract", "FileTenancyRegistry", ["INT-006"], "cargo test -p fieldseal-adapters-file del_071"),
-        external!("intake", "DataPlatform", "data_platform_contract", "EventPlatform", ["INT-011"], "cargo test -p fieldseal-adapters-upload-http --bin fieldseal-upload-server int_011"),
+        external!("intake", "TenancyRegistry", "tenancy_registry_contract", "FileTenancyRegistry", ["INT-006"], "cargo test -p fieldseal-adapters-file --test intake_ports int_006"),
+        external!("intake", "DataPlatform", "data_platform_contract", "EventPlatform", ["INT-011"], "cargo test -p fieldseal-intake-app --test event_platform int_011"),
         external!("intake", "SubmissionStore", "submission_store_contract", "FileSubmissionStore", ["INT-013"], "cargo test -p fieldseal-adapters-file int_013"),
-        external!("intake", "RosterHistory", "roster_history_contract", "FileRosterHistory", ["INT-040"], "cargo test -p fieldseal-adapters-file int_040"),
-        external!("intake", "InstrumentSource", "instrument_source_contract", "PublishedInstruments", ["INT-070"], "cargo test -p fieldseal-adapters-file int_070"),
+        external!("intake", "RosterHistory", "roster_history_contract", "FileRosterHistory", ["INT-040"], "cargo test -p fieldseal-adapters-file --test intake_ports int_040"),
+        external!("intake", "InstrumentSource", "instrument_source_contract", "PublishedInstruments", ["INT-070"], "cargo test -p fieldseal-adapters-file --test intake_ports int_070"),
         external!("distribution", "RosterSource", "roster_source_contract", "FileRosterSource", ["DIS-080"], "cargo test -p fieldseal-adapters-file --test contracts"),
         external!("distribution", "BundleStore", "bundle_store_contract", "FileBundleStore", ["DIS-015", "DIS-023"], "cargo test -p fieldseal-adapters-file --test contracts"),
         external!("distribution", "RuntimeProfiles", "runtime_profiles_contract", "FileRuntimeProfiles", ["DIS-012"], "cargo test -p fieldseal-adapters-file --test contracts"),

@@ -865,6 +865,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "fieldseal-adapters-results-http"
+version = "0.1.0"
+dependencies = [
+ "fieldseal-adapters-authoring",
+ "fieldseal-adapters-landing-files",
+ "fieldseal-adapters-memory",
+ "fieldseal-adapters-portal",
+ "fieldseal-instrument",
+ "fieldseal-intake",
+ "fieldseal-kernel",
+ "fieldseal-policy",
+ "fieldseal-publishing",
+ "fieldseal-registration",
+ "fieldseal-trust",
+ "serde_json",
+ "tiny_http",
+]
+
+[[package]]
 name = "fieldseal-adapters-translog"
 version = "0.1.0"
 dependencies = [
@@ -880,8 +899,6 @@ name = "fieldseal-adapters-upload-http"
 version = "0.1.0"
 dependencies = [
  "fieldseal-adapters-authoring",
- "fieldseal-adapters-file",
- "fieldseal-adapters-landing-files",
  "fieldseal-adapters-memory",
  "fieldseal-collection",
  "fieldseal-delivery",
@@ -1093,6 +1110,35 @@ dependencies = [
  "serde_json",
  "thiserror",
  "zeroize",
+]
+
+[[package]]
+name = "fieldseal-intake-app"
+version = "0.1.0"
+dependencies = [
+ "fieldseal-adapters-authoring",
+ "fieldseal-adapters-file",
+ "fieldseal-adapters-landing-files",
+ "fieldseal-adapters-memory",
+ "fieldseal-adapters-oidc",
+ "fieldseal-adapters-portal",
+ "fieldseal-adapters-results-http",
+ "fieldseal-adapters-upload-http",
+ "fieldseal-collection",
+ "fieldseal-delivery",
+ "fieldseal-deployment",
+ "fieldseal-distribution",
+ "fieldseal-instrument",
+ "fieldseal-intake",
+ "fieldseal-kernel",
+ "fieldseal-policy",
+ "fieldseal-publishing",
+ "fieldseal-registration",
+ "fieldseal-trust",
+ "getrandom 0.2.17",
+ "serde_json",
+ "tiny_http",
+ "ureq",
 ]
 
 [[package]]

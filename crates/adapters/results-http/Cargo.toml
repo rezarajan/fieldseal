@@ -1,0 +1,27 @@
+[package]
+name = "fieldseal-adapters-results-http"
+description = "The results reader: the intake app's staff portal, a signed-in, role-checked view of the results export with downloads"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-trust.workspace = true
+fieldseal-intake.workspace = true
+fieldseal-registration.workspace = true
+fieldseal-policy.workspace = true
+fieldseal-adapters-portal.workspace = true
+fieldseal-adapters-landing-files.workspace = true
+serde_json = "1"
+tiny_http = "0.12"
+
+[dev-dependencies]
+fieldseal-publishing.workspace = true
+fieldseal-adapters-memory.workspace = true
+fieldseal-instrument.workspace = true
+fieldseal-adapters-authoring.workspace = true
+
+[lints]
+workspace = true

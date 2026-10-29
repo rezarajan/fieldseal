@@ -39,7 +39,7 @@ Some rules help when you read the files:
 - `value_number` is exact text, never a floating-point number. Cast it with the precision you want.
 - `tick_lower_bound` and `received_at` are integers in milliseconds since the Unix epoch on the authority clock, with no time zone (UTC).
 - A free-text answer keeps its row in the results table with every value column empty. Its text is in the free-text files.
-- A CSV text cell that starts with `=`, `+`, `-` or `@` has a `'` in front, so a spreadsheet does not run it as a formula. Numbers never have one. A program that reads the CSV should strip one leading `'` from a text cell that starts with `'=`, `'+`, `'-` or `'@`. JSON Lines is never changed.
+- A CSV text cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return has a `'` in front, so a spreadsheet does not run it as a formula. Numbers never have one. A program that reads the CSV should strip one leading `'` from a text cell that starts with `'=`, `'+`, `'-`, `'@`, a `'` and a tab, or a `'` and a carriage return. JSON Lines is never changed.
 
 ## Convert to Parquet
 

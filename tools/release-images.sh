@@ -14,7 +14,7 @@ engine="${FIELDSEAL_CONTAINER_ENGINE:-docker}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "$ROOT/release-docs"
 : > "$ROOT/release-docs/images.txt"
-for svc in factory upload translog web cli; do
+for svc in factory intake translog web cli; do
   out="$(nix build "path:$ROOT#$svc-image" --no-link --print-out-paths)"
   "$engine" load < "$out" >/dev/null
   ref="$prefix/$svc:$tag"

@@ -177,7 +177,7 @@
               }
             );
           factoryBin = serviceBin "fieldseal-factory" "fieldseal-factory";
-          uploadBin = serviceBin "fieldseal-upload-server" "fieldseal-adapters-upload-http";
+          intakeBin = serviceBin "fieldseal-intake" "fieldseal-intake-app";
           translogBin = serviceBin "fieldseal-translog" "fieldseal-translog";
           webServerBin = serviceBin "fieldseal-web" "fieldseal-web";
 
@@ -219,7 +219,7 @@
           # (no shell, no package manager), configured only by its environment. Linux only:
           # `docker load < $(nix build .#factory-image --print-out-paths)`. Nothing here is pushed anywhere.
           serviceImage =
-            name: bin: port: mounts:
+            name: bin: ports: mounts:
             pkgs.dockerTools.buildLayeredImage {
               inherit name;
               tag = "local";
@@ -237,7 +237,7 @@
               '';
               config = {
                 Entrypoint = [ "${bin}/bin/${bin.pname}" ];
-                ExposedPorts."${toString port}/tcp" = { };
+                ExposedPorts = pkgs.lib.genAttrs (map (port: "${toString port}/tcp") ports) (_: { });
                 Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
                 User = "10001:10001";
               };
@@ -320,15 +320,15 @@
             };
           images = pkgs.lib.optionalAttrs isLinux {
             web-image = webImage;
-            factory-image = serviceImage "fieldseal-factory" factoryBin 8080 [ "/state/factory" ];
-            upload-image =
-              serviceImage "fieldseal-upload" uploadBin 8480
+            factory-image = serviceImage "fieldseal-factory" factoryBin [ 8080 ] [ "/state/factory" ];
+            intake-image =
+              serviceImage "fieldseal-intake" intakeBin [ 8480 8481 ]
                 [
                   "/landing"
                   "/submissions"
                   "/published"
                 ];
-            translog-image = serviceImage "fieldseal-translog" translogBin 8080 [ "/data/log" ];
+            translog-image = serviceImage "fieldseal-translog" translogBin [ 8080 ] [ "/data/log" ];
             cli-image = stackToolImage "fieldseal-cli" [ ] [ ] [ "/opt/fieldseal/tools/stack-init.sh" ];
             demo-image =
               stackToolImage "fieldseal-demo"
@@ -456,7 +456,7 @@
             fieldsealCli
             images
             factoryBin
-            uploadBin
+            intakeBin
             translogBin
             webApp
             wasmBundle
@@ -513,7 +513,7 @@
           fieldseal = e.fieldsealCli;
           default = e.fieldsealCli;
           fieldseal-factory = e.factoryBin;
-          fieldseal-upload-server = e.uploadBin;
+          fieldseal-intake = e.intakeBin;
           fieldseal-translog = e.translogBin;
           fieldseal-web = e.webApp;
           fieldseal-wasm = e.wasmBundle;

@@ -264,10 +264,20 @@ fn lines(rows: impl Iterator<Item = String>, header: Option<&str>) -> Vec<u8> {
     out.into_bytes()
 }
 
-/// Writes the export into `out_dir` (created if absent): `results.*` and `free_text.*` in the
-/// chosen formats, `codebook.csv`, `contracts/<fingerprint hex>.json` and `manifest.json`.
-/// Every file is written with the atomic-write helper, and the manifest last.
-pub fn write_export(table: &ExportTable, options: &ExportOptions, out_dir: &Path) -> Result<ExportResult, ExportError> {
+/// An export built in memory: every file's bytes, as `write_export` would write them.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RenderedExport {
+    /// Each file by its path under the output directory, ascending by name, with
+    /// `manifest.json` last.
+    pub files: Vec<(String, Vec<u8>)>,
+    /// What the export holds, as `write_export` returns it.
+    pub result: ExportResult,
+}
+
+/// Builds the export in memory: `results.*` and `free_text.*` in the chosen formats,
+/// `codebook.csv`, `contracts/<fingerprint hex>.json` and `manifest.json`. Nothing is written.
+/// `write_export` writes exactly these bytes, so the CLI and the results reader agree.
+pub fn render_export(table: &ExportTable, options: &ExportOptions) -> Result<RenderedExport, ExportError> {
     let mut files: Vec<(String, Vec<u8>, Option<u64>)> = Vec::new();
     let (n, f) = (table.rows.len() as u64, table.free_text.len() as u64);
     if options.formats.contains(&Format::Jsonl) {
@@ -285,16 +295,23 @@ pub fn write_export(table: &ExportTable, options: &ExportOptions, out_dir: &Path
         files.push((format!("contracts/{}.json", lower_hex(fp.as_bytes())), writers::json(&contract.to_value()).into_bytes(), None));
     }
     files.sort_by(|a, b| a.0.cmp(&b.0));
+    let exported: Vec<ExportedFile> =
+        files.iter().map(|(name, bytes, rows)| ExportedFile { name: name.clone(), sha256: lower_hex(sha256(bytes).as_bytes()), bytes: bytes.len() as u64, rows: *rows }).collect();
+    let manifest = manifest::manifest(table, options.subject.key_id(), &exported)?;
+    let result = ExportResult { files: exported, manifest_sha256: lower_hex(sha256(&manifest).as_bytes()) };
+    let mut out: Vec<(String, Vec<u8>)> = files.into_iter().map(|(name, bytes, _)| (name, bytes)).collect();
+    out.push(("manifest.json".into(), manifest));
+    Ok(RenderedExport { files: out, result })
+}
 
+/// Writes the export into `out_dir` (created if absent): the files of [`render_export`].
+/// Every file is written with the atomic-write helper, and the manifest last.
+pub fn write_export(table: &ExportTable, options: &ExportOptions, out_dir: &Path) -> Result<ExportResult, ExportError> {
+    let rendered = render_export(table, options)?;
     std::fs::create_dir_all(out_dir.join("contracts")).map_err(|e| io(out_dir, e))?;
-    let mut exported = Vec::new();
-    for (name, bytes, rows) in &files {
+    for (name, bytes) in &rendered.files {
         let path = out_dir.join(name);
         write_atomic(&path, bytes).map_err(|e| io(&path, e))?;
-        exported.push(ExportedFile { name: name.clone(), sha256: lower_hex(sha256(bytes).as_bytes()), bytes: bytes.len() as u64, rows: *rows });
     }
-    let manifest = manifest::manifest(table, options.subject.key_id(), &exported)?;
-    let path = out_dir.join("manifest.json");
-    write_atomic(&path, &manifest).map_err(|e| io(&path, e))?;
-    Ok(ExportResult { files: exported, manifest_sha256: lower_hex(sha256(&manifest).as_bytes()) })
+    Ok(rendered.result)
 }

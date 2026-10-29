@@ -28,7 +28,8 @@
   "roles": {
     "realm": [
       { "name": "collector", "description": "May request registration tokens for their own devices" },
-      { "name": "operator", "description": "May also issue batch tokens" }
+      { "name": "operator", "description": "May also issue batch tokens" },
+      { "name": "results-reader", "description": "May sign in to the intake app's results reader" }
     ]
   },
   "authenticationFlows": [
@@ -98,6 +99,42 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "fieldseal-intake",
+      "name": "Fieldseal intake results reader",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8481/sign-in/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8481/",
+        "acr.loa.map": "{\"phr\":\"2\"}"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles as roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -108,7 +145,7 @@
       "email": "product-owner@fieldseal.test",
       "firstName": "Product",
       "lastName": "Owner",
-      "realmRoles": ["collector", "operator"],
+      "realmRoles": ["collector", "operator", "results-reader"],
       "requiredActions": ["webauthn-register-passwordless"]
     }
   ]

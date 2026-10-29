@@ -161,7 +161,7 @@ pub fn csv_rows(text: &str, guarded: &[&str]) -> Vec<BTreeMap<String, String>> {
                 .iter()
                 .zip(r)
                 .map(|(h, v)| {
-                    let strip = guarded.contains(&h.as_str()) && v.len() > 1 && v.starts_with('\'') && v[1..].starts_with(['=', '+', '-', '@']);
+                    let strip = guarded.contains(&h.as_str()) && v.len() > 1 && v.starts_with('\'') && v[1..].starts_with(['=', '+', '-', '@', '\t', '\r']);
                     (h.clone(), if strip { v[1..].to_owned() } else { v.clone() })
                 })
                 .collect()

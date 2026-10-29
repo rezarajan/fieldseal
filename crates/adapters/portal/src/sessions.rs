@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
+use fieldseal_kernel::digest::sha256;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::domain::AuthenticatedPerson;
 use fieldseal_registration::domain::wire::base64url_encode;
@@ -37,6 +38,20 @@ pub struct SessionView {
     pub csrf: String,
 }
 
+/// How long a started sign-in may wait for its callback.
+const PENDING_TTL_MS: u64 = 10 * 60 * 1000;
+
+/// How many sign-ins may wait at once; past it the oldest is dropped.
+const PENDING_CAP: usize = 1000;
+
+/// What the callback of one started sign-in is checked against.
+struct Pending {
+    sign_in: PendingSignIn,
+    expires_at: AuthorityTime,
+    /// Start order, to find the oldest.
+    seq: u64,
+}
+
 struct Session {
     person: AuthenticatedPerson,
     csrf: String,
@@ -49,7 +64,8 @@ pub struct PortalSessions {
     secure: bool,
     ttl_ms: u64,
     sessions: Mutex<BTreeMap<String, Session>>,
-    pending: Mutex<BTreeMap<String, PendingSignIn>>,
+    pending: Mutex<BTreeMap<String, Pending>>,
+    next_seq: Mutex<u64>,
 }
 
 impl PortalSessions {
@@ -57,30 +73,57 @@ impl PortalSessions {
     /// (`Secure` when `secure`). Two portals on one host use two names so their cookies do
     /// not mix.
     pub fn new(cookie_name: &str, secure: bool, ttl_ms: u64) -> Self {
-        Self { cookie_name: cookie_name.to_owned(), secure, ttl_ms, sessions: Mutex::default(), pending: Mutex::default() }
+        Self { cookie_name: cookie_name.to_owned(), secure, ttl_ms, sessions: Mutex::default(), pending: Mutex::default(), next_seq: Mutex::default() }
     }
 
-    /// Starts a sign-in with `provider` and returns the URL to send the person to. The
-    /// pending sign-in is kept by its state until the callback arrives.
-    pub fn begin(&self, provider: &dyn IdentityProvider, callback_url: &str) -> Result<String, PortalError> {
+    /// Starts a sign-in with `provider`. Returns the URL to send the person to and the
+    /// `Set-Cookie` value of the pre-auth cookie, which binds the sign-in to this browser:
+    /// it holds a hash of the state, and [`finish`](Self::finish) needs it back. The pending
+    /// sign-in is kept by its state for ten minutes, and at most 1000 are kept (the oldest
+    /// is dropped first).
+    pub fn begin(&self, provider: &dyn IdentityProvider, callback_url: &str, now: AuthorityTime) -> Result<(String, String), PortalError> {
         let start = provider.start_sign_in(callback_url).map_err(|e| PortalError::Start(e.to_string()))?;
-        self.pending.lock().expect("lock").insert(start.pending.state.clone(), start.pending);
-        Ok(start.redirect_to)
+        let cookie = self.pre_auth_cookie(&state_hash(&start.pending.state), PENDING_TTL_MS / 1000);
+        let seq = {
+            let mut n = self.next_seq.lock().expect("lock");
+            *n += 1;
+            *n
+        };
+        let mut pending = self.pending.lock().expect("lock");
+        pending.retain(|_, p| p.expires_at >= now);
+        while pending.len() >= PENDING_CAP {
+            let Some(oldest) = pending.iter().min_by_key(|(_, p)| p.seq).map(|(k, _)| k.clone()) else { break };
+            pending.remove(&oldest);
+        }
+        let expires_at = now.checked_add(PENDING_TTL_MS).unwrap_or(AuthorityTime(u64::MAX));
+        pending.insert(start.pending.state.clone(), Pending { sign_in: start.pending, expires_at, seq });
+        Ok((start.redirect_to, cookie))
     }
 
-    /// Finishes a sign-in from the callback's whole query. A pending sign-in is usable once.
-    /// Returns the new session and the `Set-Cookie` value that carries it.
+    /// Finishes a sign-in from the callback's whole query and the request's `Cookie` header,
+    /// which must carry the pre-auth cookie that [`begin`](Self::begin) set for this state.
+    /// A pending sign-in is usable once and only within ten minutes. A callback that carries
+    /// `error` is refused with a fixed message, never the provider's text. Returns the new
+    /// session and the `Set-Cookie` value that carries it; the caller also sends
+    /// [`clear_pre_auth_cookie`](Self::clear_pre_auth_cookie).
     pub fn finish(
         &self,
         provider: &dyn IdentityProvider,
         query: &BTreeMap<String, String>,
+        cookie_header: Option<&str>,
         now: AuthorityTime,
     ) -> Result<(SessionId, String), PortalError> {
-        let pending = query.get("state").and_then(|s| self.pending.lock().expect("lock").remove(s));
-        let person = match pending {
-            Some(p) => provider.finish_sign_in(&p, query).map_err(|e| PortalError::Refused(e.to_string()))?,
-            None => return Err(PortalError::Refused("unknown or expired sign-in".to_owned())),
-        };
+        let unknown = || PortalError::Refused("unknown or expired sign-in".to_owned());
+        let state = query.get("state").ok_or_else(unknown)?;
+        let bound = cookie_header.and_then(|h| cookie_value(h, &self.pre_auth_name())).is_some_and(|c| c == state_hash(state));
+        if !bound {
+            return Err(PortalError::Refused("this sign-in was not started in this browser".to_owned()));
+        }
+        let pending = self.pending.lock().expect("lock").remove(state).filter(|p| p.expires_at >= now).ok_or_else(unknown)?;
+        if query.contains_key("error") {
+            return Err(PortalError::Refused("the identity provider did not complete the sign-in".to_owned()));
+        }
+        let person = provider.finish_sign_in(&pending.sign_in, query).map_err(|e| PortalError::Refused(e.to_string()))?;
         let id = random_token();
         let expires_at = now.checked_add(self.ttl_ms).unwrap_or(AuthorityTime(u64::MAX));
         self.sessions.lock().expect("lock").insert(id.clone(), Session { person, csrf: random_token(), expires_at });
@@ -111,10 +154,30 @@ impl PortalSessions {
         self.cookie("", 0)
     }
 
+    /// The `Set-Cookie` value that removes the pre-auth cookie once a sign-in has finished.
+    pub fn clear_pre_auth_cookie(&self) -> String {
+        self.pre_auth_cookie("", 0)
+    }
+
+    fn pre_auth_name(&self) -> String {
+        format!("{}_pre", self.cookie_name)
+    }
+
+    /// The pre-auth cookie: only the sign-in routes see it.
+    fn pre_auth_cookie(&self, value: &str, max_age_s: u64) -> String {
+        let secure = if self.secure { "; Secure" } else { "" };
+        format!("{}={value}; Path=/sign-in; HttpOnly; SameSite=Lax; Max-Age={max_age_s}{secure}", self.pre_auth_name())
+    }
+
     fn cookie(&self, value: &str, max_age_s: u64) -> String {
         let secure = if self.secure { "; Secure" } else { "" };
         format!("{}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age_s}{secure}", self.cookie_name)
     }
+}
+
+/// The hash of a state, as the pre-auth cookie holds it.
+fn state_hash(state: &str) -> String {
+    base64url_encode(sha256(state.as_bytes()).as_bytes())
 }
 
 /// 32 random bytes from the operating system, base64url-encoded.

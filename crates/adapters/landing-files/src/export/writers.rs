@@ -129,9 +129,10 @@ pub fn long_row(r: &LandedObservation) -> String {
 }
 
 /// The CSV formula guard (INT-085): text that a spreadsheet would run as a formula gets a `'`
-/// in front.
+/// in front. That is text that starts with `=`, `+`, `-`, `@`, a tab or a carriage return (the
+/// last two are read by some spreadsheets as the start of a formula after the control character).
 pub fn guard(text: &str) -> String {
-    if text.starts_with(['=', '+', '-', '@']) { format!("'{text}") } else { text.to_owned() }
+    if text.starts_with(['=', '+', '-', '@', '\t', '\r']) { format!("'{text}") } else { text.to_owned() }
 }
 
 /// One cell of a results row, before it is written as JSON or CSV.

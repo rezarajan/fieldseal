@@ -320,15 +320,15 @@ impl<'a> FactoryHttp<'a> {
 
     fn sign_in(&self) -> Response {
         let callback = format!("{}/sign-in/callback", self.config.public_url.trim_end_matches('/'));
-        match self.sessions.begin(self.idp, &callback) {
-            Ok(redirect_to) => Response::redirect(&redirect_to),
+        match self.sessions.begin(self.idp, &callback, self.factory.now()) {
+            Ok((redirect_to, pre_auth)) => Response::redirect(&redirect_to).with("Set-Cookie", pre_auth),
             Err(e) => html(503, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &e.to_string())])), None)),
         }
     }
 
     fn sign_in_callback(&self, req: &Request) -> Response {
-        match self.sessions.finish(self.idp, &req.query, self.factory.now()) {
-            Ok((_, set_cookie)) => Response::redirect("/").with("Set-Cookie", set_cookie),
+        match self.sessions.finish(self.idp, &req.query, req.header("cookie"), self.factory.now()) {
+            Ok((_, set_cookie)) => Response::redirect("/").with("Set-Cookie", set_cookie).with("Set-Cookie", self.sessions.clear_pre_auth_cookie()),
             Err(e) => html(401, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &e.to_string())])), None)),
         }
     }

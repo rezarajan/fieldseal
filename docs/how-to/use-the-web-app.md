@@ -51,7 +51,7 @@ It uses ports 8080, 8090 and 9001, the ports the compose stack uses, so run one 
 
 ## Attach it to the compose stack
 
-The compose stack ([run-the-local-stack.md](./run-the-local-stack.md)) runs its own factory (`:8080`), upload endpoint (`:8480`) and log (`:9001`). Point the app at them instead of the demo authority:
+The compose stack ([run-the-local-stack.md](./run-the-local-stack.md)) runs its own factory (`:8080`), intake app (`:8480`) and log (`:9001`). Point the app at them instead of the demo authority:
 
 ```sh
 FIELDSEAL_ENVIRONMENT=development FIELDSEAL_WEB_EXAMPLES_DIR=examples \
@@ -64,6 +64,6 @@ FIELDSEAL_WEB_PROVISIONING_FILE=provisioning.json cargo run -p fieldseal-web
 `provisioning.json` carries the stack's trust bundle: `{"authority":"local-stack","trustBundle":"<base64url of deploy/local/.state/factory/trust-bundle.bin>","allowedBuilders":[...],"allowedSources":[...],"provisionalRecordKey":"<hex>","buildAnchor":"<hex>","factoryUrl":"http://localhost:8080","uploadUrl":"http://localhost:8480"}`. The Device page then registers against the real factory through `/proxy/factory`; sign in at the portal for the token and confirm the four words there. Two things the stack does not do yet:
 
 - **Bundles.** Nothing serves bundles; build one for the web device with the CLI against the device's public keys (the Device page shows them) and open the file on the Device page.
-- **Upload.** The compose upload endpoint accepts only its practice device's tenancy, so an upload from the browser device is refused until the upload endpoint takes its authority from the factory's registrations.
+- **Upload.** The compose intake app accepts only devices the factory registered, so an upload from a browser device that has not registered is refused.
 
 The `web-image` Nix package (`nix build path:.#web-image`) is the same app as a container image for the compose file; add it as a service that publishes `8090` and sets the URLs above.

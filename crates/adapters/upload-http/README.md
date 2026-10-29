@@ -2,7 +2,7 @@
 
 ## Overview
 
-The HTTP upload adapter ([ADR 0021](../../../docs/explanation/adr/0021-export-upload-receipts.md); [delivery spec](../../../docs/reference/spec/delivery.md)). Two halves of one protocol live in `src/lib.rs`, plus a development server binary in `src/bin/server.rs`.
+The HTTP upload adapter ([ADR 0021](../../../docs/explanation/adr/0021-export-upload-receipts.md); [delivery spec](../../../docs/reference/spec/delivery.md)). Two halves of one protocol live in `src/lib.rs`, plus the practice binary in `src/bin/practice.rs`. The production composition root is the intake app (`crates/apps/intake`), which uses `UploadHttp` from this crate.
 
 ## Interface
 
@@ -17,9 +17,9 @@ Library (`src/lib.rs`):
 | `Request`, `Response` | HTTP types decoupled from the server library. |
 | `MAX_ANSWER` | 1 MiB limit on answers the client reads. |
 
-Routes: `POST /v1/challenge` (no auth; CBOR challenge in, receiver answer out), `POST /v1/upload` (`Fieldseal-PoP` token; export file without parity in, CBOR array of receipts out), `POST /v1/upload/outbox` (no token; closing manifests are verified), `GET /healthz` (200, no auth). Refusals are JSON: `401` token, `422` gate refusal (stage and code, no personal data), `400` malformed, `404` unknown path, `405` wrong method, `413` body too large, `503` backing-service failure.
+Routes: `POST /v1/challenge` (no auth; CBOR challenge in, receiver answer out), `POST /v1/upload` (`Fieldseal-PoP` token; export file without parity in, CBOR array of receipts out), `POST /v1/upload/outbox` (no token; closing manifests are verified), `GET /healthz` and `GET /readyz` (200, no auth; the handler exists only after the intake app's start-up replay). Refusals are JSON: `401` token, `422` gate refusal (stage and code, no personal data), `400` malformed, `404` unknown path, `405` wrong method, `413` body too large, `503` backing-service failure.
 
-Binary `fieldseal-upload-server` (`src/bin/server.rs`): a development and conformance intake endpoint. Default mode (`FIELDSEAL_UPLOAD_AUTHORITY=practice`) serves the gate over in-memory ports with the practice authority's software keys and registers one practice device per `--device` label. Mode `stack` serves a real authority with development custody.
+Binary `fieldseal-upload-practice` (`src/bin/practice.rs`): a development and conformance intake endpoint over in-memory ports with the practice authority's software keys (fixed seeds), registering one practice device per `--device` label. Flags `--listen`, `--public-url`, `--seed`, `--max-body`, `--device`. It refuses `FIELDSEAL_ENVIRONMENT=production` and is in no image, compose file or manifest.
 
 | Variable | Flag | Meaning |
 |---|---|---|

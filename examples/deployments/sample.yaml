@@ -44,6 +44,10 @@ spec:
         DataPlatform: { adapter: landing-files, config: { directory: ./landing } }
         PolicyEngine: { adapter: built-in, config: {} }
         TenancyRegistry: { adapter: memory, config: {} }
+        # The results reader signs people in; the stores are development adapters (DEP-023).
+        IdentityProvider: { adapter: oidc, config: { issuer: "http://localhost:8180/realms/fieldseal", clientId: fieldseal-intake } }
+        RosterHistory: { adapter: file-dev, config: { dir: ./published/rosters } }
+        InstrumentSource: { adapter: file-dev, config: { dir: ./published } }
       scaling: { replicas: 1 }
     publishing:
       adapters:

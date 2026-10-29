@@ -15,8 +15,9 @@
 //! | `POST /v1/upload` | `Fieldseal-PoP` | an export file without parity | a CBOR array of receipts |
 //! | `POST /v1/upload/outbox` | none; closing manifests are verified | an export file without parity | a CBOR array of receipts |
 //!
-//! `GET /healthz` answers `200` with no authentication, for orchestrators; it says the process is
-//! serving and nothing about its contents.
+//! `GET /healthz` and `GET /readyz` answer `200` with no authentication, for orchestrators; they
+//! say the process is serving and nothing about its contents. The handler is built only after
+//! the intake app's start-up replay, so `/readyz` is never `200` before replay has finished.
 //!
 //! Refusals are JSON: `401` for a token (DEL-003), `422` for a body the gate refused (with
 //! its stage and code, no personal data), `400` for a malformed request, `503` when a
@@ -116,31 +117,53 @@ impl<'a, 'g> UploadHttp<'a, 'g> {
 
     /// Serves requests from `server` until it is closed, one at a time.
     pub fn run(&self, server: &tiny_http::Server) {
-        for mut req in server.incoming_requests() {
-            let mut body = Vec::new();
-            let too_big = req.as_reader().take(self.config.max_body as u64 + 1).read_to_end(&mut body).is_err() || body.len() > self.config.max_body;
-            let headers = req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
-            let target = req.url().to_owned();
-            let path = target.split('?').next().unwrap_or("").to_owned();
-            let response = if too_big {
-                Response::error(413, "too-large", &[])
-            } else {
-                self.handle(&Request { method: req.method().as_str().to_ascii_uppercase(), path, headers, body })
-            };
-            let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);
-            for (k, v) in [("Content-Type", response.content_type), ("X-Content-Type-Options", "nosniff"), ("Cache-Control", "no-store")] {
-                if let Ok(h) = tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()) {
-                    out.add_header(h);
-                }
-            }
-            let _ = req.respond(out);
+        for req in server.incoming_requests() {
+            self.serve_one(req);
         }
+    }
+
+    /// Answers one request that `server` handed out, reading its body here. A process that
+    /// must not wait on a slow client on its serving thread (the intake app) reads the body
+    /// elsewhere, under a deadline, and calls [`answer`](Self::answer) instead.
+    pub fn serve_one(&self, mut req: tiny_http::Request) {
+        let mut body = Vec::new();
+        let too_big = req.as_reader().take(self.config.max_body as u64 + 1).read_to_end(&mut body).is_err() || body.len() > self.config.max_body;
+        let out = self.answer(&req, (!too_big).then_some(body));
+        let _ = req.respond(out);
+    }
+
+    /// The largest request body this endpoint accepts.
+    pub fn max_body(&self) -> usize {
+        self.config.max_body
+    }
+
+    /// The answer to `req`, whose body was read already: `None` is a body that was too big.
+    /// Does no I/O on `req`.
+    pub fn answer(&self, req: &tiny_http::Request, body: Option<Vec<u8>>) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+        let headers = req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
+        let target = req.url().to_owned();
+        let path = target.split('?').next().unwrap_or("").to_owned();
+        let response = match body {
+            None => Response::error(413, "too-large", &[]),
+            Some(body) => self.handle(&Request { method: req.method().as_str().to_ascii_uppercase(), path, headers, body }),
+        };
+        let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);
+        for (k, v) in [("Content-Type", response.content_type), ("X-Content-Type-Options", "nosniff"), ("Cache-Control", "no-store")] {
+            if let Ok(h) = tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()) {
+                out.add_header(h);
+            }
+        }
+        out
     }
 
     /// Handles one request.
     pub fn handle(&self, req: &Request) -> Response {
         if req.method == "GET" && req.path == "/healthz" {
             return Response { status: 200, content_type: "application/json", body: br#"{"status":"ok"}"#.to_vec() };
+        }
+        // The handler exists only after start-up replay has finished, so answering means ready.
+        if req.method == "GET" && req.path == "/readyz" {
+            return Response { status: 200, content_type: "application/json", body: br#"{"status":"ready"}"#.to_vec() };
         }
         let route = [UploadRoute::Challenge, UploadRoute::Tenancy, UploadRoute::Outbox].into_iter().find(|r| r.path() == req.path.trim_end_matches('/'));
         let Some(route) = route else { return Response::error(404, "not-found", &[]) };

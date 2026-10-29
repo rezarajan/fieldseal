@@ -129,7 +129,9 @@ fn sign_in(world: &World, http: &FactoryHttp, public_url: &str, login: &str) -> 
     let start = http.handle(&get("/sign-in", None));
     let location = header(&start, "Location").expect("redirect to the provider").to_owned();
     let callback = location.strip_prefix(public_url).expect("the callback is on the public URL");
-    let done = http.handle(&get(callback, None));
+    // The browser brings back the pre-auth cookie that the redirect set.
+    let pre_auth = header(&start, "Set-Cookie").expect("a pre-auth cookie").split(';').next().expect("name=value").to_owned();
+    let done = http.handle(&get(callback, Some(&pre_auth)));
     assert_eq!(done.status, 303);
     let set_cookie = header(&done, "Set-Cookie").expect("a session cookie").to_owned();
     let pair = set_cookie.split(';').next().expect("name=value").to_owned();
