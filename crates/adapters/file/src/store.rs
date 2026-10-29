@@ -17,7 +17,9 @@ use std::sync::Mutex;
 use fieldseal_adapters_memory::registration::MemoryRegistryStore;
 use fieldseal_kernel::id::{Nonce, TenancyHandle, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
-use fieldseal_registration::domain::{AccessToken, Account, AccountId, DeviceId, IssuedToken, RegisteredDevice, TenancyRecord, TokenSecret};
+use fieldseal_registration::domain::{
+    AccessToken, Account, AccountId, Assignment, DeviceId, IssuedToken, RegisteredDevice, RosterIssue, TenancyRecord, TokenSecret,
+};
 use fieldseal_registration::ports::{IssuedNonce, RegistryStore, RegistryStoreError, TokenError};
 
 use crate::codec::{self as c, R, W};
@@ -34,6 +36,8 @@ const PUT_NONCE: u8 = 6;
 const TAKE_NONCE: u8 = 7;
 const RECORD_JTI: u8 = 8;
 const PUT_ACCESS: u8 = 9;
+const PUT_ASSIGNMENT: u8 = 10;
+const PUT_ROSTER_ISSUE: u8 = 11;
 
 fn apply(inner: &MemoryRegistryStore, payload: &[u8]) -> c::Res<()> {
     let mut r = R(payload);
@@ -70,7 +74,17 @@ fn apply(inner: &MemoryRegistryStore, payload: &[u8]) -> c::Res<()> {
         PUT_ACCESS => {
             let _ = inner.put_access_token(&c::get_access(&mut r)?);
         }
+        PUT_ASSIGNMENT => {
+            let _ = inner.put_assignment(&c::get_assignment(&mut r)?);
+        }
+        PUT_ROSTER_ISSUE => {
+            let _ = inner.put_roster_issue(&c::get_roster_issue(&mut r)?);
+        }
         other => return Err(format!("unknown journal operation {other}")),
+    }
+    // Every record is read to its end: bytes after it mean a corrupt journal.
+    if !r.done() {
+        return Err("trailing bytes after a journal record".into());
     }
     Ok(())
 }
@@ -239,5 +253,21 @@ impl RegistryStore for FileRegistryStore {
 
     fn access_token(&self, value: &[u8; 32]) -> Result<Option<AccessToken>, RegistryStoreError> {
         self.inner.access_token(value)
+    }
+
+    fn put_assignment(&self, assignment: &Assignment) -> Result<(), RegistryStoreError> {
+        self.journaled(entry!(PUT_ASSIGNMENT, |w| { c::put_assignment(&mut w, assignment) }), |s| s.put_assignment(assignment), |()| true)
+    }
+
+    fn assignments(&self) -> Result<Vec<Assignment>, RegistryStoreError> {
+        self.inner.assignments()
+    }
+
+    fn put_roster_issue(&self, issue: &RosterIssue) -> Result<(), RegistryStoreError> {
+        self.journaled(entry!(PUT_ROSTER_ISSUE, |w| { c::put_roster_issue(&mut w, issue) }), |s| s.put_roster_issue(issue), |()| true)
+    }
+
+    fn roster_issues(&self) -> Result<Vec<RosterIssue>, RegistryStoreError> {
+        self.inner.roster_issues()
     }
 }

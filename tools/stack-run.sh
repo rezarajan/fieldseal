@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Runs the demo service once: tools/stack-run.sh <step> [argument]   (just demo|seed|resume and
-# the walkthrough steps: authority, publish, registry, fetch, enrol, register, wait, bundle,
-# capture, upload, intake).
+# the walkthrough steps: authority, publish, issue, assign, registry, fetch, enrol, register, wait,
+# bundle, capture, upload, intake). `issue` issues the example rosters at the factory and `assign`
+# assigns their cohorts to the collector's account; each asks for one operator sign-in, which the
+# demo service answers with a passkey (tools/stack-browser.sh). `just up` runs seed, issue and
+# assign; `demo`, `enrol` and `resume` run them again first, and they change nothing a second time.
 # Starts the stack first if it is not up. The exit status is the demo's.
 set -euo pipefail
 # shellcheck source=stack-engine.sh

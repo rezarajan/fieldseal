@@ -719,8 +719,10 @@ dependencies = [
 name = "fieldseal-adapters-factory-http"
 version = "0.1.0"
 dependencies = [
+ "fieldseal-adapters-file",
  "fieldseal-adapters-memory",
  "fieldseal-adapters-portal",
+ "fieldseal-distribution",
  "fieldseal-kernel",
  "fieldseal-policy",
  "fieldseal-registration",
@@ -973,6 +975,7 @@ dependencies = [
  "fieldseal-adapters-html",
  "fieldseal-adapters-landing-files",
  "fieldseal-adapters-memory",
+ "fieldseal-adapters-oidc",
  "fieldseal-adapters-rekor",
  "fieldseal-adapters-translog",
  "fieldseal-adapters-upload-http",
@@ -987,9 +990,11 @@ dependencies = [
  "fieldseal-publishing",
  "fieldseal-registration",
  "fieldseal-trust",
+ "p256",
  "qrcode",
  "serde_json",
  "tiny_http",
+ "ureq",
  "zeroize",
 ]
 
@@ -1028,6 +1033,25 @@ dependencies = [
  "fieldseal-publishing",
  "fieldseal-trust",
  "thiserror",
+]
+
+[[package]]
+name = "fieldseal-dev-idp"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "fieldseal-adapters-authoring",
+ "fieldseal-adapters-factory-http",
+ "fieldseal-adapters-memory",
+ "fieldseal-adapters-oidc",
+ "fieldseal-kernel",
+ "fieldseal-policy",
+ "fieldseal-registration",
+ "getrandom 0.2.17",
+ "p256",
+ "serde_json",
+ "tiny_http",
+ "ureq",
 ]
 
 [[package]]
@@ -1075,6 +1099,7 @@ dependencies = [
  "fieldseal-deployment",
  "fieldseal-kernel",
  "fieldseal-policy",
+ "fieldseal-publishing",
  "fieldseal-registration",
  "fieldseal-trust",
  "getrandom 0.2.17",
@@ -1286,10 +1311,12 @@ name = "fieldseal-web"
 version = "0.1.0"
 dependencies = [
  "fieldseal-adapters-authoring",
+ "fieldseal-adapters-file",
  "fieldseal-adapters-html",
  "fieldseal-adapters-memory",
  "fieldseal-adapters-web",
  "fieldseal-adapters-web-demo",
+ "fieldseal-distribution",
  "fieldseal-instrument",
  "fieldseal-intake",
  "fieldseal-kernel",

@@ -118,6 +118,18 @@ impl RegistryStore for TrackingStore {
     fn access_token(&self, value: &[u8; 32]) -> Result<Option<AccessToken>, RegistryStoreError> {
         self.inner.access_token(value)
     }
+    fn put_assignment(&self, assignment: &fieldseal_registration::domain::Assignment) -> Result<(), RegistryStoreError> {
+        self.inner.put_assignment(assignment)
+    }
+    fn assignments(&self) -> Result<Vec<fieldseal_registration::domain::Assignment>, RegistryStoreError> {
+        self.inner.assignments()
+    }
+    fn put_roster_issue(&self, issue: &fieldseal_registration::domain::RosterIssue) -> Result<(), RegistryStoreError> {
+        self.inner.put_roster_issue(issue)
+    }
+    fn roster_issues(&self) -> Result<Vec<fieldseal_registration::domain::RosterIssue>, RegistryStoreError> {
+        self.inner.roster_issues()
+    }
 }
 
 /// Intake's view of the registry: read live from the world's registry store on every

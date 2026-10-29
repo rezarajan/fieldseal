@@ -3,17 +3,17 @@
 use std::collections::BTreeMap;
 
 use fieldseal_kernel::crypto::{P256PublicKey, Signature};
-use fieldseal_kernel::id::{Digest, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
+use fieldseal_kernel::id::{CohortId, Digest, Generation, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_trust::domain::{AttestationEvidence, DeviceKeyKind};
 
 use crate::domain::{
-    AccessToken, Account, AccountId, AuthRecord, DeviceId, FingerprintWords, IssuedToken, KeyState,
+    AccessToken, Account, AccountId, Assignment, AuthRecord, DeviceId, FingerprintWords, IssuedToken, KeyState,
     NonceSource, RegisteredDevice, RegisteredKey, RegistrationRoute, RegistrationToken,
-    ReportedProfile, ReportedVersion, Role, TenancyRecord, TenancyState, TokenSecret, Window,
+    ReportedProfile, ReportedVersion, Role, RosterIssue, TenancyRecord, TenancyState, TokenSecret, Window,
 };
 use crate::ports::{
-    IdentityProvider, IssuedNonce, Notifier, PortalEvent, ReceivedProgress, RegistryStore, RegistryStoreError, SignInStart,
+    CohortDirectory, IssueOutcome, RosterIssuer, SurveyDirectory, IdentityProvider, IssuedNonce, Notifier, PortalEvent, ReceivedProgress, RegistryStore, RegistryStoreError, SignInStart,
     TokenError,
 };
 
@@ -209,6 +209,83 @@ pub fn registry_store_contract<S: RegistryStore + Sync>(make: impl Fn() -> S) {
     store.put_access_token(&access).expect("put access token");
     assert_eq!(store.access_token(&[8; 32]), Ok(Some(access)));
     assert_eq!(store.access_token(&[0; 32]), Ok(None));
+
+    // Assignments and roster issues: oldest first, `seq` assigned by the store, scoped to
+    // their account, and no change to any tenancy (REG-046, REG-047).
+    let store = make();
+    assert_eq!(store.assignments(), Ok(vec![]));
+    assert_eq!(store.roster_issues(), Ok(vec![]));
+    let other = sample_tenancy(7, "acct-b");
+    store.put_tenancy(&other).expect("put tenancy");
+    let first = sample_assignment("acct-a", "survey-a", "cohort-a");
+    let second = sample_assignment("acct-b", "survey-b", "cohort-b");
+    store.put_assignment(&first).expect("put assignment");
+    store.put_assignment(&second).expect("put assignment");
+    let held = store.assignments().expect("assignments");
+    assert_eq!(held.iter().map(|a| a.seq).collect::<Vec<_>>(), vec![Seq(1), Seq(2)], "the store assigns seq, oldest first");
+    assert_eq!(held.iter().map(|a| a.account.0.as_str()).collect::<Vec<_>>(), vec!["acct-a", "acct-b"], "an assignment names its account");
+    assert_eq!(Assignment { seq: Seq(0), ..held[0].clone() }, first, "every field is kept");
+    assert_eq!(store.account(&AccountId("acct-a".into())), Ok(None), "an assignment creates no account by itself");
+    assert_eq!(store.tenancy(&other.id), Ok(Some(other)), "an assignment changes no tenancy");
+    let issue = |version: u64| RosterIssue {
+        seq: Seq(99),
+        cohort: CohortId::new("cohort-a").expect("cohort"),
+        version,
+        digest: Digest::from([version as u8; 32]),
+        by: AccountId("operator".into()),
+        roles: vec!["operator".into()],
+        methods: vec!["hwk".into(), "phr".into()],
+        at: AuthorityTime(40),
+    };
+    store.put_roster_issue(&issue(1)).expect("put roster issue");
+    store.put_roster_issue(&issue(2)).expect("put roster issue");
+    let issues = store.roster_issues().expect("roster issues");
+    assert_eq!(issues.iter().map(|i| (i.seq, i.version)).collect::<Vec<_>>(), vec![(Seq(1), 1), (Seq(2), 2)], "seq counts roster issues on their own");
+    assert_eq!(RosterIssue { seq: Seq(99), ..issues[1].clone() }, issue(2), "every field is kept");
+}
+
+/// [`RosterIssuer`]: `body(cohort, version, display)` builds a valid roster body for `cohort`. The
+/// issuer stores a valid roster once and reports it again as already issued with the same
+/// version and digest; refuses different content at that version; refuses a lower version;
+/// refuses bytes that are not a valid roster, and a roster of another cohort than the one named,
+/// writing nothing.
+pub fn roster_issuer_contract<I: RosterIssuer>(issuer: &I, cohort: &CohortId, body: impl Fn(&CohortId, u64, &str) -> Vec<u8>) {
+    let IssueOutcome::Issued { version: 2, digest } = issuer.issue(cohort, &body(cohort, 2, "A")) else { panic!("a valid roster is issued") };
+    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "A")), IssueOutcome::AlreadyIssued { version: 2, digest }, "idempotent by content");
+    assert_eq!(issuer.issue(cohort, &body(cohort, 2, "B")), IssueOutcome::VersionTaken, "a version never changes");
+    assert_eq!(issuer.issue(cohort, &body(cohort, 1, "A")), IssueOutcome::NotNewer, "a lower version is not accepted");
+    assert!(matches!(issuer.issue(cohort, b"not a roster"), IssueOutcome::Invalid(_)), "bytes that are no roster are invalid");
+    let other = CohortId::new("another-cohort").expect("cohort");
+    assert!(matches!(issuer.issue(cohort, &body(&other, 3, "A")), IssueOutcome::Invalid(_)), "a roster of another cohort is invalid");
+    assert!(matches!(issuer.issue(&other, &body(&other, 3, "A")), IssueOutcome::Issued { .. }), "and nothing was written for it");
+}
+
+/// [`SurveyDirectory`]: knows `published` and not a name nobody published.
+pub fn survey_directory_contract<D: SurveyDirectory>(directory: &D, published: &str) {
+    assert!(directory.exists(published));
+    assert!(!directory.exists(&format!("{published}-not")));
+    assert!(!directory.exists(""));
+}
+
+/// [`CohortDirectory`]: knows `stored` and not another cohort.
+pub fn cohort_directory_contract<D: CohortDirectory>(directory: &D, stored: &CohortId) {
+    assert!(directory.exists(stored));
+    assert!(!directory.exists(&CohortId::new("no-such-cohort").expect("cohort")));
+}
+
+/// An assignment fixture by the account `operator`.
+pub fn sample_assignment(account: &str, survey: &str, cohort: &str) -> Assignment {
+    Assignment {
+        seq: Seq(0),
+        account: AccountId(account.into()),
+        survey: survey.into(),
+        cohort: CohortId::new(cohort).expect("cohort"),
+        generation: Generation(1),
+        by: AccountId("operator".into()),
+        roles: vec!["operator".into()],
+        methods: vec!["hwk".into(), "phr".into()],
+        at: AuthorityTime(30),
+    }
 }
 
 /// [`IdentityProvider`]: `complete` plays the browser and the provider for one sign-in,

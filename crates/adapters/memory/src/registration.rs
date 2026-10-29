@@ -14,10 +14,10 @@ use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::domain::auth::phishing_resistant_from_claims;
 use fieldseal_registration::domain::wire::{PopToken, PostureBody, RequestBody, TokenRefusal, factory_sealing_key};
 use fieldseal_registration::domain::{
-    AccessToken, Account, AccountId, AuthenticatedPerson, AuthenticationMethods, DeviceId,
+    AccessToken, Account, AccountId, Assignment, AuthenticatedPerson, AuthenticationMethods, DeviceId,
     IssuedToken, KeyEvidence, ManagementMode, MethodAssurance, NonceSource, RegisteredDevice,
     RegistrationToken, ReportedProfile, ReportedRestriction, ReportedVersion, Role, RollProof,
-    TenancyRecord, TokenSecret,
+    RosterIssue, TenancyRecord, TokenSecret,
 };
 use fieldseal_trust::application::{Authority, SOFTWARE_EVIDENCE_FORMAT};
 use fieldseal_trust::domain::{
@@ -56,6 +56,8 @@ struct RegistryState {
     nonces: BTreeMap<Nonce, IssuedNonce>,
     jtis: BTreeMap<(TenancyId, [u8; 16]), AuthorityTime>,
     access: BTreeMap<[u8; 32], AccessToken>,
+    assignments: Vec<Assignment>,
+    roster_issues: Vec<RosterIssue>,
 }
 
 /// In-memory [`RegistryStore`]. One mutex guards all state, so token, nonce and `jti`
@@ -198,6 +200,28 @@ impl RegistryStore for MemoryRegistryStore {
 
     fn access_token(&self, value: &[u8; 32]) -> Result<Option<AccessToken>, RegistryStoreError> {
         Ok(self.state.lock().expect("lock").access.get(value).cloned())
+    }
+
+    fn put_assignment(&self, assignment: &Assignment) -> Result<(), RegistryStoreError> {
+        let mut state = self.state.lock().expect("lock");
+        let seq = Seq(state.assignments.len() as u64 + 1);
+        state.assignments.push(Assignment { seq, ..assignment.clone() });
+        Ok(())
+    }
+
+    fn assignments(&self) -> Result<Vec<Assignment>, RegistryStoreError> {
+        Ok(self.state.lock().expect("lock").assignments.clone())
+    }
+
+    fn put_roster_issue(&self, issue: &RosterIssue) -> Result<(), RegistryStoreError> {
+        let mut state = self.state.lock().expect("lock");
+        let seq = Seq(state.roster_issues.len() as u64 + 1);
+        state.roster_issues.push(RosterIssue { seq, ..issue.clone() });
+        Ok(())
+    }
+
+    fn roster_issues(&self) -> Result<Vec<RosterIssue>, RegistryStoreError> {
+        Ok(self.state.lock().expect("lock").roster_issues.clone())
     }
 }
 

@@ -1,0 +1,35 @@
+# The configuration of the development identity provider (crates/apps/dev-idp), the tool that
+# stands where Keycloak stands in `just web`. It is not a deployment manifest: no component of
+# one names it, and it is in no image. Read with:
+#
+#   fieldseal-dev-idp --development-tool --config examples/deployments/dev-idp.yaml
+#
+# The subjects are fixed so that `roster assign --account` can name an account before it has
+# signed in. A confidential client's secret is named by reference and read at start-up from
+# FIELDSEAL_SECRET_<REFERENCE> (here FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET and
+# FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET); this file holds no secret.
+apiAudience: fieldseal-factory-api
+logins:
+  # `acr: phr` is a phishing-resistant sign-in to the OIDC adapter. `amr: hwk` says the same
+  # in the form a hardware key would report.
+  - login: presenter
+    subject: 00000000-0000-4000-8000-000000000001
+    roles: [collector, operator, results-reader]
+    amr: [hwk]
+    acr: phr
+  - login: collector1
+    subject: 00000000-0000-4000-8000-000000000002
+    roles: [collector]
+    amr: [hwk]
+    acr: phr
+clients:
+  - id: fieldseal-factory
+    secretRef: factory-oidc-client-secret
+    redirectUris: ["http://localhost:8080/sign-in/callback"]
+  - id: fieldseal-intake
+    secretRef: intake-oidc-client-secret
+    redirectUris: ["http://localhost:8481/sign-in/callback"]
+  # The operator CLI: a public client with no secret. It redirects to a loopback listener on
+  # any port (RFC 8252), so it lists no redirect URI.
+  - id: fieldseal-cli
+    public: true

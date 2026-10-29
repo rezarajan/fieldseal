@@ -51,6 +51,10 @@ Ports consumed: `fieldseal_registration::ports::IdentityProvider` (and its `Pend
 - `run` adds `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` to every response.
 - The client accepts only `http://` or `https://` base URLs and caps answers at `MAX_ANSWER`.
 
+## Operator API
+
+`POST /v1/rosters`, `POST /v1/assignments` and `GET /v1/assignments` take `Authorization: Bearer <access token>` and read no cookie; the portal pages read no Bearer token. A route asks the injected `BearerVerifier` for the person (`401 bearer-required` without a token, `401 token-invalid` when the verifier refuses), then `Factory::authorise_operator` (`403 not-authorised`, `403 authentication-too-weak`), and only then reads the body: the server checks the header before it reads any of the body of these routes, and the use case checks again. `POST /v1/assignments` takes the bare subject in `account` (not empty, at most 255 bytes, no control character, else `400 malformed`) and maps it with `BearerVerifier::account_for_subject`, the rule the sign-in uses for the account id; `GET /v1/assignments` shows the subject, derived from the account id by `BearerVerifier::subject_of_account`, which strips the verifier's own prefix (a subject may hold `|`; an id without the prefix is shown whole), since the journal keeps only the account id. Other refusals: `404 unknown-survey|unknown-cohort`, `409 version-taken|not-newer`, `422 roster-invalid`; an identical request answers `200` with `unchanged`. The `ReconcileNotify` callback is told each tenancy a change touched (a no-op until Phase 13) and the `OperatorEvents` callback receives `assignment-made` and `roster-issued`. A roster body is never logged. Without `with_operator_api` the routes answer `503`.
+
 ## Side Effects
 
 - Network: `run` listens on the supplied `tiny_http::Server`; `FactoryHttpClient` makes outbound HTTP(S) calls with a 30 s global timeout (plain `http://` allowed for the loopback local stack).

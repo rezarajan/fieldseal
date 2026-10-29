@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # The stack's end-to-end demo, run inside the `demo` compose service (fieldseal-demo:local):
 #
-#   demo     seed, then register a device through the browser flow, build its bundle, capture,
-#            export, upload to the intake and verify the receipts
-#   seed     publish the sample instrument through the stack's transparency log
-#   resume   after `just down` and `just up`: the device registered earlier is still registered
-#            and uploads the same export again, which changes nothing
+#   demo     seed, issue and assign, then register a device through the browser flow, build its
+#            bundle, capture, export, upload to the intake and verify the receipts
+#   seed     publish the sample instruments, their layouts and the policy through the stack's log
+#   issue    issue the example rosters at the factory (one operator sign-in); `unchanged` when
+#            the factory already holds them
+#   assign   assign the cohorts to the account of the stack's product-owner (one operator
+#            sign-in); `unchanged` when they are already assigned
+#   resume   after `just down` and `just up`: seed, issue and assign again (nothing changes), then
+#            the device registered earlier is still registered and uploads the same export again
+#            (changing nothing)
 #
 # Every command is printed as it runs; any failure ends the run with a non-zero status.
 set -euo pipefail
@@ -38,13 +43,17 @@ capture() { printf '+ fieldseal %s\n' "$*" >&2; local out; out="$(fieldseal "$@"
 # The log's tree size: the second line of its signed checkpoint.
 log_size() { curl -fsS --max-time 5 "$FIELDSEAL_TRANSLOG_URL/checkpoint" | sed -n 2p; }
 
-# publish_artefact <name> <file>: signs and publishes <file> through the stack's log with two of
+# publish_artefact <name> <file> [provenance args...]: signs and publishes <file> through the stack's log with two of
 # three publisher signatures, unless it is already there. The address of a publication changes
 # with every signing, so the one published is remembered in /clistate with the registry that
 # can prove it; if the proof still holds against the log, nothing is signed or appended.
 # Sets PUBLISHED to "published" or "skipped". The result is kept at /published/<name>.published.
+# An instrument is published with a salt of ours (ADR 0027), kept in /clistate/<name>.salt: no
+# command prints the salt of a publication, and a layout binds to the fingerprint of its
+# instrument, which the salt is part of. REVIEWERS, when set, replaces the default reviewers.
 publish_artefact() {
-  local name="$1" file="$2" mark="/clistate/$1.address" address prov doc="$1.yaml"
+  local name="$1" file="$2" mark="/clistate/$1.address" address prov doc="$1.yaml" salt=""
+  shift 2
   mkdir -p "$W/publish/$name"; cd "$W/publish/$name"
   if [ "$(basename "$file")" = instrument.yaml ]; then
     # A survey is published from a folder (ADR 0041): its instrument and catalogues travel together.
@@ -63,7 +72,8 @@ publish_artefact() {
     PUBLISHED=skipped
   else
     # The custody directories are on a read-only mount: the CLI ignores usage-log write failures.
-    prov="$(FIELDSEAL_SIGNER=soft:/authority/publish/builder capture artefact provenance "$doc" --out "$name.publication" --source abc123 --reviewers reviewer-1:es,reviewer-2 --at "$(date -u +%F)")"
+    [ "$doc" != instrument.yaml ] || { salt="$(head -c 32 /dev/urandom | od -An -vtx1 | tr -d ' \n')"; set -- --salt "$salt"; }
+    prov="$(FIELDSEAL_SIGNER=soft:/authority/publish/builder capture artefact provenance "$doc" --out "$name.publication" --source abc123 --reviewers "${REVIEWERS:-reviewer-1:es,reviewer-2}" --at "$(date -u +%F)" "$@")"
     address="$(printf '%s' "$prov" | sed -n 's/.*(\(sha256:[0-9a-f]*\)).*/\1/p' | head -1)"
     [ -n "$address" ] || { echo "no artefact address in the provenance output" >&2; exit 1; }
     FIELDSEAL_SIGNER=soft:/authority/publish/pub-alice run artefact sign "$name.publication"
@@ -73,6 +83,7 @@ publish_artefact() {
     run artefact verify "$name.published" --trust-bundle "$TB"
     cat "$name.published" > "/clistate/published/$name.published"
     printf '%s\n' "$address" > "$mark"
+    [ -z "$salt" ] || printf '%s\n' "$salt" > "/clistate/$name.salt"
     PUBLISHED=published
   fi
   # The intake app verifies every *.published in this directory against the trust bundle.
@@ -81,8 +92,27 @@ publish_artefact() {
   cd "$W"
 }
 
+# publish_layouts <survey>: publishes each of the survey's layouts after its instrument, under
+# the name <survey>.<window> (compact, medium or expanded) that the reconciler looks up. A layout
+# is bound to the fingerprint of the instrument just published, which takes the instrument's salt.
+publish_layouts() {
+  local survey="$1" layout window
+  [ -s "/clistate/$survey.salt" ] || { echo "$survey is published but its salt is not in /clistate (published by an older stack?): run \`just purge\` and \`just up\`" >&2; exit 1; }
+  for layout in "$EX/surveys/$survey"/layouts/*.yaml; do
+    [ -f "$layout" ] || continue
+    window="$(basename "${layout%.*}")"
+    REVIEWERS=reviewer-1,reviewer-2 publish_artefact "$survey.$window.layout" "$layout" \
+      --instrument "$EX/surveys/$survey/instrument.yaml" --salt "$(cat "/clistate/$survey.salt")"
+    note_state
+  done
+}
+# Keeps track of whether anything in this publish_all run was new.
+ANY_STATE=skipped
+note_state() { [ "$PUBLISHED" != published ] || ANY_STATE=published; }
+
 publish_all() {
   local d="$W/publish"; mkdir -p "$d"
+  ANY_STATE=skipped
   cat > "$d/deployment-policy.yaml" <<'YAML'
 apiVersion: fieldseal.dev/v1alpha1
 kind: Policy
@@ -97,32 +127,61 @@ spec:
     allowedBuilders: [ "https://ci.example.org/builders/fieldseal-publish" ]
     allowedSources: [ "https://git.example.org/authority/artefacts" ]
     requireTransparencyLog: true
+  factory:
+    # Equal to the default. The demo's reset relies on this limit and on retirement: the
+    # presenter retires the old device on the portal and registers again, and a retired
+    # tenancy is not active, so the new one receives the cohort (Technical Plan 7.4).
+    cohorts: { maxActiveTenanciesPerCohort: 1 }
 YAML
   export FIELDSEAL_TRUST_BUNDLE="$TB" FIELDSEAL_POLICY="$d/deployment-policy.yaml"
   publish_artefact household-water-access "$EX/surveys/household-water-access/instrument.yaml"
-  INSTRUMENT_STATE="$PUBLISHED"; INSTRUMENT_ADDRESS="$ADDRESS"
+  INSTRUMENT_ADDRESS="$ADDRESS"; note_state
+  publish_layouts household-water-access
   publish_artefact school-meals-baseline "$EX/surveys/school-meals-baseline/instrument.yaml"
+  note_state
+  publish_layouts school-meals-baseline
   publish_artefact deployment-policy "$d/deployment-policy.yaml"
-  POLICY_STATE="$PUBLISHED"
+  note_state
   unset FIELDSEAL_TRUST_BUNDLE FIELDSEAL_POLICY
 }
 
 # 1. Publish the instrument and the deployment policy, then repeat to show it is idempotent.
 seed() {
-  stage "1. Publish the sample instrument and the deployment policy through the stack's transparency log"
+  stage "1. Publish the sample instruments, their layouts and the deployment policy through the stack's transparency log"
   local before after
   before="$(log_size)"; publish_all; after="$(log_size)"
   echo "log tree size: $before -> $after"
-  local first="$INSTRUMENT_STATE/$POLICY_STATE"
-  if [ "$first" = skipped/skipped ]; then
+  local first="$ANY_STATE"
+  if [ "$first" = skipped ]; then
     [ "$after" = "$before" ] || { echo "the log grew although nothing was published: $before -> $after" >&2; exit 1; }
   else
     [ "$after" -gt "$before" ] || { echo "the log did not grow on a publish: $before -> $after" >&2; exit 1; }
   fi
   echo "-- publishing again must change nothing"
   publish_all
-  [ "$INSTRUMENT_STATE/$POLICY_STATE" = skipped/skipped ] && [ "$(log_size)" = "$after" ] || { echo "a repeat publish changed the log" >&2; exit 1; }
-  note "instrument $INSTRUMENT_ADDRESS and the deployment policy in $FIELDSEAL_TRANSLOG_URL ($first); a repeat was skipped, log size unchanged at $after"
+  [ "$ANY_STATE" = skipped ] && [ "$(log_size)" = "$after" ] || { echo "a repeat publish changed the log" >&2; exit 1; }
+  note "instrument $INSTRUMENT_ADDRESS, the layouts and the deployment policy in $FIELDSEAL_TRANSLOG_URL ($first); a repeat was skipped, log size unchanged at $after"
+}
+
+# The operator sign-in of the next two steps: the CLI opens the authorisation URL with the stack's
+# opener (a passkey for product-owner; FIELDSEAL_OIDC_ISSUER and FIELDSEAL_OIDC_CLIENT_ID come
+# from the demo service's environment). Each step signs in once, and prints `unchanged` when the
+# factory already holds what it was asked to store.
+BROWSER="${FIELDSEAL_BROWSER:-/opt/fieldseal/tools/stack-browser.sh}"
+# The collector's account: product-owner's subject in the stack's realm.
+ACCOUNT=00000000-0000-4000-8000-000000000003
+
+issue() {
+  stage "Issue the example rosters at the factory (operator sign-in)"
+  run roster issue --factory-url "$FIELDSEAL_FACTORY_URL" --browser "$BROWSER" "$EX/rosters/village-a.yaml" "$EX/rosters/cohort-a.yaml"
+  note "rosters village-a and cohort-a issued at the factory"
+}
+
+assign() {
+  stage "Assign the cohorts to the collector's account (operator sign-in)"
+  run roster assign --factory-url "$FIELDSEAL_FACTORY_URL" --browser "$BROWSER" --account "$ACCOUNT" \
+    --assign household-water-access=village-a --assign school-meals-baseline=cohort-a
+  note "household-water-access -> village-a and school-meals-baseline -> cohort-a assigned to account $ACCOUNT"
 }
 
 # 2. A device registers: the browser flow gets the token and calls tools/stack-enroll.sh.
@@ -303,18 +362,20 @@ step_intake() { need_device; landing; }
 
 case "${1:-demo}" in
   seed) seed; summary ;;
-  demo) seed; enrol; await_certificate; bundle; capture_records; deliver; landing; summary ;;
-  resume) resume ;;
+  demo) seed; issue; assign; enrol; await_certificate; bundle; capture_records; deliver; landing; summary ;;
+  resume) seed; issue; assign; resume ;;
+  issue) issue ;;
+  assign) assign ;;
   authority) step_authority ;;
   publish) seed ;;
   registry) step_registry "${2:-}" ;;
   fetch) step_fetch "${2:-}" ;;
-  enrol) enrol; printf '%s\n' "$TENANCY" > /device/tenancy; await_certificate ;;
+  enrol) seed; issue; assign; enrol; printf '%s\n' "$TENANCY" > /device/tenancy; await_certificate ;;
   register) step_register "${2:-}" ;;
   wait) step_wait ;;
   bundle) step_bundle ;;
   capture) step_capture ;;
   upload) step_upload ;;
   intake) step_intake ;;
-  *) echo "usage: stack-demo.sh demo|seed|resume" >&2; exit 2 ;;
+  *) echo "usage: stack-demo.sh demo|seed|issue|assign|resume" >&2; exit 2 ;;
 esac

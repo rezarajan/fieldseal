@@ -150,6 +150,7 @@
   - window (`not_before`, `not_after`, `grace`);
   - cohort assignments with their generations;
   - the record-key certificate for the collection period.
+- **REG-032a** When a tenancy's cohort set changes, the factory MUST reissue its certificate from the tenancy record, sign it again, and store it in the record, so that `GetCertificate` returns it. The `serial` field stays the attested device serial.
 - **REG-033** The runtime MUST verify a tenancy certificate's chain to its trust bundle before using it.
 
 ### 5.5 Multiple devices and batch tokens
@@ -162,6 +163,8 @@
 - **REG-042** When an account is at its device limit, `IssueToken` MUST fail with `DeviceLimitReached`, and the portal MUST offer to retire a device.
 - **REG-043** The portal MUST list an account's devices with nickname, fingerprint words, state, last seen, and the actions *roll keys*, *mark as lost* and *retire*.
 - **REG-044** Policy MAY allow **batch tokens** for an operator role, valid for up to `factory.registration.batchTokens.maxUses` devices within `factory.registration.batchTokens.ttl`. Each device registered with a batch token MUST still create its own keys and tenancy, and MUST still be confirmed by fingerprint words, listed together for the operator. Batch tokens MUST NOT be issued to collector roles.
+- **REG-046** The factory MUST keep survey-to-cohort assignments in its tenancy registry and change them only through `AssignCohort`. `AssignCohort` MUST require an `operator` account signed in by a phishing-resistant method, MUST name the account the assignment targets (the collector's bare OIDC subject, which the factory maps to the account id the identity provider adapter gives that person at sign-in, so the assignment reaches the tenancies they register; the subject MUST NOT be empty, longer than 255 bytes, or hold a control character, and MAY hold `|`; the account is created with no roles when it does not exist), MUST refuse an unknown survey or cohort, MUST record generation 1 for each cohort on each tenancy it reaches (DIS-014), and MUST NOT remove an assignment. An assignment MUST apply to the target account's tenancies, current and later, and to no other account's. The journal record MUST be written before the tenancies are updated, and a tenancy that is created or registered after the record is written MUST read it (and be issued a new certificate if it already holds one), so that no order of the two leaves a tenancy without the cohort. An identical assignment answers `unchanged` and writes no record. Each assignment MUST be journaled with the operator's account, roles and methods, the time and the change.
+- **REG-047** The factory MUST accept a new roster version only through `IssueRoster`, with the same authentication, the DIS-063 check and the version rule of DIS-014, and MUST NOT remove a version. Each issue MUST be journaled with the operator's account, roles and methods, the time, and the cohort, version and content digest, never subject data. The roster store write comes before the journal record; issuing the same bytes again writes a missing record. The roster body MUST NOT be logged.
 - **REG-045** Moving a cohort to another tenancy MUST record a succession with `generation + 1` ([Distribution](./distribution.md)).
 
 ### 5.6 Air-gapped route
@@ -184,6 +187,7 @@
 ### 5.8 After registration
 
 - **REG-070** The runtime MUST authenticate to factory and upload APIs with short-lived tokens bound to its signing key (proof-of-possession, for example DPoP per RFC 9449), obtained through `IssueApiToken`.
+- **REG-070a** Operator API routes MUST authenticate an `Authorization: Bearer` JWT access token (RFC 9068 profile) from the configured identity provider, and MUST verify its signature (`RS256` or `ES256` only), issuer, audience (the factory API identifier), expiry (`iat` and `nbf` too, with clock leeway), a non-empty subject, the header `typ` (`at+jwt`; a plain `JWT` only when the deployment accepts it, and then only with the payload `typ: Bearer`), the absence of a `nonce` claim (only ID tokens carry one), the client (`client_id`, or `azp` when `client_id` is absent, is the operator CLI's public client), the `operator` role and a phishing-resistant sign-in method. The roles and the authentication methods MUST be read from the access token and from no other source, and a token MUST NOT be cached.
 - **REG-071** When online, the runtime SHOULD perform a posture re-check at the interval set by runtime policy. The factory MUST evaluate the result by policy.
 - **REG-072** A failed posture check MUST flag the tenancy and pause new bundle releases ([Distribution](./distribution.md)). It MUST NOT block collection, sealing or delivery.
 
@@ -237,6 +241,9 @@
 | `IssueApiToken` | `POST /v1/api-token` | PoP |
 | `PostureNonce` | `POST /v1/posture/nonce` | PoP |
 | `CheckPosture` | `POST /v1/posture` | PoP |
+| `IssueRoster` | `POST /v1/rosters` | operator Bearer access token (REG-070a) |
+| `AssignCohort` | `POST /v1/assignments` | operator Bearer access token |
+| `ListAssignments` | `GET /v1/assignments` | operator Bearer access token |
 
 - **REG-086** The portal pages, sign-in and the identity-provider flow (REG-002, REG-002a) MUST be served over HTTP only; they are not part of the `Factory` contract.
 

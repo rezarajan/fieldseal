@@ -1,6 +1,7 @@
 //! The HTTP client for the factory's runtime API (the same routes [`crate::FactoryHttp`]
 //! serves): submit a sealed registration request, read a tenancy's status, and fetch the
-//! tenancy certificate with a proof-of-possession token.
+//! tenancy certificate with a proof-of-possession token. The operator calls (`assign`,
+//! `assignments`, `issue_roster`) send an access token as `Authorization: Bearer`.
 //!
 //! It speaks bytes and returns the status code and body; the caller decides what they mean.
 //! Plain `http://` is allowed (the local stack runs on loopback); `https://` uses rustls.
@@ -81,6 +82,48 @@ impl FactoryHttpClient {
             .get(format!("{}/v1/certificate", self.base))
             .header(fieldseal_kernel::pop::POP_HEADER, pop_header)
             .call()
+            .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        self.answer(r)
+    }
+
+    /// `POST /v1/assignments`: assign `cohort` of `survey` to `account` (an OIDC subject).
+    pub fn assign(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<Answer, ClientError> {
+        use fieldseal_kernel::{Value, cbor};
+        let body = cbor::encode(&cbor::map([
+            ("account", Value::Text(account.to_owned())),
+            ("survey", Value::Text(survey.to_owned())),
+            ("cohort", Value::Text(cohort.to_owned())),
+        ]))
+        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        let r = self
+            .agent
+            .post(format!("{}/v1/assignments", self.base))
+            .header("Authorization", format!("Bearer {bearer}"))
+            .header("Content-Type", "application/cbor")
+            .send(&body[..])
+            .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        self.answer(r)
+    }
+
+    /// `GET /v1/assignments`: the journaled assignments.
+    pub fn assignments(&self, bearer: &str) -> Result<Answer, ClientError> {
+        let r = self
+            .agent
+            .get(format!("{}/v1/assignments", self.base))
+            .header("Authorization", format!("Bearer {bearer}"))
+            .call()
+            .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        self.answer(r)
+    }
+
+    /// `POST /v1/rosters`: a roster in canonical CBOR (the issue form of WIRE-198).
+    pub fn issue_roster(&self, bearer: &str, canonical_roster: &[u8]) -> Result<Answer, ClientError> {
+        let r = self
+            .agent
+            .post(format!("{}/v1/rosters", self.base))
+            .header("Authorization", format!("Bearer {bearer}"))
+            .header("Content-Type", "application/cbor")
+            .send(canonical_roster)
             .map_err(|e| ClientError::Unreachable(e.to_string()))?;
         self.answer(r)
     }

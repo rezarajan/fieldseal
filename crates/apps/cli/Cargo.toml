@@ -33,6 +33,9 @@ fieldseal-deployment.workspace = true
 fieldseal-adapters-landing-files.workspace = true
 fieldseal-adapters-file.workspace = true
 fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
+fieldseal-adapters-oidc = { path = "../../adapters/oidc" }
+# The development sign-in follows the identity provider's redirect itself (`--browser none --login`).
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 fieldseal-adapters-upload-http.workspace = true
 
 [build-dependencies]
@@ -40,3 +43,5 @@ fieldseal-adapters-authoring.workspace = true
 
 [dev-dependencies]
 tiny_http = "0.12"
+# The test identity provider signs ID and access tokens (ES256).
+p256.workspace = true

@@ -7,12 +7,12 @@
 
 use std::collections::BTreeMap;
 
-use fieldseal_kernel::id::{Nonce, Seq, TenancyHandle, TenancyId};
+use fieldseal_kernel::id::{CohortId, Digest, Nonce, Seq, TenancyHandle, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
 
 use crate::domain::{
-    AccessToken, Account, AccountId, AuthenticatedPerson, DeviceId, IssuedToken, RegisteredDevice, TenancyRecord,
-    TokenSecret,
+    AccessToken, Account, AccountId, Assignment, AuthenticatedPerson, DeviceId, IssuedToken, RegisteredDevice,
+    RosterIssue, TenancyRecord, TokenSecret,
 };
 
 /// Errors from [`IdentityProvider`].
@@ -121,7 +121,8 @@ pub struct IssuedNonce {
 /// atomic, so a single-use token registers at most one tenancy even under concurrent
 /// requests; expiry is judged against the time the caller passes, which comes from the
 /// factory's clock; tenancy updates can't remove keys from history; nonces and PoP `jti`s
-/// are single use, atomically.
+/// are single use, atomically; assignments and roster issues are kept for good, oldest
+/// first, and the store gives each its `seq`.
 pub trait RegistryStore {
     /// Stores a newly issued token.
     fn put_token(&self, token: &IssuedToken) -> Result<(), RegistryStoreError>;
@@ -176,6 +177,74 @@ pub trait RegistryStore {
 
     /// An access token by value.
     fn access_token(&self, value: &[u8; 32]) -> Result<Option<AccessToken>, RegistryStoreError>;
+
+    /// Appends an assignment to the journal, giving it the next `seq` (the one passed is
+    /// ignored). There is no way to remove one (REG-046).
+    fn put_assignment(&self, assignment: &Assignment) -> Result<(), RegistryStoreError>;
+
+    /// Every assignment, oldest first.
+    fn assignments(&self) -> Result<Vec<Assignment>, RegistryStoreError>;
+
+    /// Appends a roster issue to the journal, giving it the next `seq` (the one passed is
+    /// ignored).
+    fn put_roster_issue(&self, issue: &RosterIssue) -> Result<(), RegistryStoreError>;
+
+    /// Every roster issue, oldest first.
+    fn roster_issues(&self) -> Result<Vec<RosterIssue>, RegistryStoreError>;
+}
+
+/// What a [`RosterIssuer`] did with the roster it was given.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum IssueOutcome {
+    /// The roster was stored as this version.
+    Issued {
+        /// The stored version.
+        version: u64,
+        /// SHA-256 of the stored canonical roster.
+        digest: Digest,
+    },
+    /// The same content was already stored at this version; nothing was written. The version
+    /// and digest let the caller check that the journal holds the record of it.
+    AlreadyIssued {
+        /// The stored version.
+        version: u64,
+        /// SHA-256 of the stored canonical roster.
+        digest: Digest,
+    },
+    /// A different roster is already stored at this version.
+    VersionTaken,
+    /// The version is lower than the latest stored for the cohort.
+    NotNewer,
+    /// The roster failed the closed-schema check (DIS-063). The reason holds paths and
+    /// messages only, never subject data.
+    Invalid(String),
+    /// The store failed. Nothing is known to be written.
+    Unavailable(String),
+}
+
+/// Stores a roster version for a cohort (REG-047).
+///
+/// Contract: `canonical_bytes` is checked completely (canonical CBOR, DIS-063, the cohort
+/// named in the roster equal to `cohort`) before anything is written; the write is
+/// idempotent by content digest; a version is never changed or removed; a version lower than
+/// the latest stored is not accepted.
+pub trait RosterIssuer {
+    /// Checks and stores the roster.
+    fn issue(&self, cohort: &CohortId, canonical_bytes: &[u8]) -> IssueOutcome;
+}
+
+/// Whether a survey is published (REG-046). Contract: answers from the artefact registry
+/// only; a name no published instrument carries is `false`.
+pub trait SurveyDirectory {
+    /// Whether a published instrument has this name.
+    fn exists(&self, name: &str) -> bool;
+}
+
+/// Whether a cohort has a stored roster (REG-046). Contract: answers from the roster store
+/// only; a cohort with no stored version is `false`.
+pub trait CohortDirectory {
+    /// Whether at least one version of the cohort is stored.
+    fn exists(&self, cohort: &CohortId) -> bool;
 }
 
 /// Errors from [`ReceivedProgress`].

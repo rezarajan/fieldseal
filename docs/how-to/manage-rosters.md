@@ -1,6 +1,6 @@
 # Manage rosters
 
-A roster lists the subjects of one cohort: an ID, the name the collector sees, a consent state and the values a survey reads as `roster.<field>`. This guide covers the three commands that work on files and a copy of the roster store: `roster check`, `roster diff` and `roster list`. Issuing a roster and assigning a cohort to a survey are operations of the factory and are not covered here.
+A roster lists the subjects of one cohort: an ID, the name the collector sees, a consent state and the values a survey reads as `roster.<field>`. This guide covers the three commands that work on files and a copy of the roster store (`roster check`, `roster diff` and `roster list`) and the two operations of the factory (`roster issue` and `roster assign`).
 
 ## Check a roster against its survey
 
@@ -40,6 +40,39 @@ fieldseal roster list --store ./rosters --cohort village-a
 ```
 
 Each line names a version as `<cohort>@<version>` with its digest, subject count and consent counts. It shows no subject ID.
+
+## Issue a roster
+
+```sh
+fieldseal roster issue examples/rosters/village-a.yaml examples/rosters/cohort-a.yaml \
+  --factory-url http://localhost:8080 --instrument examples/surveys/household-water-access
+```
+
+`roster issue` stores each file at the factory as its cohort's roster at the version the file names. It runs `roster check` on every file first and sends nothing if any fails; `--instrument` (optional, repeatable) adds the comparison with a survey. Then it signs you in once as the operator and sends the files. For each it prints the stored version and digest, or `unchanged` when the factory already holds exactly that roster at that version. A version never changes once stored: the same version with different content is refused, and so is a version lower than the latest. To change a roster, raise `version`.
+
+## Assign a cohort to an account
+
+```sh
+fieldseal roster assign --factory-url http://localhost:8080 \
+  --account 00000000-0000-4000-8000-000000000003 \
+  --assign household-water-access=village-a --assign school-meals-baseline=cohort-a
+```
+
+An assignment says that one account collects one survey for one cohort. The account is the collector's OIDC subject, the `sub` claim of the collector's sign-in at the identity provider (in the local stack, `product-owner` is `00000000-0000-4000-8000-000000000003`). It applies to the tenancies that account has now and to those it registers later. The factory refuses a survey that is not published (`unknown-survey`) and a cohort with no stored roster (`unknown-cohort`), so publish and issue first. Giving the same assignment twice prints `unchanged`.
+
+To see what has been assigned:
+
+```sh
+fieldseal roster assign --factory-url http://localhost:8080 --list
+```
+
+This prints the factory's journal of assignments, one line each: the account (the subject you sent), the survey, the cohort, the cohort's generation for that account, and who made it and when. It takes no `--account` or `--assign`.
+
+Removal is not built. `roster assign` has no way to take an assignment away or to move a cohort to another tenancy; asking with `--remove` names REG-045 (moving a cohort records a succession with the generation raised by one) and stops.
+
+## Signing in as the operator
+
+`roster issue` and `roster assign` need an access token for the factory, from the identity provider's authorisation-code flow with PKCE. The CLI reads the provider from `FIELDSEAL_OIDC_ISSUER` and the client id from `FIELDSEAL_OIDC_CLIENT_ID` (`--issuer` and `--client-id` override them), starts a listener on the loopback interface and opens the authorisation URL with the command in `FIELDSEAL_BROWSER` or `--browser`. `--browser none` opens nothing and is for the development identity provider of `just web`, which signs in without a person; `--login <name>` picks the development login. The [local stack guide](./run-the-local-stack.md) shows both set-ups. Neither command prints a token.
 
 ## No subject IDs on screen
 

@@ -20,6 +20,7 @@ use fieldseal_distribution::domain::{
 use fieldseal_distribution::ports::{BundleStore, BundleStoreError, RosterSource, RuntimeProfiles};
 use fieldseal_instrument::domain::SchemaVersion;
 use fieldseal_kernel::id::{CohortId, Generation, SubjectId, TenancyId};
+use fieldseal_kernel::cbor;
 use fieldseal_kernel::value::Value;
 use fieldseal_publishing::contract::artefact_registry_contract;
 use fieldseal_registration::contract::sample_tenancy;
@@ -645,4 +646,182 @@ fn pub_062_a_registry_directory_that_cannot_be_read_is_an_error_not_an_empty_reg
             "{result:?}"
         );
     }
+}
+
+#[test]
+fn reg_046_the_file_registry_store_satisfies_the_registry_store_contract() {
+    let scratch = Scratch::new();
+    let n = AtomicU64::new(0);
+    fieldseal_registration::contract::registry_store_contract(|| {
+        FileRegistryStore::open(scratch.join(&format!("store-{}", n.fetch_add(1, Ordering::Relaxed)))).expect("store")
+    });
+}
+
+#[test]
+fn reg_046_assignments_and_roster_issues_survive_a_restart_of_the_journal() {
+    use fieldseal_registration::contract::sample_assignment;
+    use fieldseal_registration::domain::RosterIssue;
+    let scratch = Scratch::new();
+    let issue = RosterIssue {
+        seq: fieldseal_kernel::id::Seq(0),
+        cohort: CohortId::new("cohort-a").expect("cohort"),
+        version: 2,
+        digest: fieldseal_kernel::id::Digest::from([5; 32]),
+        by: fieldseal_registration::domain::AccountId("operator".into()),
+        roles: vec!["operator".into()],
+        methods: vec!["hwk".into(), "phr".into()],
+        at: fieldseal_kernel::time::AuthorityTime(77),
+    };
+    let (assignments, issues) = {
+        let store = FileRegistryStore::open(scratch.path()).expect("store");
+        store.put_assignment(&sample_assignment("acct-a", "survey-a", "cohort-a")).expect("put");
+        store.put_assignment(&sample_assignment("acct-b", "survey-b", "cohort-b")).expect("put");
+        store.put_roster_issue(&issue).expect("put");
+        (store.assignments().expect("assignments"), store.roster_issues().expect("issues"))
+    };
+    assert_eq!(assignments.len(), 2);
+    let reopened = FileRegistryStore::open(scratch.path()).expect("reopen");
+    assert_eq!(reopened.assignments(), Ok(assignments), "oldest first, with the same seq");
+    assert_eq!(reopened.roster_issues(), Ok(issues));
+    // A new record continues the numbering.
+    reopened.put_assignment(&sample_assignment("acct-c", "survey-a", "cohort-b")).expect("put");
+    assert_eq!(reopened.assignments().expect("assignments").last().map(|a| a.seq), Some(fieldseal_kernel::id::Seq(3)));
+    // The read-only snapshot another process takes sees them too.
+    assert_eq!(FileRegistryStore::snapshot(scratch.path()).expect("snapshot").assignments().expect("assignments").len(), 3);
+}
+
+#[test]
+fn reg_046_a_journal_record_that_does_not_decode_is_refused_not_skipped() {
+    use std::io::Write as _;
+    let scratch = Scratch::new();
+    drop(FileRegistryStore::open(scratch.path()).expect("store"));
+    // An assignment record (operation 10) whose cohort is empty.
+    let mut payload = vec![10u8];
+    for text in ["acct", "survey", ""] {
+        payload.extend_from_slice(&(text.len() as u32).to_be_bytes());
+        payload.extend_from_slice(text.as_bytes());
+    }
+    let mut framed = (payload.len() as u32).to_be_bytes().to_vec();
+    framed.extend_from_slice(&payload);
+    std::fs::OpenOptions::new().append(true).open(scratch.path().join("registry.journal")).expect("journal").write_all(&framed).expect("write");
+    assert!(FileRegistryStore::open(scratch.path()).is_err());
+}
+
+#[test]
+fn reg_046_a_corrupt_assignment_record_makes_the_store_refuse_to_open() {
+    use fieldseal_registration::contract::sample_assignment;
+    let journal_after = |assignment| {
+        let scratch = Scratch::new();
+        FileRegistryStore::open(scratch.path()).expect("store").put_assignment(&assignment).expect("put");
+        scratch
+    };
+    // A good record opens.
+    let good = journal_after(sample_assignment("acct", "survey", "cohort-a"));
+    assert!(FileRegistryStore::open(good.path()).is_ok());
+    // A byte after the record's last field, inside its frame.
+    let trailing = journal_after(sample_assignment("acct", "survey", "cohort-a"));
+    let path = trailing.path().join("registry.journal");
+    let mut bytes = std::fs::read(&path).expect("journal");
+    let len = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) + 1;
+    bytes[..4].copy_from_slice(&len.to_be_bytes());
+    bytes.push(0);
+    std::fs::write(&path, bytes).expect("write");
+    assert!(FileRegistryStore::open(trailing.path()).is_err(), "a trailing byte");
+    // Empty account, survey and `by`; generation 0.
+    let mut empty_by = sample_assignment("acct", "survey", "cohort-a");
+    empty_by.by.0.clear();
+    let mut generation_0 = sample_assignment("acct", "survey", "cohort-a");
+    generation_0.generation = Generation(0);
+    for (why, bad) in [
+        ("an empty account", sample_assignment("", "survey", "cohort-a")),
+        ("an empty survey", sample_assignment("acct", "", "cohort-a")),
+        ("an empty by", empty_by),
+        ("generation 0", generation_0),
+    ] {
+        let dir = journal_after(bad);
+        assert!(FileRegistryStore::open(dir.path()).is_err(), "{why}");
+    }
+}
+
+#[test]
+fn reg_046_the_survey_and_cohort_directories_answer_from_the_registry_and_the_roster_store() {
+    use fieldseal_adapters_file::directories::{PublishedSurveys, StoredCohorts};
+    use fieldseal_registration::ports::{CohortDirectory, SurveyDirectory};
+    let scratch = Scratch::new();
+    let surveys = PublishedSurveys(FileRegistry::new(scratch.join("registry")));
+    assert!(!surveys.exists("school-meals-baseline"), "an empty registry publishes nothing");
+    let store = RosterStore::open(scratch.join("rosters")).expect("store");
+    let cohorts = StoredCohorts(RosterStore::open(scratch.join("rosters")).expect("store"));
+    let cohort = CohortId::new("village-a").expect("cohort");
+    assert!(!cohorts.exists(&cohort));
+    store.issue(&roster("village-a", 1, "Bo")).expect("issue");
+    assert!(cohorts.exists(&cohort));
+    assert!(!cohorts.exists(&CohortId::new("village-b").expect("cohort")));
+    assert!(!cohorts.exists(&CohortId::new("../escape").expect("cohort")), "a name that can't be stored is not a cohort");
+}
+
+#[test]
+fn reg_047_the_file_roster_issuer_checks_before_it_writes_and_maps_the_store_outcomes() {
+    use fieldseal_adapters_file::roster_issuer::FileRosterIssuer;
+    use fieldseal_registration::ports::{IssueOutcome as Out, RosterIssuer};
+    let scratch = Scratch::new();
+    let issuer = FileRosterIssuer::new(RosterStore::open(scratch.join("rosters")).expect("store"));
+    let cohort = CohortId::new("village-a").expect("cohort");
+    let body = |version: i128, display: &str| {
+        let subject = cbor::map([("subject", Value::Text("s-1".into())), ("display", Value::Text(display.into()))]);
+        cbor::encode(&cbor::map([
+            ("cohort", Value::Text("village-a".into())),
+            ("version", Value::Int(version)),
+            ("subjects", Value::Array(vec![subject])),
+        ]))
+        .expect("encodable")
+    };
+    let Out::Issued { version: 2, digest } = issuer.issue(&cohort, &body(2, "Bo")) else { panic!("issued") };
+    assert_eq!(issuer.issue(&cohort, &body(2, "Bo")), Out::AlreadyIssued { version: 2, digest });
+    assert_eq!(issuer.issue(&cohort, &body(2, "Other")), Out::VersionTaken);
+    assert_eq!(issuer.issue(&cohort, &body(1, "Bo")), Out::NotNewer);
+    assert!(matches!(issuer.issue(&CohortId::new("village-b").expect("cohort"), &body(3, "Bo")), Out::Invalid(_)), "the roster names another cohort");
+    assert!(matches!(issuer.issue(&cohort, b"not cbor"), Out::Invalid(_)));
+    // Bytes that decode but are not in canonical form (a map with keys in the wrong order).
+    assert!(matches!(issuer.issue(&cohort, b"\xa2\x61b\x01\x61a\x02"), Out::Invalid(_)));
+    assert_eq!(issuer.store().versions(&cohort).expect("versions"), vec![2], "nothing else was written");
+    // The stored digest is the checksum the store keeps and `roster list` prints.
+    assert_eq!(digest, fieldseal_kernel::digest::sha256(&issuer.store().get(&cohort, 2).expect("get").expect("stored").encode()));
+}
+
+#[test]
+fn reg_047_the_file_roster_issuer_satisfies_the_roster_issuer_contract() {
+    use fieldseal_adapters_file::roster_issuer::FileRosterIssuer;
+    let scratch = Scratch::new();
+    let issuer = FileRosterIssuer::new(RosterStore::open(scratch.join("rosters")).expect("store"));
+    let cohort = CohortId::new("village-a").expect("cohort");
+    fieldseal_registration::contract::roster_issuer_contract(&issuer, &cohort, |cohort, version, display| {
+        let subject = cbor::map([("subject", Value::Text("s-1".into())), ("display", Value::Text(display.into()))]);
+        cbor::encode(&cbor::map([
+            ("cohort", Value::Text(cohort.as_str().into())),
+            ("version", Value::Int(i128::from(version))),
+            ("subjects", Value::Array(vec![subject])),
+        ]))
+        .expect("encodable")
+    });
+}
+
+#[test]
+fn reg_046_the_file_directories_satisfy_the_directory_contracts() {
+    use fieldseal_adapters_file::directories::StoredCohorts;
+    let scratch = Scratch::new();
+    let store = RosterStore::open(scratch.join("rosters")).expect("store");
+    store.issue(&roster("village-a", 1, "Bo")).expect("issue");
+    fieldseal_registration::contract::cohort_directory_contract(&StoredCohorts(store), &CohortId::new("village-a").expect("cohort"));
+}
+
+#[test]
+fn reg_046_the_published_surveys_satisfy_the_survey_directory_contract() {
+    use fieldseal_adapters_file::directories::PublishedSurveys;
+    use fieldseal_publishing::contract::sample_publication;
+    use fieldseal_publishing::ports::ArtefactRegistry;
+    let scratch = Scratch::new();
+    let registry = FileRegistry::new(scratch.join("registry"));
+    registry.put(&sample_publication("school-meals-baseline", "1.0.0", b"instrument bytes")).expect("put");
+    fieldseal_registration::contract::survey_directory_contract(&PublishedSurveys(registry), "school-meals-baseline");
 }

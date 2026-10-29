@@ -4,6 +4,8 @@
 
 #![allow(dead_code)]
 
+pub mod standin;
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 

@@ -226,6 +226,10 @@ impl RegistryStore for TokenFiles {
         record_jti(tenancy: &fieldseal_kernel::id::TenancyId, jti: &[u8; 16], until: AuthorityTime, now: AuthorityTime) -> Result<bool, RegistryStoreError>;
         put_access_token(token: &fieldseal_registration::domain::AccessToken) -> Result<(), RegistryStoreError>;
         access_token(value: &[u8; 32]) -> Result<Option<fieldseal_registration::domain::AccessToken>, RegistryStoreError>;
+        put_assignment(assignment: &fieldseal_registration::domain::Assignment) -> Result<(), RegistryStoreError>;
+        assignments() -> Result<Vec<fieldseal_registration::domain::Assignment>, RegistryStoreError>;
+        put_roster_issue(issue: &fieldseal_registration::domain::RosterIssue) -> Result<(), RegistryStoreError>;
+        roster_issues() -> Result<Vec<fieldseal_registration::domain::RosterIssue>, RegistryStoreError>;
     }
 }
 

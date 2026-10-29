@@ -8,17 +8,20 @@
 //!
 //! Every adapter here is a development adapter: [`custody::DirCustody`],
 //! [`store::FileRegistryStore`], [`tenancy::FileTenancyRegistry`], [`registry::FileRegistry`],
-//! [`roster_store::RosterStore`] with [`roster_store::FileRosterSource`],
-//! [`bundles::FileBundleStore`], [`profiles::FileRuntimeProfiles`] and the intake stores
+//! [`roster_store::RosterStore`] with [`roster_store::FileRosterSource`] and
+//! [`roster_issuer::FileRosterIssuer`],
+//! [`directories::PublishedSurveys`], [`directories::StoredCohorts`], [`bundles::FileBundleStore`], [`profiles::FileRuntimeProfiles`] and the intake stores
 //! ([`rosters`], [`submissions`], [`instruments`]).
 
 pub mod atomic;
 pub mod bundles;
 pub mod codec;
 pub mod custody;
+pub mod directories;
 pub mod instruments;
 pub mod profiles;
 pub mod registry;
+pub mod roster_issuer;
 pub mod roster_store;
 pub mod rosters;
 pub mod store;

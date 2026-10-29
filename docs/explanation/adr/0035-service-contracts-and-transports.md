@@ -25,6 +25,9 @@ Without a single definition, a second transport would restate each operation by 
 | `Factory` | `IssueApiToken` | `POST /v1/api-token` | PoP |
 | `Factory` | `PostureNonce` | `POST /v1/posture/nonce` | PoP |
 | `Factory` | `CheckPosture` | `POST /v1/posture` | PoP |
+| `Factory` | `IssueRoster` | `POST /v1/rosters` | operator Bearer access token |
+| `Factory` | `AssignCohort` | `POST /v1/assignments` | operator Bearer access token |
+| `Factory` | `ListAssignments` | `GET /v1/assignments` | operator Bearer access token |
 | `Upload` | `Challenge` | `POST /v1/challenge` | none |
 | `Upload` | `Upload` | `POST /v1/upload` | PoP |
 | `Upload` | `UploadOutbox` | `POST /v1/upload/outbox` | none (closing manifests are verified) |

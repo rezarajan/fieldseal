@@ -22,7 +22,7 @@ fn manifest(intake_adapters: Vec<(&str, Value)>, production: bool) -> Value {
     let simple = |ports: &[(&str, &str)]| map(ports.iter().map(|(p, a)| (*p, binding(a, vec![]))).collect::<Vec<_>>());
     let factory = map([(
         "adapters",
-        simple(&[("IdentityProvider", "memory-dev"), ("Signer", "file-dev"), ("AttestationVerifier", "software"), ("PolicyEngine", "built-in"), ("TenancyRegistry", "file-dev")]),
+        simple(&[("IdentityProvider", "memory-dev"), ("Signer", "file-dev"), ("AttestationVerifier", "software"), ("PolicyEngine", "built-in"), ("TenancyRegistry", "file-dev"), ("ArtefactRegistry", "file-dev"), ("RosterSource", "file-dev")]),
     )]);
     let intake = map([
         ("bind", t("127.0.0.1:8480")),

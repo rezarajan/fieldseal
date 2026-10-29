@@ -50,31 +50,39 @@ registry address="":
 fetch artefact="school-meals-baseline":
     tools/stack-run.sh fetch {{artefact}}
 
-# Walkthrough 5a: register a device headless (virtual passkey, words confirmed for you).
+# Walkthrough 5: issue the example rosters (village-a, cohort-a) at the factory; you sign in as the operator.
+issue:
+    tools/stack-run.sh issue
+
+# Walkthrough 6: assign those cohorts to the collector's account (one account; its tenancies, now and later).
+assign:
+    tools/stack-run.sh assign
+
+# Walkthrough 7a: register a device headless (virtual passkey, words confirmed for you).
 enrol:
     tools/stack-run.sh enrol
 
-# Walkthrough 5b: register a device with a token you got from the portal yourself.
+# Walkthrough 7b: register a device with a token you got from the portal yourself.
 register token:
     tools/stack-run.sh register {{token}}
 
-# Walkthrough 5b (cont.): after confirming the words in the portal, collect the certificate.
+# Walkthrough 7b (cont.): after confirming the words in the portal, collect the certificate.
 wait:
     tools/stack-run.sh wait
 
-# Walkthrough 6: a bundle sealed to the registered device, verified as the device verifies it.
+# Walkthrough 8: a bundle sealed to the registered device, verified as the device verifies it.
 bundle:
     tools/stack-run.sh bundle
 
-# Walkthrough 7: the device captures (scripted) and exports.
+# Walkthrough 9: the device captures (scripted) and exports.
 capture:
     tools/stack-run.sh capture
 
-# Walkthrough 8: upload the export and verify every receipt.
+# Walkthrough 10: upload the export and verify every receipt.
 upload:
     tools/stack-run.sh upload
 
-# Walkthrough 9: what intake landed for this device.
+# Walkthrough 11: what intake landed for this device.
 intake:
     tools/stack-run.sh intake
 

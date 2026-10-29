@@ -15,6 +15,8 @@ fieldseal-kernel.workspace = true
 fieldseal-trust.workspace = true
 fieldseal-policy.workspace = true
 fieldseal-registration.workspace = true
+fieldseal-deployment.workspace = true
+fieldseal-publishing.workspace = true
 fieldseal-adapters-memory.workspace = true
 fieldseal-adapters-oidc = { path = "../../adapters/oidc" }
 fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
@@ -23,7 +25,6 @@ getrandom = "0.2"
 tiny_http = "0.12"
 
 [dev-dependencies]
-fieldseal-deployment.workspace = true
 fieldseal-adapters-authoring.workspace = true
 
 [lints]

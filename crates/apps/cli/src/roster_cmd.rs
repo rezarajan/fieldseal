@@ -1,8 +1,12 @@
-//! `fieldseal roster check|diff|list` (CLI §5, CLI-050, CLI-052, CLI-053): the roster commands that
-//! read only their arguments and a copy of the factory's roster store. Issuing a roster and
-//! assigning cohorts are operations of the factory.
+//! `fieldseal roster check|diff|list|issue|assign` (CLI §5, CLI-050 to CLI-053, CLI-055).
+//!
+//! `check`, `diff` and `list` read only their arguments and a copy of the factory's roster store.
+//! `issue` and `assign` are operations of the factory (`IssueRoster`, `AssignCohort`): each signs
+//! the operator in once through OIDC (`oidc_login`), sends the access token as a Bearer token and
+//! writes nothing to disk. No other command in the CLI signs anyone in (REG-001).
 //!
 //! No command prints a subject id or a roster value unless `diff` is given `--reveal` (CLI-008).
+//! `assign --list` prints the accounts the factory journaled: the operator's own audit trail.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -10,7 +14,7 @@ use std::path::Path;
 use fieldseal_adapters_authoring::decode_path;
 use fieldseal_adapters_authoring::survey::SurveyTree;
 use fieldseal_adapters_file::roster_store::RosterStore;
-use fieldseal_distribution::domain::{ConsentState, Roster, RosterEntry};
+use fieldseal_distribution::domain::{ConsentState, Roster, RosterEntry, check_issue_form};
 use fieldseal_instrument::domain::Severity;
 use fieldseal_kernel::Value;
 use fieldseal_kernel::digest::{lower_hex, sha256};
@@ -18,11 +22,13 @@ use fieldseal_kernel::id::CohortId;
 
 use crate::args::Args;
 use crate::bundle_cmd::parse_roster;
+use crate::clients::{ClientError, connect_operator, report};
+use crate::oidc_login::{self, SignInError};
 use crate::json;
 use crate::messages::msg;
 use crate::outcome::{Outcome, exit};
 use crate::roster_check::{check_roster_form, compare_roster};
-use crate::support::{Res, fail, parse_uint, read, run_command, usage};
+use crate::support::{Res, fail, parse_uint, read, run_command, setting, usage};
 
 /// Runs `roster <verb>`; `None` if the verb is not one of these.
 pub fn run(verb: &str, raw: &[String]) -> Option<u8> {
@@ -30,6 +36,14 @@ pub fn run(verb: &str, raw: &[String]) -> Option<u8> {
         "check" => run_command("roster check", raw, &["--instrument"], &[], check),
         "diff" => run_command("roster diff", raw, &["--store"], &["--reveal"], diff),
         "list" => run_command("roster list", raw, &["--store", "--cohort"], &[], list),
+        "issue" => run_command("roster issue", raw, &["--factory-url", "--instrument", "--login", "--browser", "--issuer", "--client-id"], &[], issue),
+        "assign" => run_command(
+            "roster assign",
+            raw,
+            &["--factory-url", "--account", "--assign", "--login", "--browser", "--issuer", "--client-id", "--remove", "--unassign"],
+            &["--list"],
+            assign,
+        ),
         _ => return None,
     })
 }
@@ -42,17 +56,9 @@ fn int(n: usize) -> Value {
     Value::Int(n as i128)
 }
 
-// ---- check ------------------------------------------------------------------------------------
-
-/// `roster check <file> --instrument <survey dir>...`: the closed-schema check (DIS-063), then the
-/// comparison with every instrument (DIS-013). Writes nothing (CLI-050).
-fn check(args: &Args, out: &mut Outcome) -> Res {
-    let path = args.file("roster check")?;
-    let dirs = args.values("--instrument");
-    if dirs.is_empty() {
-        return Err(usage("missing-flag", &[("command", "roster check"), ("flag", "--instrument")]));
-    }
-    // A survey folder is the only instrument source: resolving an address needs a registry.
+/// The expanded instrument of each survey folder. A survey folder is the only instrument source:
+/// resolving an address needs a registry. `None` when one does not load (the error is recorded).
+fn load_instruments(dirs: &[String], out: &mut Outcome) -> Res<Option<Vec<Value>>> {
     let mut instruments = Vec::new();
     for dir in dirs {
         let dir = dir.trim_end_matches('/');
@@ -65,10 +71,24 @@ fn check(args: &Args, out: &mut Outcome) -> Res {
             Ok(loaded) => instruments.push(loaded.instrument),
             Err(_) => {
                 fail(out, exit::FAILED, "roster-survey-invalid", &[("dir", dir)]);
-                return Ok(());
+                return Ok(None);
             }
         }
     }
+    Ok(Some(instruments))
+}
+
+// ---- check ------------------------------------------------------------------------------------
+
+/// `roster check <file> --instrument <survey dir>...`: the closed-schema check (DIS-063), then the
+/// comparison with every instrument (DIS-013). Writes nothing (CLI-050).
+fn check(args: &Args, out: &mut Outcome) -> Res {
+    let path = args.file("roster check")?;
+    let dirs = args.values("--instrument");
+    if dirs.is_empty() {
+        return Err(usage("missing-flag", &[("command", "roster check"), ("flag", "--instrument")]));
+    }
+    let Some(instruments) = load_instruments(dirs, out)? else { return Ok(()) };
     let Some(_) = read(path, out) else { return Ok(()) };
     let value = match decode_path(Path::new(path)) {
         Ok(v) => v,
@@ -345,6 +365,204 @@ fn list(args: &Args, out: &mut Outcome) -> Res {
         }
     }
     out.set("rosters", Value::Array(rows));
+    Ok(())
+}
+
+// ---- issue ------------------------------------------------------------------------------------
+
+/// Records why a sign-in did not give a token, with the exit code of its kind.
+fn sign_in_failed(out: &mut Outcome, e: &SignInError) {
+    match e {
+        SignInError::NeedsPerson => fail(out, exit::FAILED, "sign-in-needs-person", &[]),
+        SignInError::Refused(reason) => fail(out, exit::FAILED, "sign-in-failed", &[("reason", reason)]),
+        SignInError::Unavailable(reason) => fail(out, exit::CONFIG, "sign-in-unreachable", &[("reason", reason)]),
+        SignInError::TimedOut => fail(out, exit::FAILED, "sign-in-timeout", &[("seconds", "180")]),
+    }
+}
+
+/// `roster issue <file>... --factory-url <url> [--instrument <survey dir>...]`: runs the check
+/// on every file first and sends nothing if any fails; then one sign-in and one `POST /v1/rosters`
+/// per file. Prints each stored version and digest, or `unchanged` (CLI-051).
+fn issue(args: &Args, out: &mut Outcome) -> Res {
+    if args.positionals.is_empty() {
+        return Err(usage("missing-file", &[("command", "roster issue")]));
+    }
+    let settings = oidc_login::settings(args, "roster issue")?;
+    let Some(url) = setting(args, "--factory-url", "FIELDSEAL_FACTORY_URL") else {
+        fail(out, exit::CONFIG, "no-factory-url", &[]);
+        return Ok(());
+    };
+    let Some(instruments) = load_instruments(args.values("--instrument"), out)? else { return Ok(()) };
+    // The same check as `roster check`, on every file, before anyone is signed in.
+    let mut bodies = Vec::new();
+    for path in &args.positionals {
+        let Some(_) = read(path, out) else { return Ok(()) };
+        let value = match decode_path(Path::new(path)) {
+            Ok(v) => v,
+            Err(e) => {
+                out.located_finding("INS-002", "error", path, (e.line, e.column), "", &e.message);
+                continue;
+            }
+        };
+        let form = match check_issue_form(value) {
+            Ok(form) => form,
+            Err(findings) => {
+                for f in findings {
+                    out.raw_finding("DIS-063", "error", path, &f.path, &f.message);
+                }
+                continue;
+            }
+        };
+        let roster = form.clone().into_roster(fieldseal_kernel::id::Generation(1));
+        for instrument in &instruments {
+            for f in compare_roster(&roster, instrument).iter().filter(|f| f.severity == Severity::Error) {
+                out.finding(path, f);
+            }
+        }
+        bodies.push((path.as_str(), form));
+    }
+    if out.exit != exit::OK {
+        return Ok(());
+    }
+    let client = match connect_operator(&url) {
+        Ok(c) => c,
+        Err(e) => {
+            report(out, &url, &e);
+            return Ok(());
+        }
+    };
+    let token = match oidc_login::sign_in(&settings) {
+        Ok(t) => t,
+        Err(e) => {
+            sign_in_failed(out, &e);
+            return Ok(());
+        }
+    };
+    let mut rows = Vec::new();
+    for (path, form) in &bodies {
+        match client.issue_roster(&token, &form.encode()) {
+            Ok(done) => {
+                let name = format!("{}@{}", form.cohort.as_str(), done.version);
+                out.lines.push(msg("roster-issue-line", &[("name", &name), ("digest", &done.digest), ("status", if done.status == "issued" { "stored" } else { &done.status })]));
+                rows.push(fieldseal_kernel::cbor::map([
+                    ("name", text(&name)),
+                    ("cohort", text(form.cohort.as_str())),
+                    ("version", Value::Int(i128::from(done.version))),
+                    ("digest", text(&done.digest)),
+                    ("status", text(&done.status)),
+                ]));
+            }
+            Err(ClientError::Refused { code, .. }) if code == "not-newer" || code == "version-taken" => {
+                let id = if code == "not-newer" { "roster-issue-not-newer" } else { "roster-issue-version-taken" };
+                fail(out, exit::FAILED, id, &[("file", path), ("cohort", form.cohort.as_str())]);
+            }
+            Err(e) => report(out, &url, &e),
+        }
+    }
+    out.set("rosters", Value::Array(rows));
+    Ok(())
+}
+
+// ---- assign -----------------------------------------------------------------------------------
+
+/// `roster assign --factory-url <url> --account <oidc-subject> (--assign <survey>=<cohort>)...`:
+/// one sign-in, one `POST /v1/assignments` per `--assign`. `--list` prints the journal. The
+/// command removes nothing, and a request to remove names REG-045 (CLI-055).
+fn assign(args: &Args, out: &mut Outcome) -> Res {
+    if let Some(extra) = args.positionals.first() {
+        return Err(usage("extra-argument", &[("argument", extra)]));
+    }
+    for flag in ["--remove", "--unassign"] {
+        if args.value(flag).is_some() {
+            return Err(usage("roster-assign-no-remove", &[("flag", flag)]));
+        }
+    }
+    let list = args.has("--list");
+    let mut pairs = Vec::new();
+    for pair in args.values("--assign") {
+        match pair.split_once('=').filter(|(s, c)| !s.is_empty() && !c.is_empty()) {
+            Some((survey, cohort)) => pairs.push((survey, cohort)),
+            None => return Err(usage("roster-assign-bad-pair", &[("pair", pair)])),
+        }
+    }
+    let account = args.value("--account").filter(|a| !a.is_empty());
+    if !list && (account.is_none() || pairs.is_empty()) || list && (account.is_some() || !pairs.is_empty()) {
+        return Err(usage("roster-assign-needs", &[]));
+    }
+    let settings = oidc_login::settings(args, "roster assign")?;
+    let Some(url) = setting(args, "--factory-url", "FIELDSEAL_FACTORY_URL") else {
+        fail(out, exit::CONFIG, "no-factory-url", &[]);
+        return Ok(());
+    };
+    let client = match connect_operator(&url) {
+        Ok(c) => c,
+        Err(e) => {
+            report(out, &url, &e);
+            return Ok(());
+        }
+    };
+    let token = match oidc_login::sign_in(&settings) {
+        Ok(t) => t,
+        Err(e) => {
+            sign_in_failed(out, &e);
+            return Ok(());
+        }
+    };
+    if list {
+        let rows = match client.assignments(&token) {
+            Ok(rows) => rows,
+            Err(e) => {
+                report(out, &url, &e);
+                return Ok(());
+            }
+        };
+        if rows.is_empty() {
+            out.lines.push(msg("roster-assign-none", &[]));
+        }
+        for r in &rows {
+            out.lines.push(format!("#{} {}  account {}: {} -> cohort {} (generation {})  by {}", r.seq, r.at, r.account, r.survey, r.cohort, r.generation, r.by));
+        }
+        out.set(
+            "assignments",
+            Value::Array(
+                rows.iter()
+                    .map(|r| {
+                        fieldseal_kernel::cbor::map([
+                            ("seq", Value::Int(i128::from(r.seq))),
+                            ("account", text(&r.account)),
+                            ("survey", text(&r.survey)),
+                            ("cohort", text(&r.cohort)),
+                            ("generation", Value::Int(i128::from(r.generation))),
+                            ("by", text(&r.by)),
+                            ("at", text(&r.at)),
+                        ])
+                    })
+                    .collect(),
+            ),
+        );
+        return Ok(());
+    }
+    let account = account.unwrap_or_default();
+    let mut done = Vec::new();
+    for (survey, cohort) in pairs {
+        match client.assign(&token, account, survey, cohort) {
+            Ok(answer) => {
+                out.lines.push(msg(
+                    "roster-assign-line",
+                    &[("account", account), ("survey", survey), ("cohort", cohort), ("generation", &answer.generation.to_string()), ("status", &answer.status)],
+                ));
+                done.push(fieldseal_kernel::cbor::map([
+                    ("account", text(account)),
+                    ("survey", text(survey)),
+                    ("cohort", text(cohort)),
+                    ("generation", Value::Int(i128::from(answer.generation))),
+                    ("status", text(&answer.status)),
+                ]));
+            }
+            Err(e) => report(out, &url, &e),
+        }
+    }
+    out.set("assignments", Value::Array(done));
     Ok(())
 }
 

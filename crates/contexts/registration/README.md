@@ -45,12 +45,13 @@ Contract tests (`contract`): `registry_store_contract`, `identity_provider_contr
 - A policy decision that cannot be logged is a deny (`decision-log-unavailable`); a policy-engine failure yields the decision point's failure verdict.
 - Tenancy updates never remove keys from history (`RegistryStoreError::HistoryViolation`); posture nonces and PoP `jti`s are single use; PoP token `iat` must be within 300 s of the factory clock.
 - `Notifier` failures are ignored; no security property depends on it.
+- Operator operations (`assign_cohort`, `list_assignments`, `issue_roster`) need `Role::Operator` and a phishing-resistant sign-in whatever the registration policy says. `RegistryStore` keeps `Assignment` and `RosterIssue` records, oldest first, with a store-assigned `seq` and no way to remove one; the ports `RosterIssuer`, `SurveyDirectory` and `CohortDirectory` (wired with `Factory::with_operator_ports`) reach the roster store and the artefact registry. `AssignCohort` creates a missing account (no roles, random collector reference), updates the target account's live tenancies first and journals second, and reissues the certificate of a registered tenancy whose cohort set changes. `register` starts a tenancy with the cohorts of the account's assignments. `IssueRoster` writes the roster store first and the journal second; issuing the same bytes again writes a missing record.
 - Adapters must not take authentication strength from configuration: `IdentityProvider` reports it from the provider's assertion or as `asserted`.
 
 ## Side Effects
 
 - None inside the crate itself; all effects go through ports passed in `FactoryPorts`.
-- Writes accounts, tokens, tenancies, devices, nonces and access tokens through `RegistryStore`.
+- Writes accounts, assignments, roster issues, tokens, tenancies, devices, nonces and access tokens through `RegistryStore`.
 - Signs tokens and certificates and opens sealed requests through Trust's `KeyCustody`.
 - Appends every policy decision to Policy's `DecisionLog`.
 - Sends best-effort `PortalEvent`s (`DeviceRegistered`, `DeviceMarkedLost`, `RegistrationHeld`) through `Notifier`; reads intake progress through `ReceivedProgress` to set cutoffs.

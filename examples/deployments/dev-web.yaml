@@ -1,9 +1,11 @@
 # The manifest of `just web` (tools/dev-web.sh, docs/how-to/use-the-web-app.md): the services
 # that run natively, without containers. Like local-stack.yaml, but the directories are under
 # deploy/local/.state/dev-web/ (relative to the repository root, where tools/dev-web.sh starts
-# every process), the processes bind 127.0.0.1, and the factory's identity is the development one
-# (`memory-dev`, FIELDSEAL_IDENTITY=dev), which `fieldseal deployment validate` refuses in an
-# environment named `production` (DEP-023).
+# every process), the processes bind 127.0.0.1, and the factory signs in through the production `oidc`
+# adapter against the development IdP (crates/apps/dev-idp), which tools/dev-web.sh starts on
+# localhost:8180, the issuer the stack's Keycloak uses. The development IdP is a tool, not a
+# component, so no manifest names it. Secrets appear only as `{ secretRef: <name> }`;
+# tools/dev-web.sh generates them into deploy/local/.state/dev-web/secrets.
 #
 #   fieldseal deployment validate examples/deployments/dev-web.yaml
 #   fieldseal deployment render examples/deployments/dev-web.yaml --environment development --out deploy/local/.state/dev-web/env
@@ -29,8 +31,19 @@ spec:
     factory:
       bind: "127.0.0.1:8080"
       adapters:
-        # The development identity: the factory runs FIELDSEAL_IDENTITY=dev (memory-dev).
-        IdentityProvider: { adapter: memory-dev, config: {} }
+        # The same adapter and settings as the stack, against the development IdP.
+        IdentityProvider:
+          adapter: oidc
+          config:
+            issuer: "http://localhost:8180/realms/fieldseal"
+            clientId: fieldseal-factory
+            clientSecret: { secretRef: factory-oidc-client-secret }
+            acrValues: phr
+            rolesClaim: roles
+            # The operator API: access tokens of the public client fieldseal-cli for this audience.
+            # The development IdP issues the header type at+jwt, so acceptTypJwt stays off.
+            apiAudience: fieldseal-factory-api
+            cliClientId: fieldseal-cli
         # The authority that tools/stack-init.sh creates (development custody: files).
         Signer:
           adapter: file-dev
@@ -40,19 +53,29 @@ spec:
         # The render writes FIELDSEAL_ALLOW_UNATTESTED=true for this adapter (REG-017, non-production only).
         AttestationVerifier: { adapter: software, config: {} }
         PolicyEngine: { adapter: built-in, config: {} }
-        # Every new tenancy is assigned the cohorts of both sample rosters.
-        TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory, cohorts: "cohort-a:1,village-a:1" } }
+        # Cohorts reach a tenancy through `fieldseal roster assign`, which the journal records.
+        TenancyRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/factory } }
+        # The artefact registry `just publish` writes (read here) and the roster store that
+        # `fieldseal roster issue` writes through the factory. Both are development adapters.
+        ArtefactRegistry: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/cli/registry } }
+        RosterSource: { adapter: file-dev, config: { dir: deploy/local/.state/dev-web/rosters } }
       scaling: { replicas: 1 }
-    # `just web` runs the intake app natively. Until the development IdP exists (Phase 11) the
-    # results reader signs in as the development identity (`memory-dev`, FIELDSEAL_IDENTITY=dev),
-    # which production refuses.
+    # `just web` runs the intake app natively. Its results reader signs in at the development IdP
+    # as the factory does, with the client `fieldseal-intake`.
     intake:
       bind: "127.0.0.1:8480"
       publicUrl: "http://localhost:8480"
       portal: { bind: "127.0.0.1:8481", publicUrl: "http://localhost:8481" }
       dirs: { exportKey: deploy/local/.state/dev-web/authority/export-key }
       adapters:
-        IdentityProvider: { adapter: memory-dev, config: {} }
+        IdentityProvider:
+          adapter: oidc
+          config:
+            issuer: "http://localhost:8180/realms/fieldseal"
+            clientId: fieldseal-intake
+            clientSecret: { secretRef: intake-oidc-client-secret }
+            acrValues: phr
+            rolesClaim: roles
         RecordKeyUnsealer:
           adapter: file-dev
           config: { dir: deploy/local/.state/dev-web/authority/online, trustBundle: deploy/local/.state/dev-web/authority/trust-bundle.bundle }

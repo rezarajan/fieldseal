@@ -18,7 +18,7 @@ pub struct Args {
 /// The flags that may be given more than once; every other flag may be given at most once
 /// (CLI-022), so a repeated `--out` is refused instead of the last one silently winning.
 pub const REPEATABLE: &[&str] = &[
-    "--lang", "--layout", "--reviewers", "--revocations", "--key", "--policy", "--build", "--instrument", "--log-origin", "--log", "--roster",
+    "--lang", "--layout", "--reviewers", "--revocations", "--key", "--policy", "--build", "--instrument", "--log-origin", "--log", "--roster", "--assign",
 ];
 
 /// Why the arguments were refused: a usage error (exit 2).

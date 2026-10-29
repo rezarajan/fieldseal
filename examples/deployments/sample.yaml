@@ -36,6 +36,9 @@ spec:
         AttestationVerifier: { adapter: software, config: {} }
         PolicyEngine: { adapter: built-in, config: {} }
         TenancyRegistry: { adapter: memory, config: {} }
+        # The operator API reads the artefact registry and writes the roster store (development adapters, DEP-023).
+        ArtefactRegistry: { adapter: file-dev, config: { dir: ./registry } }
+        RosterSource: { adapter: file-dev, config: { dir: ./rosters } }
       scaling: { replicas: 1 }
     intake:
       adapters:

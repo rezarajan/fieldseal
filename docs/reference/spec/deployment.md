@@ -147,6 +147,8 @@ spec:
         AttestationVerifier: { adapter: android-key-attestation, config: { rootsRef: trust/google-attestation-roots } }
         PolicyEngine: { adapter: opa, config: { bundleRef: policy/factory } }
         TenancyRegistry: { adapter: postgres, config: { url: { secretRef: factory-db-url } } }
+        ArtefactRegistry: { adapter: file-dev, config: { dir: /registry } }
+        RosterSource: { adapter: file-dev, config: { dir: /rosters } }
       scaling: { replicas: 2 }
     intake:
       adapters:

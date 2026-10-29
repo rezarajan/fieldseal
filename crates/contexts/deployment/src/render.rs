@@ -168,9 +168,11 @@ fn factory_aliases(env: &mut BTreeMap<String, String>, spec: &crate::manifest::C
     if let Some(v) = spec.adapters.get("TenancyRegistry").filter(|a| a.adapter == "file-dev").and_then(|a| a.config.get("dir")) {
         put(env, "FIELDSEAL_STATE_DIR", v);
     }
-    // Cohorts every new tenancy is assigned at registration (`cohort:generation,...`).
-    if let Some(v) = spec.adapters.get("TenancyRegistry").and_then(|a| a.config.get("cohorts")) {
-        put(env, "FIELDSEAL_COHORTS", v);
+    // The artefact registry directory the factory reads and the roster store it writes.
+    for (port, var) in [("ArtefactRegistry", "FIELDSEAL_FACTORY_REGISTRY_DIR"), ("RosterSource", "FIELDSEAL_ROSTER_DIR")] {
+        if let Some(v) = spec.adapters.get(port).filter(|a| a.adapter == "file-dev").and_then(|a| a.config.get("dir")) {
+            put(env, var, v);
+        }
     }
     if spec.adapters.get("AttestationVerifier").is_some_and(|a| a.adapter == "software" || a.adapter == "memory") {
         env.insert("FIELDSEAL_ALLOW_UNATTESTED".into(), "true".into());
@@ -276,6 +278,14 @@ fn identity_vars(env: &mut BTreeMap<String, String>, idp: &crate::manifest::Adap
     match idp.adapter.as_str() {
         "oidc" => {
             env.insert("FIELDSEAL_IDENTITY".into(), "oidc".into());
+            // The operator API's access tokens (REG-070a); only the factory verifies them.
+            if with_users {
+                for (key, var) in [("apiAudience", "FIELDSEAL_OIDC_API_AUDIENCE"), ("cliClientId", "FIELDSEAL_OIDC_CLI_CLIENT_ID"), ("acceptTypJwt", "FIELDSEAL_OIDC_ACCEPT_TYP_JWT")] {
+                    if let Some(v) = idp.config.get(key) {
+                        put(env, var, v);
+                    }
+                }
+            }
             for (key, var) in [
                 ("issuer", "FIELDSEAL_OIDC_ISSUER"),
                 ("clientId", "FIELDSEAL_OIDC_CLIENT_ID"),

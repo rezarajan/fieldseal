@@ -21,6 +21,9 @@ pub enum ClientError {
     NotBuilt(String),
     /// The address isn't a URL with a known scheme.
     BadUrl,
+    /// An operator call was pointed at an `http://` address that isn't on this machine: the
+    /// access token would cross the network in clear.
+    Cleartext,
     /// The service couldn't be reached, or its answer was cut off.
     Unreachable(String),
     /// The service refused: the HTTP status and the machine-readable error code.
@@ -47,7 +50,47 @@ pub struct RegistrationStatus {
     pub reasons: Vec<String>,
 }
 
-/// The factory's runtime API, as the CLI uses it.
+/// What `AssignCohort` answered.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssignAnswer {
+    /// `assigned`, or `unchanged` when the same assignment was already journaled.
+    pub status: String,
+    /// The generation recorded for the cohort.
+    pub generation: u32,
+}
+
+/// One journaled assignment, as `ListAssignments` returns it.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssignmentRow {
+    /// The journal position.
+    pub seq: u64,
+    /// The account the assignment targets: the collector's OIDC subject.
+    pub account: String,
+    /// The survey.
+    pub survey: String,
+    /// The cohort.
+    pub cohort: String,
+    /// The generation.
+    pub generation: u32,
+    /// The operator's account.
+    pub by: String,
+    /// When it was made, as the factory printed it.
+    pub at: String,
+}
+
+/// What `IssueRoster` answered.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct IssueAnswer {
+    /// `issued`, or `unchanged` when the same roster was already stored.
+    pub status: String,
+    /// The stored version.
+    pub version: u64,
+    /// `sha256:` and the digest of the stored roster.
+    pub digest: String,
+}
+
+/// The factory's runtime API, as the CLI uses it. The last three calls are the operator API:
+/// they send the access token as `Authorization: Bearer` and nothing else.
 pub trait FactoryClient {
     /// Submits a sealed registration request file (REG-050).
     fn submit(&self, request_file: &[u8]) -> Result<RegistrationStatus, ClientError>;
@@ -55,6 +98,12 @@ pub trait FactoryClient {
     fn status(&self, tenancy: &str) -> Result<RegistrationStatus, ClientError>;
     /// The tenancy certificate (CBOR), with a `Fieldseal-PoP` header made by the tenancy's key.
     fn certificate(&self, pop_header: &str) -> Result<Vec<u8>, ClientError>;
+    /// Assigns `cohort` of `survey` to `account`, an OIDC subject (REG-046).
+    fn assign(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<AssignAnswer, ClientError>;
+    /// The journaled assignments, oldest first.
+    fn assignments(&self, bearer: &str) -> Result<Vec<AssignmentRow>, ClientError>;
+    /// Adds a roster in canonical CBOR as a new version (REG-047).
+    fn issue_roster(&self, bearer: &str, canonical_roster: &[u8]) -> Result<IssueAnswer, ClientError>;
 }
 
 /// The upload endpoint, as the CLI uses it.
@@ -75,6 +124,30 @@ fn check_scheme(url: &str) -> Result<(), ClientError> {
 pub fn connect_factory(url: &str) -> Result<Box<dyn FactoryClient>, ClientError> {
     check_scheme(url)?;
     Ok(Box::new(HttpFactory(FactoryHttpClient::new(url).map_err(|_| ClientError::BadUrl)?)))
+}
+
+/// Whether the host of an `http://` or `https://` address is `localhost` or a loopback address.
+fn is_loopback_host(url: &str) -> bool {
+    let rest = url.split_once("://").map_or("", |(_, r)| r);
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    // What follows the last `@` is the host; anything before it is user information.
+    let host_port = authority.rsplit('@').next().unwrap_or("");
+    let host = match host_port.strip_prefix('[') {
+        Some(v6) => v6.split(']').next().unwrap_or(""),
+        None => host_port.split(':').next().unwrap_or(""),
+    };
+    host.eq_ignore_ascii_case("localhost") || host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
+/// Connects to the factory at `url` for an operator call (`roster issue`, `roster assign`),
+/// which sends a Bearer access token. An `http://` address is refused unless its host is a
+/// loopback name or address; use `https://` for any other.
+pub fn connect_operator(url: &str) -> Result<Box<dyn FactoryClient>, ClientError> {
+    check_scheme(url)?;
+    if scheme(url) == Some("http") && !is_loopback_host(url) {
+        return Err(ClientError::Cleartext);
+    }
+    connect_factory(url)
 }
 
 /// Connects to the upload endpoint at `url`, choosing the transport by scheme.
@@ -129,6 +202,55 @@ impl FactoryClient for HttpFactory {
         let a = self.0.certificate(pop_header).map_err(unreachable)?;
         if a.status == 200 { Ok(a.body) } else { Err(refusal(a.status, &a.body)) }
     }
+
+    fn assign(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<AssignAnswer, ClientError> {
+        self.assign_impl(bearer, account, survey, cohort)
+    }
+
+    fn assignments(&self, bearer: &str) -> Result<Vec<AssignmentRow>, ClientError> {
+        let j = json_of(&self.0.assignments(bearer).map_err(unreachable)?)?;
+        let rows = j.get("assignments").and_then(Json::as_array).ok_or_else(|| ClientError::Malformed("no assignments".into()))?;
+        rows.iter()
+            .map(|r| {
+                Ok(AssignmentRow {
+                    seq: number_of(r, "seq")?,
+                    account: text_of(r, "account")?,
+                    survey: text_of(r, "survey")?,
+                    cohort: text_of(r, "cohort")?,
+                    generation: u32::try_from(number_of(r, "generation")?).map_err(|_| ClientError::Malformed("generation".into()))?,
+                    by: text_of(r, "by")?,
+                    at: text_of(r, "at")?,
+                })
+            })
+            .collect()
+    }
+
+    fn issue_roster(&self, bearer: &str, canonical_roster: &[u8]) -> Result<IssueAnswer, ClientError> {
+        let j = json_of(&self.0.issue_roster(bearer, canonical_roster).map_err(unreachable)?)?;
+        Ok(IssueAnswer { status: text_of(&j, "status")?, version: number_of(&j, "version")?, digest: text_of(&j, "digest")? })
+    }
+}
+
+fn json_of(a: &fieldseal_adapters_factory_http::client::Answer) -> Result<Json, ClientError> {
+    if a.status != 200 {
+        return Err(refusal(a.status, &a.body));
+    }
+    serde_json::from_slice(&a.body).map_err(|e| ClientError::Malformed(e.to_string()))
+}
+
+fn text_of(j: &Json, key: &str) -> Result<String, ClientError> {
+    j.get(key).and_then(Json::as_str).map(str::to_owned).ok_or_else(|| ClientError::Malformed(format!("no {key}")))
+}
+
+fn number_of(j: &Json, key: &str) -> Result<u64, ClientError> {
+    j.get(key).and_then(Json::as_u64).ok_or_else(|| ClientError::Malformed(format!("no {key}")))
+}
+
+impl HttpFactory {
+    fn assign_impl(&self, bearer: &str, account: &str, survey: &str, cohort: &str) -> Result<AssignAnswer, ClientError> {
+        let j = json_of(&self.0.assign(bearer, account, survey, cohort).map_err(unreachable)?)?;
+        Ok(AssignAnswer { status: text_of(&j, "status")?, generation: u32::try_from(number_of(&j, "generation")?).map_err(|_| ClientError::Malformed("generation".into()))? })
+    }
 }
 
 struct HttpUpload {
@@ -160,6 +282,7 @@ pub fn report(out: &mut crate::outcome::Outcome, url: &str, e: &ClientError) {
     match e {
         ClientError::NotBuilt(s) => fail(out, exit::CONFIG, "transport-not-built", &[("url", url), ("scheme", s)]),
         ClientError::BadUrl => fail(out, exit::CONFIG, "bad-scheme", &[("url", url)]),
+        ClientError::Cleartext => fail(out, exit::USAGE, "operator-cleartext", &[("url", url)]),
         ClientError::Unreachable(r) => fail(out, exit::CONFIG, "service-unreachable", &[("url", url), ("reason", r)]),
         ClientError::Refused { status, code } => fail(out, exit::FAILED, "service-refused", &[("url", url), ("status", &status.to_string()), ("code", code)]),
         ClientError::Malformed(r) => fail(out, exit::FAILED, "service-malformed", &[("url", url), ("reason", r)]),

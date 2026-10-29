@@ -471,6 +471,52 @@ pub struct TenancyTerms {
     pub cohorts: Vec<CohortAssignment>,
 }
 
+/// A survey's cohort assigned to one account by an operator (REG-046). It applies to the
+/// account's tenancies, current and later, and is never removed (REG-045).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Assignment {
+    /// Its place in the journal, oldest first. The store assigns it; callers pass `Seq(0)`.
+    pub seq: Seq,
+    /// The account the assignment targets: the collector's OIDC subject.
+    pub account: AccountId,
+    /// The name of the published instrument.
+    pub survey: String,
+    /// The cohort.
+    pub cohort: CohortId,
+    /// The generation recorded for the cohort on each tenancy it reaches (DIS-014).
+    pub generation: Generation,
+    /// The operator's account that made the assignment.
+    pub by: AccountId,
+    /// The operator's role names at the time.
+    pub roles: Vec<String>,
+    /// The `amr` and `acr` values the operator's sign-in carried.
+    pub methods: Vec<String>,
+    /// The factory's clock when it was made.
+    pub at: AuthorityTime,
+}
+
+/// A roster version the factory accepted (REG-047). It names the cohort, the version and the
+/// content digest, and holds no subject data.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RosterIssue {
+    /// Its place in the journal, oldest first. The store assigns it; callers pass `Seq(0)`.
+    pub seq: Seq,
+    /// The cohort.
+    pub cohort: CohortId,
+    /// The roster version.
+    pub version: u64,
+    /// SHA-256 of the stored canonical roster.
+    pub digest: Digest,
+    /// The operator's account that issued it.
+    pub by: AccountId,
+    /// The operator's role names at the time.
+    pub roles: Vec<String>,
+    /// The `amr` and `acr` values the operator's sign-in carried.
+    pub methods: Vec<String>,
+    /// The factory's clock when it was issued.
+    pub at: AuthorityTime,
+}
+
 /// A device's identifier at the factory.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct DeviceId(pub String);

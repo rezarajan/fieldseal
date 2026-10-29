@@ -2,7 +2,8 @@
 # Starts the local stack: generates the secrets (once; a later release's new secrets are appended),
 # refuses to start on a Keycloak volume made from an older realm, renders the services' environment from
 # the manifest, builds and loads the images with Nix, starts compose and waits for the endpoints
-# (Keycloak, the factory, the intake app, the log and the web app).
+# (Keycloak, the factory, the intake app, the log and the web app), then publishes the examples,
+# issues the example rosters and assigns their cohorts (tools/stack-run.sh seed, issue, assign).
 #
 #   tools/stack-up.sh                 (normally: just up)
 #
@@ -85,6 +86,13 @@ stage wait-intake wait_for http://localhost:8480/healthz "intake" 120
 stage wait-log wait_for http://localhost:9001/checkpoint "transparency log" 120
 stage wait-web wait_for http://127.0.0.1:8090/instruments "web app" 120
 
+# The production order (Technical Plan 8): publish, then issue the rosters, then assign. Each step
+# is idempotent. The two operator sign-ins use a passkey that is reset on every run, which costs
+# nothing here because no one has signed in by hand yet.
+stage seed "$ROOT/tools/stack-run.sh" seed || die "the seed step failed (tools/stack-run.sh seed)"
+stage issue "$ROOT/tools/stack-run.sh" issue || die "the issue step failed (tools/stack-run.sh issue)"
+stage assign "$ROOT/tools/stack-run.sh" assign || die "the assign step failed (tools/stack-run.sh assign)"
+
 stage_report
 
 cat <<MSG
@@ -98,7 +106,10 @@ The stack is up (engine: $ENGINE).
   Results reader:    http://localhost:8481   (sign in as product-owner; download the results files)
   Transparency log:  http://localhost:9001
 
-Next:  just seed     publish the sample instrument through the log
+The examples are published, the example rosters issued and their cohorts assigned to the
+collector's account (product-owner).
+
+Next:  just seed     publish the sample instruments (again: nothing changes)
        just demo     register a device with a passkey, capture, upload, verify the receipts
        just down     stop (keeps the registered device, the passkey and the log);  just purge  forgets all
 MSG

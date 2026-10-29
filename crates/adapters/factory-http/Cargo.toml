@@ -23,6 +23,8 @@ ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 
 [dev-dependencies]
 fieldseal-adapters-memory.workspace = true
+fieldseal-adapters-file.workspace = true
+fieldseal-distribution.workspace = true
 fieldseal-policy.workspace = true
 tiny_http = "0.12"
 

@@ -195,6 +195,11 @@ fn plan_value(plan: &RenderPlan) -> Value {
 
 /// The roster as JSON, `{}` when the instrument has none.
 fn roster(entry: &Entry) -> Response {
+    match &entry.stored_roster {
+        Some(Ok(json)) => return Response::json(200, json),
+        Some(Err(e)) => return ui::error_page(422, &format!("The roster store could not be read: {e}")),
+        None => {}
+    }
     let Some(path) = &entry.roster else { return Response::json(200, "{}") };
     let parsed = fieldseal_adapters_authoring::decode_path(path).map_err(|e| e.message);
     match parsed {

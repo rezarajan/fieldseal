@@ -48,6 +48,11 @@ spec:
             # Asking proves nothing: only the ID token's own acr/amr count (REG-002a).
             acrValues: phr
             rolesClaim: roles
+            # The operator API (roster issue, roster assign): access tokens of the public client
+            # fieldseal-cli for this audience. Keycloak's access tokens carry the header type JWT.
+            apiAudience: fieldseal-factory-api
+            cliClientId: fieldseal-cli
+            acceptTypJwt: true
         # One authority for the whole stack: the keys and the trust bundle that the `init`
         # service created (development custody: files, never production).
         Signer:
@@ -56,8 +61,12 @@ spec:
         AttestationVerifier: { adapter: software, config: {} }
         PolicyEngine: { adapter: built-in, config: {} }
         # Tokens, accounts, tenancies and devices are kept in a journal, so a restart keeps them.
-        # Every new tenancy is assigned the cohorts of both sample rosters (school meals survey, water survey).
-        TenancyRegistry: { adapter: file-dev, config: { dir: /state/factory, cohorts: "cohort-a:1,village-a:1" } }
+        # Cohorts reach a tenancy through `fieldseal roster assign`, which the journal records.
+        TenancyRegistry: { adapter: file-dev, config: { dir: /state/factory } }
+        # The artefact registry `artefact publish` writes (read here) and the roster store that
+        # `roster issue` writes through the factory. Both are development adapters.
+        ArtefactRegistry: { adapter: file-dev, config: { dir: /clistate/registry } }
+        RosterSource: { adapter: file-dev, config: { dir: /rosters } }
       scaling: { replicas: 1 }
     intake:
       # Both listeners are on all interfaces: the service shares Keycloak's network namespace.

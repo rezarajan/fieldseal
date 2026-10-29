@@ -18,6 +18,8 @@ Adversarial tests for Fieldseal (issue #59): hostile bytes, replay, key misuse, 
 - Canary values must never appear in outputs that must not carry them.
 - All randomness is seeded, so failures reproduce.
 
+- `tests/operator_api.rs` (the operator routes: Bearer required, role, phishing resistance, no cookie accepted, no Bearer on the portal) and `tests/keycloak_realm.rs` (the realm file: API audience in access tokens only, `fieldseal-cli` public with PKCE, fixed `product-owner` id).
+
 ## Side Effects
 - None in the library. Tests are in process over in-memory adapters; no ports or network.
 

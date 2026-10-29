@@ -92,6 +92,11 @@ services:
     volumes:
       - authority:/authority:ro
       - factory-state:/state/factory
+      # The artefact registry (/clistate/registry) that assignments are checked against, written
+      # by the CLI (demo service), and the roster store, which only the factory writes (the
+      # image makes /rosters owner-only, as the store requires).
+      - clistate:/clistate:ro
+      - rosters:/rosters
 
   intake:
     # The intake app (fieldseal-intake): device uploads on :8480 and the results reader portal on
@@ -155,6 +160,11 @@ services:
       FIELDSEAL_FACTORY_URL: http://localhost:8080
       FIELDSEAL_INTAKE_URL: http://localhost:8480
       FIELDSEAL_TRANSLOG_URL: http://translog:8080
+      # The operator sign-in of `roster issue` and `roster assign`: a passkey, through the
+      # opener below, at the development Keycloak (the demo shares its network namespace).
+      FIELDSEAL_BROWSER: /opt/fieldseal/tools/stack-browser.sh
+      FIELDSEAL_OIDC_ISSUER: http://localhost:8180/realms/fieldseal
+      FIELDSEAL_OIDC_CLIENT_ID: fieldseal-cli
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run just up}
       FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET: ${FIELDSEAL_SECRET_FACTORY_OIDC_CLIENT_SECRET:?run just up}
     volumes:
@@ -164,6 +174,8 @@ services:
       - clistate:/clistate
       - published:/published
       - factory-state:/factory-state:ro
+      # For `roster diff` and `roster list`; the factory writes the store.
+      - rosters:/rosters:ro
       # The walkthrough's files for you: fetched artefacts and rendered instruments.
       - ./.out:/out
 
@@ -185,6 +197,8 @@ services:
       FIELDSEAL_WEB_STACK: "true"
       # Which cohort's roster each survey's pages use, until assignments replace this map.
       FIELDSEAL_WEB_SURVEY_COHORTS: "school-meals-baseline=cohort-a,household-water-access=village-a"
+      # The roster page reads the factory's roster store (read-only) instead of examples/rosters.
+      FIELDSEAL_WEB_ROSTER_DIR: /rosters
       FIELDSEAL_FACTORY_URL: http://localhost:8080
       FIELDSEAL_UPLOAD_URL: http://localhost:8480
       FIELDSEAL_LOG_URL: http://translog:8080
@@ -196,6 +210,7 @@ services:
       - published:/published
       - factory-state:/factory-state:ro
       - clistate:/clistate
+      - rosters:/rosters:ro
 
 volumes:
   authority:
@@ -204,6 +219,7 @@ volumes:
   log:
   device:
   clistate:
+  rosters:
   published:
   submissions:
   keycloak-data:

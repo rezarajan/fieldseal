@@ -15,7 +15,7 @@ contexts = [
 # Matched by prefix.
 adapters = ["fieldseal-adapters-"]
 bindings = ["fieldseal-uniffi", "fieldseal-py", "fieldseal-wasm"]
-apps = ["fieldseal-cli", "fieldseal-factory", "fieldseal-intake-app", "fieldseal-translog", "fieldseal-security-tests", "fieldseal-e2e", "fieldseal-web"]
+apps = ["fieldseal-cli", "fieldseal-factory", "fieldseal-intake-app", "fieldseal-translog", "fieldseal-security-tests", "fieldseal-e2e", "fieldseal-web", "fieldseal-dev-idp"]
 
 # Inward edges between contexts. A context not listed may depend only on the kernel.
 [context_edges]

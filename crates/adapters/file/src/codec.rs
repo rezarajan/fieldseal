@@ -3,13 +3,13 @@
 //! of the development stack.
 
 use fieldseal_kernel::crypto::P256PublicKey;
-use fieldseal_kernel::id::{CohortId, Generation, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
+use fieldseal_kernel::id::{CohortId, Digest, Generation, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::domain::wire::TenancyCertificate;
 use fieldseal_registration::domain::{
-    AccessToken, Account, AccountId, AuthRecord, CohortAssignment, DeviceId, FingerprintWords,
+    AccessToken, Account, AccountId, Assignment, AuthRecord, CohortAssignment, DeviceId, FingerprintWords,
     IssuedToken, KeyState, NonceSource, RegisteredDevice, RegisteredKey, RegistrationToken,
-    ReportedProfile, ReportedVersion, Role, TenancyRecord, TenancyState, TokenSecret, Window,
+    ReportedProfile, ReportedVersion, Role, RosterIssue, TenancyRecord, TenancyState, TokenSecret, Window,
 };
 use fieldseal_registration::ports::IssuedNonce;
 use fieldseal_trust::domain::{AttestationClaims, AttestationEvidence, BootState, DeviceKeyKind, SecurityLevel};
@@ -429,6 +429,69 @@ pub fn put_access(w: &mut W, a: &AccessToken) {
 /// Reads an access token.
 pub fn get_access(r: &mut R<'_>) -> Res<AccessToken> {
     Ok(AccessToken { value: r.arr::<32>()?, tenancy: TenancyId::from(r.arr::<32>()?), key: KeyId::from(r.arr::<16>()?), expires_at: time(r)? })
+}
+
+/// Writes an assignment. The `seq` is not written: replay gives it the same one.
+pub fn put_assignment(w: &mut W, a: &Assignment) {
+    w.str(&a.account.0);
+    w.str(&a.survey);
+    w.str(a.cohort.as_str());
+    w.u32(a.generation.0);
+    w.str(&a.by.0);
+    w.list(&a.roles, |w, s| w.str(s));
+    w.list(&a.methods, |w, s| w.str(s));
+    w.u64(a.at.0);
+}
+
+/// Reads an assignment, strictly: an account, survey, cohort or `by` that is empty, or a
+/// generation of 0, is a corrupt record.
+pub fn get_assignment(r: &mut R<'_>) -> Res<Assignment> {
+    let (account, survey) = (non_empty(r.str()?, "account")?, non_empty(r.str()?, "survey")?);
+    let cohort = CohortId::new(r.str()?).map_err(|e| e.to_string())?;
+    let generation = r.u32()?;
+    if generation == 0 {
+        return Err("assignment generation is 0".into());
+    }
+    Ok(Assignment {
+        seq: Seq(0),
+        account: AccountId(account),
+        survey,
+        cohort,
+        generation: Generation(generation),
+        by: AccountId(non_empty(r.str()?, "by")?),
+        roles: r.list(R::str)?,
+        methods: r.list(R::str)?,
+        at: time(r)?,
+    })
+}
+
+fn non_empty(s: String, what: &str) -> Res<String> {
+    if s.is_empty() { Err(format!("{what} is empty")) } else { Ok(s) }
+}
+
+/// Writes a roster issue. The `seq` is not written: replay gives it the same one.
+pub fn put_roster_issue(w: &mut W, i: &RosterIssue) {
+    w.str(i.cohort.as_str());
+    w.u64(i.version);
+    w.bytes(i.digest.as_bytes());
+    w.str(&i.by.0);
+    w.list(&i.roles, |w, s| w.str(s));
+    w.list(&i.methods, |w, s| w.str(s));
+    w.u64(i.at.0);
+}
+
+/// Reads a roster issue, strictly.
+pub fn get_roster_issue(r: &mut R<'_>) -> Res<RosterIssue> {
+    Ok(RosterIssue {
+        seq: Seq(0),
+        cohort: CohortId::new(r.str()?).map_err(|e| e.to_string())?,
+        version: r.u64()?,
+        digest: Digest::from(r.arr::<32>()?),
+        by: AccountId(non_empty(r.str()?, "by")?),
+        roles: r.list(R::str)?,
+        methods: r.list(R::str)?,
+        at: time(r)?,
+    })
 }
 
 /// Reads a `TokenSecret`.

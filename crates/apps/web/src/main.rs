@@ -8,6 +8,7 @@
 //! | `FIELDSEAL_ENVIRONMENT` | `development`, `staging` or `test` (required); `production` is refused |
 //! | `FIELDSEAL_WEB_BIND` | Address to listen on (default `127.0.0.1:8090`; port `0` picks a free one) |
 //! | `FIELDSEAL_WEB_EXAMPLES_DIR` | A directory with `surveys/` and `rosters/` (required) |
+//! | `FIELDSEAL_WEB_ROSTER_DIR` | The factory's roster store, read only: when set, the roster page reads the latest stored version of the survey's cohort (from `FIELDSEAL_WEB_SURVEY_COHORTS`) there and shows counts only; a directory that does not exist yet means no roster. Unset: `rosters/` of the examples directory |
 //! | `FIELDSEAL_WEB_SURVEY_COHORTS` | `survey=cohort,...`: the cohort whose roster each survey's pages use (default none; a survey with no entry has no roster). The factory's `cohorts` setting is a different thing |
 //! | `FIELDSEAL_WEB_WASM_DIR` | The directory with `fieldseal_wasm.js` and `fieldseal_wasm_bg.wasm` from `wasm-bindgen --target web` (optional; without it live evaluation is off) |
 //! | `FIELDSEAL_FACTORY_URL` | The factory's base URL, for links and `/proxy/factory/*` (optional) |
@@ -34,7 +35,7 @@ use fieldseal_web::state::AppState;
 /// The number of worker threads taking requests.
 const WORKERS: usize = 4;
 
-const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n";
+const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_ROSTER_DIR     the factory's roster store, read only (optional; unset: rosters/ of the examples directory)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n";
 
 /// The app's configuration, from the environment.
 #[derive(Debug, PartialEq, Eq)]
@@ -42,6 +43,7 @@ struct Config {
     bind: String,
     examples_dir: PathBuf,
     survey_cohorts: BTreeMap<String, String>,
+    roster_dir: Option<PathBuf>,
     wasm_dir: Option<PathBuf>,
     factory_url: Option<String>,
     upload_url: Option<String>,
@@ -92,6 +94,7 @@ impl Config {
             bind: opt("FIELDSEAL_WEB_BIND").unwrap_or_else(|| "127.0.0.1:8090".to_owned()),
             examples_dir,
             survey_cohorts,
+            roster_dir: opt("FIELDSEAL_WEB_ROSTER_DIR").map(PathBuf::from),
             wasm_dir: opt("FIELDSEAL_WEB_WASM_DIR").map(PathBuf::from),
             factory_url: url("FIELDSEAL_FACTORY_URL")?,
             upload_url: url("FIELDSEAL_UPLOAD_URL")?,
@@ -147,6 +150,7 @@ fn run(config: Config) -> Result<(), String> {
     let state = Arc::new(AppState {
         examples_dir: config.examples_dir,
         survey_cohorts: config.survey_cohorts,
+        roster_dir: config.roster_dir,
         wasm_dir: config.wasm_dir,
         factory_url,
         upload_url,

@@ -39,15 +39,33 @@ just demo
 
 The `demo` service shares Keycloak's network namespace, so `localhost:8180` is Keycloak and `localhost:8080` the factory (the only form a passkey works on), `localhost:8480` the intake app, and the log is `translog:8080`. It runs these stages and prints every command; any failure stops it with a non-zero status:
 
-1. Publish the sample instrument through the stack's transparency log with two of three publisher signatures, prove its inclusion and verify it against the trust bundle ([PUB](../reference/spec/publishing.md)). `just seed` runs this stage alone. Publishing is idempotent: a publication's address changes with every signing, so the address of the one published is kept in the `publish` volume with the CLI state, and a repeat that can still prove it against the log prints `already published (skipped)` and leaves the log's tree size unchanged (the demo checks both).
-2. Register a device. Headless Chromium with a virtual authenticator resets the `product-owner` user, registers a passkey, checks that the enrolment session is refused, signs in with the passkey, asks the portal for a registration token, and hands the token to the device: `fieldseal registration request` and `submit` against the factory. The four fingerprint words are confirmed in the portal ([REG-021](../reference/spec/registration.md)).
-3. `fieldseal registration wait` until the factory has registered the device and its tenancy certificate is in `/device`.
-4. Build a bundle sealed to that device and verify it the way a device does ([DIS](../reference/spec/distribution.md)).
-5. Capture a scripted session on the device simulator.
-6. Export the registered device's records, upload them to the intake endpoint, and verify every receipt against the trust bundle ([DEL](../reference/spec/delivery.md), [INT](../reference/spec/intake.md)).
-7. Print the intake data contract and the long-format files the intake app landed in the `landing` volume.
+1. Publish the sample instruments and their layouts through the stack's transparency log with two of three publisher signatures, prove their inclusion and verify them against the trust bundle ([PUB](../reference/spec/publishing.md)). `just seed` runs this stage alone. Publishing is idempotent: a publication's address changes with every signing, so the address of the one published is kept in the `publish` volume with the CLI state, and a repeat that can still prove it against the log prints `already published (skipped)` and leaves the log's tree size unchanged (the demo checks both).
+2. Issue the example rosters and assign their cohorts (see Issue and assign below). `just issue` and `just assign` run these two steps alone.
+3. Register a device. Headless Chromium with a virtual authenticator resets the `product-owner` user, registers a passkey, checks that the enrolment session is refused, signs in with the passkey, asks the portal for a registration token, and hands the token to the device: `fieldseal registration request` and `submit` against the factory. The four fingerprint words are confirmed in the portal ([REG-021](../reference/spec/registration.md)).
+4. `fieldseal registration wait` until the factory has registered the device and its tenancy certificate is in `/device`.
+5. Build a bundle sealed to that device and verify it the way a device does ([DIS](../reference/spec/distribution.md)).
+6. Capture a scripted session on the device simulator.
+7. Export the registered device's records, upload them to the intake endpoint, and verify every receipt against the trust bundle ([DEL](../reference/spec/delivery.md), [INT](../reference/spec/intake.md)).
+8. Print the intake data contract and the long-format files the intake app landed in the `landing` volume.
 
 It ends with a summary table.
+
+`just up` runs the publish stage and the issue and assign steps once after the endpoints answer, so a fresh stack is ready for a device. `just demo`, `just enrol` and `just resume` run them first again; each is idempotent and the repeat prints `unchanged`.
+
+## Issue and assign
+
+```sh
+just issue    # tools/stack-run.sh issue
+just assign   # tools/stack-run.sh assign
+```
+
+`issue` runs `fieldseal roster issue` for `examples/rosters/village-a.yaml` and `cohort-a.yaml` against the factory. `assign` runs `fieldseal roster assign` for the account `00000000-0000-4000-8000-000000000003` (the subject of `product-owner` in the realm), assigning `household-water-access=village-a` and `school-meals-baseline=cohort-a`. An assignment names one account and applies to its tenancies now and later. See [Manage rosters](./manage-rosters.md). The factory refuses an assignment for a survey that is not published or a cohort with no roster, so publish comes first.
+
+Both steps need an operator sign-in: the factory accepts these two operations only with an access token from Keycloak for the client `fieldseal-cli`. The demo service has `FIELDSEAL_OIDC_ISSUER`, `FIELDSEAL_OIDC_CLIENT_ID` and `FIELDSEAL_BROWSER` set, and `FIELDSEAL_BROWSER` is `tools/stack-browser.sh`. The CLI starts a listener on the loopback interface and runs that script with the authorisation URL; the script has `local-stack-passkey.py --open` register a passkey for `product-owner` in headless Chromium, sign in with it, and let Keycloak redirect to the CLI's listener, which works because the listener and the browser share Keycloak's network namespace. Every sign-in resets `product-owner`'s passkeys first and registers a new one, so a passkey you registered by hand in your own browser stops working; this stack is development-only. `local-stack-passkey.py --no-reset` skips the reset.
+
+Under `just web` there is no Keycloak and no browser. `tools/dev-web.sh` runs the same two commands with `--browser none --login presenter` against the development identity provider, which signs the `presenter` login in without a person, and assigns the cohorts to the presenter's account (`00000000-0000-4000-8000-000000000001`).
+
+The factory writes the roster store in the `rosters` volume (`/rosters`, owner-only). The `demo` service mounts it read-only for `roster diff` and `roster list`, and the web app reads it through `FIELDSEAL_WEB_ROSTER_DIR`.
 
 ## 3. Stop, restart, resume
 
@@ -58,7 +76,7 @@ just resume    # the device registered before the restart is still registered, a
 just purge     # forgets everything: volumes, generated files, secrets
 ```
 
-All state lives in named volumes (`authority`, `factory-state`, `landing`, `log`, `device`, `clistate`, `published`, `submissions`, `keycloak-data`), so nothing is written to the repository and rootless Podman has no ownership problems: the service images own their mount points (uid 10001), which a fresh volume inherits.
+All state lives in named volumes (`authority`, `factory-state`, `landing`, `log`, `device`, `clistate`, `rosters`, `published`, `submissions`, `keycloak-data`), so nothing is written to the repository and rootless Podman has no ownership problems: the service images own their mount points (uid 10001), which a fresh volume inherits.
 
 ## 4. By hand
 

@@ -4,6 +4,7 @@ over the DevTools protocol): registers a passkey on first sign-in, signs out, si
 passkey and asks the portal for a registration token. Local only; opt-in; never run in CI.
 
     python3 tools/local-stack-passkey.py [--on-token CMD [--emit-json FILE]] [--chromium /usr/bin/chromium] [--show-token]
+    python3 tools/local-stack-passkey.py --open <authorisation-url> [--no-reset]
 
 Needs the `websockets` package and a Chromium or Chrome. The stack must be up (`just up`);
 `just demo` runs this inside the demo container. Exit status 0 only if every step behaved as
@@ -116,7 +117,7 @@ class Cdp:
         return r.get("result", {})
 
 
-async def run(chromium, show_token, on_token, emit_json):
+async def run(chromium, show_token, on_token, emit_json, open_url=None):
     profile = tempfile.mkdtemp(prefix="fieldseal-passkey-")
     proc = subprocess.Popen(
         [chromium, "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", f"--user-data-dir={profile}",
@@ -186,29 +187,56 @@ async def run(chromium, show_token, on_token, emit_json):
             def step(msg):
                 print(f"== {msg}", flush=True)
 
+            async def register_passkey():
+                """First sign-in at the portal: the username, then the passkey registration."""
+                step("first sign-in: username, then register a passkey")
+                await goto(f"{PORTAL}/sign-in")
+                await wait_for(r"localhost:8180.*", "redirected to Keycloak")
+                await js(f"document.getElementById('username').value = {json.dumps(USER)}; document.querySelector('form').submit()")
+                await settle()
+                t = await wait_for(r"(?i)passkey|security key|register", "the passkey registration page")
+                print("   Keycloak asks to register a passkey")
+                await js("setTimeout(() => (document.getElementById('registerWebAuthn') || document.querySelector('[id*=egister]')).click(), 50); true")
+                # Some versions ask for a label first.
+                await asyncio.sleep(3)
+                if os.environ.get("PASSKEY_DEBUG"):
+                    shot = await c("Page.captureScreenshot", {"format": "png"})
+                    open("/tmp/claude-1000/passkey-debug.png", "wb").write(base64.b64decode(shot["data"]))
+                    print([e for e in cdp.events if e.get("method", "").startswith(("Page.javascriptDialog", "Runtime.exception", "Runtime.console"))][:10])
+                t = await text() or ""
+                if re.search(r"(?i)label", t) and await js("!!document.querySelector('input[name=authenticatorLabel]')"):
+                    await js("document.querySelector('form').submit()")
+                t = await wait_for(r"localhost:8080", "back at the portal after registering", 30)
+                creds = (await c("WebAuthn.getCredentials", {"authenticatorId": auth["authenticatorId"]}))["credentials"]
+                if len(creds) != 1:
+                    raise SystemExit(f"FAIL: expected one passkey in the virtual authenticator, found {len(creds)}")
+                print(f"   a resident passkey now exists (rpId {creds[0].get('rpId')})")
+
             # 1. First sign-in: the username, then passkey registration.
-            step("first sign-in: username, then register a passkey")
-            await goto(f"{PORTAL}/sign-in")
-            await wait_for(r"localhost:8180.*", "redirected to Keycloak")
-            await js(f"document.getElementById('username').value = {json.dumps(USER)}; document.querySelector('form').submit()")
-            await settle()
-            t = await wait_for(r"(?i)passkey|security key|register", "the passkey registration page")
-            print("   Keycloak asks to register a passkey")
-            await js("setTimeout(() => (document.getElementById('registerWebAuthn') || document.querySelector('[id*=egister]')).click(), 50); true")
-            # Some versions ask for a label first.
-            await asyncio.sleep(3)
-            if os.environ.get("PASSKEY_DEBUG"):
-                shot = await c("Page.captureScreenshot", {"format": "png"})
-                open("/tmp/claude-1000/passkey-debug.png", "wb").write(base64.b64decode(shot["data"]))
-                print([e for e in cdp.events if e.get("method", "").startswith(("Page.javascriptDialog", "Runtime.exception", "Runtime.console"))][:10])
-            t = await text() or ""
-            if re.search(r"(?i)label", t) and await js("!!document.querySelector('input[name=authenticatorLabel]')"):
-                await js("document.querySelector('form').submit()")
-            t = await wait_for(r"localhost:8080", "back at the portal after registering", 30)
-            creds = (await c("WebAuthn.getCredentials", {"authenticatorId": auth["authenticatorId"]}))["credentials"]
-            if len(creds) != 1:
-                raise SystemExit(f"FAIL: expected one passkey in the virtual authenticator, found {len(creds)}")
-            print(f"   a resident passkey now exists (rpId {creds[0].get('rpId')})")
+            await register_passkey()
+
+            # --open <url>: the CLI's operator sign-in (tools/stack-browser.sh). The authenticator
+            # is new on every run, so a passkey is registered first (through the portal, whose
+            # session the CLI never sees), then the cookies are dropped and the authorisation
+            # URL is opened: the passkey signs in, and Keycloak redirects to the CLI's loopback
+            # listener, which this browser reaches because both share one network namespace.
+            if open_url:
+                await register_passkey()
+                step("sign in with the passkey at the CLI's authorisation URL")
+                await c("Network.enable")
+                await c("Network.clearBrowserCookies")
+                await goto(open_url)
+                await js(f"document.getElementById('username').value = {json.dumps(USER)}; document.querySelector('form').submit()")
+                await settle()
+                await wait_for(r"(?i)passkey|authenticate|sign in", "the passkey prompt")
+                await js("setTimeout(() => { const b = document.getElementById('authenticateWebAuthnButton') || document.querySelector('[id*=uthenticate]'); b && b.click(); }, 50); true")
+                # The redirect lands on the CLI's listener (http://127.0.0.1:<port>/...), which
+                # answers when it has the code; wait until the browser has left Keycloak.
+                await wait_for(r"^(?!.*localhost:8180)", "the redirect back to the CLI's listener", 30)
+                print("   signed in; the CLI has its authorisation code")
+                print("OK")
+                pump.cancel()
+                return
 
             # 2. That session is not phishing-resistant: the portal must not issue tokens.
             step("the enrolment session is weaker: the portal refuses a token")
@@ -328,6 +356,7 @@ def main():
     ap.add_argument("--show-token", action="store_true")
     ap.add_argument("--on-token", help="a shell command run with the registration token in $FIELDSEAL_TOKEN that registers a device with the factory and prints JSON {words, tenancy} as its last line; the words are then confirmed in the portal")
     ap.add_argument("--emit-json", help="write {words, tenancy} of the confirmed device to this file")
+    ap.add_argument("--open", metavar="URL", help="the CLI's authorisation URL: register a passkey, sign in as product-owner at URL with it and wait for the redirect to the CLI's loopback listener (see tools/stack-browser.sh); the portal checks are skipped")
     ap.add_argument("--no-reset", action="store_true", help="do not first remove the user's passkeys (the user must have none)")
     a = ap.parse_args()
     if not a.chromium:
@@ -336,10 +365,13 @@ def main():
         urllib.request.urlopen(f"{PORTAL}/readyz", timeout=3)
     except Exception as e:
         raise SystemExit(f"the portal is not up at {PORTAL}: {e} (just up)")
+    # The reset runs on every invocation, --open included: it removes the user's passkeys and
+    # the script registers a new one in its fresh virtual authenticator. That is deliberate for a
+    # development-only stack. --no-reset skips it (the user must then have no passkey).
     if not a.no_reset:
         reset_user()
         print("== reset: product-owner has no passkey and must register one")
-    asyncio.run(run(a.chromium, a.show_token, a.on_token, a.emit_json))
+    asyncio.run(run(a.chromium, a.show_token, a.on_token, a.emit_json, a.open))
 
 
 if __name__ == "__main__":

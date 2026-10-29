@@ -33,7 +33,7 @@ just web
 
 Open `http://127.0.0.1:8090`. Edit a file under `examples/surveys/` and reload: the change shows with no restart. An edit that does not load keeps the last good version on the Instruments page and shows the error, with file, line and column, above it. The Publishing page lists the artefacts in the log. `just publish <survey>` publishes a survey of your own through this log (see [Write and publish your first survey](../tutorials/write-and-publish-your-first-survey.md)). State is in `deploy/local/.state/dev-web/`; remove it to start over. `Ctrl-C` stops everything.
 
-It uses ports 8080, 8090 and 9001, the ports the compose stack uses, so run one or the other; if a port is taken, `just web` names it and starts nothing. The factory's sign-in is its development identity (`FIELDSEAL_IDENTITY=dev`, which production refuses). For now the Device page's device and bundle steps need the compose stack, and there is no upload target.
+It uses ports 8080, 8090, 8180, 8480, 8481 and 9001, the ports the compose stack uses, so run one or the other; if a port is taken, `just web` names it and starts nothing. The factory and the results reader sign in through the development identity provider on 8180 (`fieldseal-dev-idp`, which refuses production): pick a login on its page. For now the Device page's device and bundle steps need the compose stack.
 
 ## What each page does
 

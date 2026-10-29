@@ -6,8 +6,9 @@ This walkthrough drives every part of Fieldseal yourself, on your own machine:
 3. Publish an instrument.
 4. Explore the register.
 5. Download the instrument, open it, and answer it.
-6. Register a device.
-7. Build its bundle, capture, upload, and see what intake landed.
+6. Issue the rosters and assign their cohorts.
+7. Register a device.
+8. Build its bundle, capture, upload, and see what intake landed.
 
 Each step is one `just` command that prints what it did and what to look at next. Each step leaves its state in the stack, so you can stop between steps and come back.
 
@@ -108,7 +109,27 @@ Open the HTML file in your browser and answer the survey. The page checks every 
 
 `just fetch household-water-access` does the same for the water sample, which also has a Spanish translation.
 
-## 6. Register a device
+## 6. Issue the rosters and assign their cohorts
+
+A roster lists the subjects of one cohort. Before a device can collect for a survey, the factory needs the rosters, and it needs to know which account collects which survey for which cohort. These are two operator steps, in this order. `just up` has already run both once, so here you run them again and see that they change nothing the second time.
+
+```sh
+just issue   # step
+```
+
+This stores the two example rosters, `village-a` and `cohort-a`, at the factory. Each is stored as a new version of its cohort, and a version, once stored, never changes. Issuing the same file again prints `unchanged`; issuing a changed file under the same version is refused.
+
+```sh
+just assign   # step
+```
+
+This assigns the water survey to the `village-a` cohort and the school meals survey to `cohort-a`. An assignment names ONE account, the collector's (here `product-owner`, whose subject is `00000000-0000-4000-8000-000000000003`), and applies to that account's tenancies now and any it registers later. A device registered afterwards receives the cohort's roster in its bundle without any further step. The factory refuses an assignment for a survey that is not published, or for a cohort with no stored roster, which is why publishing comes first.
+
+Neither step removes anything: issuing adds a version, and assigning adds an assignment. Removing an assignment is not built yet.
+
+Each step asks you to sign in as the operator. In the stack the demo container answers for you: the command opens the sign-in page with `tools/stack-browser.sh`, which registers a passkey for `product-owner` in headless Chromium and signs in with it, and the command carries on with the token Keycloak gives it. Because that passkey is registered afresh each time, the step removes the passkeys `product-owner` had before; this is a development stack.
+
+## 7. Register a device
 
 **Headless.** The stack drives a browser with a virtual passkey for you:
 
@@ -144,7 +165,7 @@ The headless step does everything below for you, printing each part as it goes:
 
    It collects the certificate and shows the tenancy as `registered`.
 
-## 7. A bundle for that device
+## 8. A bundle for that device
 
 ```sh
 just bundle   # step
@@ -157,7 +178,7 @@ This builds the bundle the device will open, with the stack's own authority. The
 
 It is sealed to the registered device's agreement key. The step then verifies it as the device does (WIRE-093): signature, threshold of publishers, log inclusion, roster generation, then decryption. The device is unattested, so the roster is released under the development factory's explicit allowance (REG-017) with a flag. It is never released as if the device were attested.
 
-## 8. Capture
+## 9. Capture
 
 ```sh
 just capture   # step
@@ -165,7 +186,7 @@ just capture   # step
 
 The registered device opens its bundle and captures the school meals survey for two pupils (`examples/scenarios/stack-capture-school-meals-baseline.yaml`; set `FIELDSEAL_DEMO_SURVEY=household-water-access` for the water survey). Each answer is checked by the core before it is stored. The device then seals the records into its journal and builds a signed export with parity.
 
-## 9. Upload and receipts
+## 10. Upload and receipts
 
 ```sh
 just upload   # step
@@ -176,7 +197,7 @@ The export goes to the intake app. The flow is:
 2. One signed receipt for each accepted part.
 3. Each receipt is verified against the trust bundle before it is stored.
 
-## 10. What intake landed
+## 11. What intake landed
 
 ```sh
 just intake   # step

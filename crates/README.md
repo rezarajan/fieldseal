@@ -14,4 +14,4 @@ kernel  <-  contexts  <-  adapters  <-  bindings, apps
 - contexts: [./contexts/README.md](./contexts/README.md) - The ten pure bounded contexts and the driven ports they declare.
 - adapters: [./adapters/README.md](./adapters/README.md) - Port implementations and driving adapters; all real I/O lives here.
 - bindings: [./bindings/README.md](./bindings/README.md) - Python, UniFFI (Kotlin/Swift) and WebAssembly bindings.
-- apps: [./apps/README.md](./apps/README.md) - The `fieldseal` CLI, factory, intake app, transparency log and web app binaries, and the e2e and security test harnesses.
+- apps: [./apps/README.md](./apps/README.md) - The `fieldseal` CLI, factory, intake app, transparency log and web app binaries, the development identity provider, and the e2e and security test harnesses.

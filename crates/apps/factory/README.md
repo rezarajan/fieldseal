@@ -23,18 +23,22 @@ The factory service's composition root (ADR 0028). The binary `fieldseal-factory
 | `FIELDSEAL_CUSTODY_DIR` | Key directory for `file-dev` |
 | `FIELDSEAL_TRUST_BUNDLE` | `memory-dev`: path to write the development trust bundle (optional). `file-dev`: path to read (required) |
 | `FIELDSEAL_STATE_DIR` | Directory for a file-backed registry journal (non-production only); otherwise in memory |
-| `FIELDSEAL_COHORTS` | `cohort:generation,...` assigned to every new tenancy (default none) |
+| `FIELDSEAL_OIDC_API_AUDIENCE`, `FIELDSEAL_OIDC_CLI_CLIENT_ID` | Audience of the operator API's access tokens and the public client that may call it; without both no access token is accepted |
+| `FIELDSEAL_OIDC_ACCEPT_TYP_JWT` | `true` to accept a plain `JWT` header type with the payload type `Bearer` (Keycloak) |
+| `FIELDSEAL_FACTORY_REGISTRY_DIR` | The artefact registry directory, read to check that a survey is published (required; development adapter) |
+| `FIELDSEAL_ROSTER_DIR` | The roster store, written by `IssueRoster` (required; development adapter; owner-only) |
 | `FIELDSEAL_ALLOW_UNATTESTED` | `true` to accept software keys (non-production only, REG-017) |
 
 - HTTP routes (served by `fieldseal_adapters_factory_http::FactoryHttp`, tiny_http):
   - Runtime API: `GET /healthz`, `GET /readyz`, `POST /v1/registrations`, `GET /v1/registrations/<id>`, and proof-of-possession routes `GET /v1/certificate`, `POST /v1/api-token`, `POST /v1/posture/nonce`, `POST /v1/posture`.
+  - Operator API (Bearer access token, operator role, phishing-resistant sign-in): `POST /v1/rosters`, `POST /v1/assignments`, `GET /v1/assignments`. Events `assignment-made` and `roster-issued` carry no roster value and no account subject.
   - Portal: `GET /`, `GET /sign-in`, `GET /sign-in/callback`, `POST /sign-out`, `POST /tokens`, `POST /pending/<id>/confirm`, `POST /devices/<id>/lost|retire`, `POST /uploads`, `GET /tenancies/<id>/certificate.cbor`.
 - Internal types: `Config` (`from_lookup`), `Identity` (`Oidc`/`Dev`), `Custody` (`MemoryDev`/`FileDev`), `Authority`, `SystemClock`, `OsRandom`.
 - `fieldseal deployment render` writes exactly these variables from the deployment manifest (DEP-012).
 
 ## Invariants
-- Production refuses to start with `dev` identity, `memory-dev`/`file-dev` custody, `FIELDSEAL_STATE_DIR` or `FIELDSEAL_ALLOW_UNATTESTED`: there is no production custody adapter or state store yet.
-- `FIELDSEAL_COHORTS` entries are unique, non-empty and `cohort:generation` with an unsigned decimal generation without leading zeros; dev users and list entries must be unique and trimmed.
+- Production refuses to start with `dev` identity, `memory-dev`/`file-dev` custody, `FIELDSEAL_STATE_DIR` `FIELDSEAL_ALLOW_UNATTESTED`, `FIELDSEAL_FACTORY_REGISTRY_DIR` or `FIELDSEAL_ROSTER_DIR`: there is no production custody adapter or state store yet.
+- Cohorts reach tenancies through assignments, never configuration; `FIELDSEAL_COHORTS` is gone. Dev users and list entries must be unique and trimmed.
 - Unattested keys are refused unless explicitly allowed outside production.
 - Default tenancy window is 180 days from start (`memory-dev`); for `file-dev` it follows the first record-key certificate's period. Grace is 30 days. Posture-nonce and API-token TTL are 10 minutes; portal session TTL is 8 hours.
 - Policy is the schema defaults until published layers are loaded (POL-022).

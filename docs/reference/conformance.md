@@ -114,12 +114,15 @@ A test (`crates/apps/cli/tests/conformance.rs`) fails when a port in a `ports.rs
 | publishing | `ReviewSystem` | `review_system_contract` | `MemoryReviewSystem` |
 | publishing | `SourceRepository` | `source_repository_contract` | `MemorySourceRepository` |
 | publishing | `TransparencyLog` | `transparency_log_contract` | `MemoryTransparencyLog`, `FileLog`, `RekorLog` (cargo test), `FileLogStore` (cargo test) |
+| registration | `CohortDirectory` | `cohort_directory_contract` | `StoredCohorts` (cargo test) |
 | registration | `FleetRegistry` | `fleet_registry_contract` | `MemoryFleetRegistry` |
-| registration | `IdentityProvider` | `identity_provider_contract` | `MemoryIdentityProvider`, `OidcIdentityProvider` (cargo test) |
+| registration | `IdentityProvider` | `identity_provider_contract` | `MemoryIdentityProvider`, `SharedOidc (factory)` (cargo test), `OidcIdentityProvider` (cargo test) |
 | registration | `Notifier` | `notifier_contract` | `MemoryNotifier` |
 | registration | `ReceivedProgress` | `received_progress_contract` | `MemoryReceivedProgress` |
 | registration | `RegistryStore` | `(wraps the in-memory store to track changes)` | `TrackingStore (web demo)` (cargo test) |
 | registration | `RegistryStore` | `registry_store_contract` | `MemoryRegistryStore`, `TokenFiles`, `FileRegistryStore` |
+| registration | `RosterIssuer` | `roster_issuer_contract` | `FileRosterIssuer` (cargo test) |
+| registration | `SurveyDirectory` | `survey_directory_contract` | `PublishedSurveys` (cargo test) |
 | trust | `AttestationVerifier` | `attestation_verifier_contract` | `SoftwareAttestationVerifier`, `Tpm2CertifyVerifier` (cargo test) |
 | trust | `Attestor` | `(software evidence only; no shared contract applies)` | `WebKeyStore (Attestor)` (cargo test) |
 | trust | `Attestor` | `attestor_contract` | `MemorySecureKeyStore` |

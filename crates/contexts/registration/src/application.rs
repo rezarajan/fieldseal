@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 
 use fieldseal_kernel::crypto::{Purpose, tags};
 use fieldseal_kernel::digest::{lower_hex, sha256};
-use fieldseal_kernel::id::{Digest, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
+use fieldseal_kernel::id::{CohortId, Digest, Generation, KeyId, Nonce, Seq, TenancyHandle, TenancyId};
 use fieldseal_kernel::seal::{RecipientKey, SealedBox};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_kernel::{Value, WireError};
@@ -31,12 +31,14 @@ use crate::domain::wire::{
     verify_pop,
 };
 use crate::domain::{
-    AccessToken, Account, AccountId, AuthenticatedPerson, CloseReason, DeviceId, FingerprintWords, IssuedToken,
-    KeyState, NonceSource, RegisteredDevice, RegisteredKey, RegistrationRequest, RegistrationRoute, RegistrationToken,
-    Role, TenancyRecord, TenancyState, TenancyTerms, TokenSecret, policy_address,
+    AccessToken, Account, AccountId, Assignment, AuthenticatedPerson, CloseReason, CohortAssignment, DeviceId,
+    FingerprintWords, IssuedToken, KeyState, NonceSource, RegisteredDevice, RegisteredKey, RegistrationRequest,
+    RegistrationRoute, RegistrationToken, Role, RosterIssue, TenancyRecord, TenancyState, TenancyTerms, TokenSecret,
+    policy_address,
 };
 use crate::ports::{
-    FleetRegistry, IssuedNonce, Notifier, PortalEvent, ReceivedProgress, RegistryStore, RegistryStoreError, TokenError,
+    CohortDirectory, FleetRegistry, IssueOutcome, IssuedNonce, Notifier, PortalEvent, ReceivedProgress, RegistryStore,
+    RegistryStoreError, RosterIssuer, SurveyDirectory, TokenError,
 };
 
 /// How far a PoP token's `iat` may be from the factory's clock (WIRE-171).
@@ -105,6 +107,21 @@ pub enum RegistrationError {
     /// A different request already registered this tenancy ID.
     #[error("tenancy already exists")]
     TenancyExists,
+    /// No published instrument has this name (`AssignCohort`, REG-046).
+    #[error("no published survey has this name")]
+    UnknownSurvey,
+    /// The roster store holds no version of this cohort (`AssignCohort`, REG-046).
+    #[error("no roster is stored for this cohort")]
+    UnknownCohort,
+    /// The roster failed the closed-schema check (`IssueRoster`, DIS-063).
+    #[error("roster invalid: {0}")]
+    RosterInvalid(String),
+    /// A different roster is stored at this version (`IssueRoster`, DIS-080).
+    #[error("a different roster is stored at this version")]
+    VersionTaken,
+    /// The roster's version is lower than the latest stored (`IssueRoster`, DIS-014).
+    #[error("the roster version is not newer than the latest stored")]
+    NotNewer,
     /// A port failed.
     #[error("{0}")]
     Port(String),
@@ -159,6 +176,42 @@ pub struct FactoryPorts<'a> {
     pub notifier: Option<&'a dyn Notifier>,
 }
 
+/// The ports the operator operations use (`IssueRoster`, `AssignCohort`, `ListAssignments`).
+/// They are separate from [`FactoryPorts`] because only a factory that serves those routes
+/// wires them; without them the operations answer `unavailable`.
+pub struct OperatorPorts<'a> {
+    /// Stores roster versions.
+    pub rosters: &'a dyn RosterIssuer,
+    /// Says which surveys are published.
+    pub surveys: &'a dyn SurveyDirectory,
+    /// Says which cohorts have a stored roster.
+    pub cohorts: &'a dyn CohortDirectory,
+}
+
+/// What `AssignCohort` did.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssignOutcome {
+    /// The assignment: the journaled one, or the earlier identical one.
+    pub assignment: Assignment,
+    /// `true` when an identical assignment already existed and nothing was written.
+    pub unchanged: bool,
+    /// The tenancies whose cohort set changed, so their bundles must be rebuilt.
+    pub changed: Vec<TenancyId>,
+}
+
+/// What `IssueRoster` did.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct IssueRosterOutcome {
+    /// The stored version.
+    pub version: u64,
+    /// SHA-256 of the stored canonical roster.
+    pub digest: Digest,
+    /// `true` when the same content was already stored and journaled; nothing was written.
+    pub unchanged: bool,
+    /// The tenancies that hold this cohort, so their bundles must be rebuilt.
+    pub affected: Vec<TenancyId>,
+}
+
 /// How a request reached the factory (REG-053).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Submission {
@@ -203,6 +256,11 @@ pub struct Factory<'a> {
     config: &'a FactoryConfig,
     trust_root: Digest,
     sealing_public: RecipientKey,
+    operator: Option<OperatorPorts<'a>>,
+    /// Held while a tenancy's cohorts are written: by `assign_cohort` and by every use case
+    /// that creates or registers a tenancy, so that neither can overwrite the other's write
+    /// of the tenancy record.
+    cohort_lock: std::sync::Mutex<()>,
 }
 
 fn hex8(id: &[u8]) -> String {
@@ -235,7 +293,14 @@ impl<'a> Factory<'a> {
             }
             _ => return Err(RegistrationError::Port("the sealing key is not an X25519 registration key".into())),
         };
-        Ok(Self { ports, bundle, policy, config, trust_root, sealing_public })
+        Ok(Self { ports, bundle, policy, config, trust_root, sealing_public, operator: None, cohort_lock: std::sync::Mutex::new(()) })
+    }
+
+    /// Adds the ports of the operator operations (REG-046, REG-047).
+    #[must_use]
+    pub fn with_operator_ports(mut self, operator: OperatorPorts<'a>) -> Self {
+        self.operator = Some(operator);
+        self
     }
 
     /// The key devices seal requests to (WIRE-134).
@@ -536,6 +601,7 @@ impl<'a> Factory<'a> {
         let token = self.ports.store.consume_token(&request.token, now)?;
 
         let device = self.device_for(&token.account, &sign_claims, &request)?;
+        let _cohorts = self.lock_cohorts();
         let mut record = TenancyRecord {
             id: request.tenancy,
             handle: TenancyHandle::from(self.random::<16>()),
@@ -562,7 +628,7 @@ impl<'a> Factory<'a> {
             ],
             window: self.config.terms.window,
             record_key: self.config.terms.record_key,
-            cohorts: self.config.terms.cohorts.clone(),
+            cohorts: self.cohorts_for(&token.account)?,
             cutoff: None,
             words,
             token: request.token,
@@ -596,6 +662,8 @@ impl<'a> Factory<'a> {
         }
         self.ports.store.put_tenancy(&record)?;
         self.ports.store.put_device(&device)?;
+        // An assignment journaled after the cohorts were read above is in the journal now.
+        self.sync_cohorts(&mut record)?;
         if record.state == TenancyState::Pending && !self.policy.factory().registration.require_fingerprint_confirmation {
             record = self.approve(record, false)?;
         }
@@ -643,6 +711,7 @@ impl<'a> Factory<'a> {
     /// `ConfirmFingerprint`: the account the token was issued to confirms the words match
     /// its device (REG-021). Registers the tenancy, or holds or denies it by policy.
     pub fn confirm(&self, account: &AccountId, tenancy: &TenancyId) -> Result<TenancyRecord, RegistrationError> {
+        let _cohorts = self.lock_cohorts();
         let mut record = self.tenancy(tenancy)?;
         if record.account != *account {
             return Err(RegistrationError::WrongAccount);
@@ -732,7 +801,36 @@ impl<'a> Factory<'a> {
         record.certificate = Some(self.certificate_for(record, serial)?);
         record.state = TenancyState::Registered;
         self.ports.store.put_tenancy(record)?;
+        // An assignment journaled while the certificate was being issued gets a new one.
+        self.sync_cohorts(record)?;
         self.notify(&record.account, PortalEvent::DeviceRegistered(record.device.clone()));
+        Ok(())
+    }
+
+    /// Takes the cohort lock. Held across `assign_cohort` and across the part of `submit`,
+    /// `confirm` and `approve_held` that writes a tenancy's cohorts.
+    fn lock_cohorts(&self) -> std::sync::MutexGuard<'_, ()> {
+        self.cohort_lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Adds to `record` every cohort the journal assigns to its account that the record lacks
+    /// (the journal is read again now, after the record was stored), and stores it. A
+    /// tenancy that holds a certificate gets a new one (REG-032). Callers hold the cohort lock.
+    fn sync_cohorts(&self, record: &mut TenancyRecord) -> Result<(), RegistrationError> {
+        let mut added = false;
+        for a in self.ports.store.assignments()?.iter().filter(|a| a.account == record.account) {
+            if !record.cohorts.iter().any(|c| c.cohort == a.cohort) {
+                record.cohorts.push(CohortAssignment { cohort: a.cohort.clone(), generation: a.generation });
+                added = true;
+            }
+        }
+        if added {
+            if record.state.may_call_api() && record.certificate.is_some() {
+                let serial = record.certificate.as_ref().and_then(|c| c.serial.clone());
+                record.certificate = Some(self.certificate_for(record, serial)?);
+            }
+            self.ports.store.put_tenancy(record)?;
+        }
         Ok(())
     }
 
@@ -741,6 +839,7 @@ impl<'a> Factory<'a> {
         if !operator.has(Role::Operator) {
             return Err(RegistrationError::NotAuthorised("approving a held registration needs the operator role"));
         }
+        let _cohorts = self.lock_cohorts();
         let mut record = self.tenancy(tenancy)?;
         if record.state != TenancyState::Held {
             return Err(RegistrationError::NotHeld);
@@ -785,6 +884,177 @@ impl<'a> Factory<'a> {
             return Err(revoked_or_unregistered(record.state));
         }
         record.certificate.ok_or(RegistrationError::NotRegistered)
+    }
+
+    // -----------------------------------------------------------------------------------
+    // IssueRoster, AssignCohort, ListAssignments (REG-046, REG-047).
+
+    fn operator_ports(&self) -> Result<&OperatorPorts<'a>, RegistrationError> {
+        self.operator.as_ref().ok_or_else(|| RegistrationError::Port("the operator operations are not wired".into()))
+    }
+
+    /// The operator checks of REG-046 and REG-047: the sign-in is strong enough whatever the
+    /// registration policy says about portal sign-ins, and the person holds the operator role.
+    /// Every operator operation makes them first; an adapter may make them earlier, to refuse
+    /// before it reads a body.
+    pub fn authorise_operator(&self, person: &AuthenticatedPerson) -> Result<(), RegistrationError> {
+        check_authentication(&self.policy.factory().registration, &person.authentication)?;
+        if !person.has(Role::Operator) {
+            return Err(RegistrationError::NotAuthorised("the operator role is needed"));
+        }
+        if !person.authentication.phishing_resistant {
+            return Err(AuthRefusal::PhishingResistantRequired.into());
+        }
+        Ok(())
+    }
+
+    /// The cohorts a new tenancy of `account` starts with: the deployment's terms, then the
+    /// cohorts of the account's assignments, each at the generation recorded for it.
+    fn cohorts_for(&self, account: &AccountId) -> Result<Vec<CohortAssignment>, RegistrationError> {
+        let mut cohorts = self.config.terms.cohorts.clone();
+        for a in self.ports.store.assignments()?.iter().filter(|a| &a.account == account) {
+            if !cohorts.iter().any(|c| c.cohort == a.cohort) {
+                cohorts.push(CohortAssignment { cohort: a.cohort.clone(), generation: a.generation });
+            }
+        }
+        Ok(cohorts)
+    }
+
+    /// The tenancies that can still collect and hold `cohort`, found through the accounts the
+    /// cohort is assigned to.
+    fn holders_of(&self, cohort: &CohortId) -> Result<Vec<TenancyId>, RegistrationError> {
+        let accounts: BTreeSet<AccountId> =
+            self.ports.store.assignments()?.into_iter().filter(|a| &a.cohort == cohort).map(|a| a.account).collect();
+        let mut out = Vec::new();
+        for account in accounts {
+            out.extend(
+                self.ports
+                    .store
+                    .tenancies_of(&account)?
+                    .into_iter()
+                    .filter(|t| t.state.may_call_api() && t.cohorts.iter().any(|c| &c.cohort == cohort))
+                    .map(|t| t.id),
+            );
+        }
+        Ok(out)
+    }
+
+    /// `AssignCohort`: an operator assigns a published survey's cohort to one account. The
+    /// account is created when it does not exist. The assignment reaches the account's
+    /// tenancies that can still collect, and a registered tenancy whose cohort set changes gets
+    /// a new certificate (REG-032). Nothing is removed (REG-045).
+    ///
+    /// The journal record is written first and the tenancies are updated second. A stop between
+    /// the two leaves a record, and making the same assignment again applies it to the
+    /// tenancies (one that already holds the cohort is skipped). Tenancies created or
+    /// registered meanwhile read the record (`sync_cohorts`).
+    pub fn assign_cohort(
+        &self,
+        operator: &AuthenticatedPerson,
+        account: &AccountId,
+        survey: &str,
+        cohort: &CohortId,
+    ) -> Result<AssignOutcome, RegistrationError> {
+        self.authorise_operator(operator)?;
+        let ports = self.operator_ports()?;
+        if account.0.is_empty() {
+            return Err(RegistrationError::NotFound);
+        }
+        if !ports.surveys.exists(survey) {
+            return Err(RegistrationError::UnknownSurvey);
+        }
+        if !ports.cohorts.exists(cohort) {
+            return Err(RegistrationError::UnknownCohort);
+        }
+        let _cohorts = self.lock_cohorts();
+        let of_this = |a: &Assignment| &a.account == account && a.survey == survey && &a.cohort == cohort;
+        let earlier = self.ports.store.assignments()?.into_iter().find(of_this);
+        if self.ports.store.account(account)?.is_none() {
+            let collector = self.random();
+            self.ports.store.put_account(&Account { id: account.clone(), collector, roles: vec![] })?;
+        }
+        let (assignment, repeat) = match earlier {
+            Some(a) => (a, true),
+            None => {
+                self.ports.store.put_assignment(&Assignment {
+                    seq: Seq(0),
+                    account: account.clone(),
+                    survey: survey.to_owned(),
+                    cohort: cohort.clone(),
+                    generation: Generation(1),
+                    by: operator.account.clone(),
+                    roles: operator.role_names.clone(),
+                    methods: operator.authentication.methods.clone(),
+                    at: self.now(),
+                })?;
+                // The store gives the record its sequence number: use the stored one.
+                let stored = self.ports.store.assignments()?.into_iter().find(of_this);
+                (stored.ok_or(RegistrationError::NotFound)?, false)
+            }
+        };
+        let mut changed = Vec::new();
+        for mut record in self.ports.store.tenancies_of(account)? {
+            let live = matches!(record.state, TenancyState::Pending | TenancyState::Held | TenancyState::Registered | TenancyState::Flagged);
+            if !live || record.cohorts.iter().any(|c| &c.cohort == cohort) {
+                continue;
+            }
+            record.cohorts.push(CohortAssignment { cohort: cohort.clone(), generation: assignment.generation });
+            if record.state.may_call_api() && record.certificate.is_some() {
+                let serial = record.certificate.as_ref().and_then(|c| c.serial.clone());
+                record.certificate = Some(self.certificate_for(&record, serial)?);
+            }
+            self.ports.store.put_tenancy(&record)?;
+            changed.push(record.id);
+        }
+        Ok(AssignOutcome { unchanged: repeat && changed.is_empty(), assignment, changed })
+    }
+
+    /// `ListAssignments`: the journaled assignments, oldest first.
+    pub fn list_assignments(&self, operator: &AuthenticatedPerson) -> Result<Vec<Assignment>, RegistrationError> {
+        self.authorise_operator(operator)?;
+        Ok(self.ports.store.assignments()?)
+    }
+
+    /// `IssueRoster`: an operator adds a roster version to the roster store. The store write
+    /// comes first and the journal record second; if the process stops between them, issuing
+    /// the same bytes again finds the roster stored, and writes the missing record.
+    pub fn issue_roster(
+        &self,
+        operator: &AuthenticatedPerson,
+        cohort: &CohortId,
+        canonical_bytes: &[u8],
+    ) -> Result<IssueRosterOutcome, RegistrationError> {
+        self.authorise_operator(operator)?;
+        let (version, digest, stored_now) = match self.operator_ports()?.rosters.issue(cohort, canonical_bytes) {
+            IssueOutcome::Issued { version, digest } => (version, digest, true),
+            IssueOutcome::AlreadyIssued { version, digest } => (version, digest, false),
+            IssueOutcome::VersionTaken => return Err(RegistrationError::VersionTaken),
+            IssueOutcome::NotNewer => return Err(RegistrationError::NotNewer),
+            IssueOutcome::Invalid(reason) => return Err(RegistrationError::RosterInvalid(reason)),
+            IssueOutcome::Unavailable(reason) => return Err(RegistrationError::Port(reason)),
+        };
+        let journaled = !stored_now
+            && self
+                .ports
+                .store
+                .roster_issues()?
+                .iter()
+                .any(|i| &i.cohort == cohort && i.version == version && i.digest == digest);
+        if journaled {
+            return Ok(IssueRosterOutcome { version, digest, unchanged: true, affected: vec![] });
+        }
+        self.ports.store.put_roster_issue(&RosterIssue {
+            seq: Seq(0),
+            cohort: cohort.clone(),
+            version,
+            digest,
+            by: operator.account.clone(),
+            roles: operator.role_names.clone(),
+            methods: operator.authentication.methods.clone(),
+            at: self.now(),
+        })?;
+        let affected = self.holders_of(cohort)?;
+        Ok(IssueRosterOutcome { version, digest, unchanged: false, affected })
     }
 
     // -----------------------------------------------------------------------------------

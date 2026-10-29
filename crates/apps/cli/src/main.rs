@@ -35,6 +35,7 @@ mod i18n_cmd;
 mod json;
 mod messages;
 mod new_cmd;
+mod oidc_login;
 mod keys_cmd;
 mod outcome;
 mod policy_cmd;

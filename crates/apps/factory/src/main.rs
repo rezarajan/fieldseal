@@ -14,12 +14,15 @@
 //! | `FIELDSEAL_OIDC_SCOPES`, `FIELDSEAL_OIDC_ROLES_CLAIM`, `FIELDSEAL_OIDC_ACR_VALUES` | Extra scopes, the roles claim (default `roles`), `acr_values` to request |
 //! | `FIELDSEAL_OIDC_PHISHING_RESISTANT_AMR`, `FIELDSEAL_OIDC_PHISHING_RESISTANT_ACR` | Comma-separated extra `amr`/`acr` values this issuer uses to mean phishing-resistant (default none: strict). A token must still carry one (REG-002a) |
 //! | `FIELDSEAL_OIDC_ASSERTED_METHODS` | `true` when the issuer is a broker that may alter `amr`/`acr` (REG-002a) |
+//! | `FIELDSEAL_OIDC_API_AUDIENCE`, `FIELDSEAL_OIDC_CLI_CLIENT_ID` | The audience of the access tokens of the operator API and the public client that may call it. Without both, no access token is accepted (REG-070a) |
+//! | `FIELDSEAL_OIDC_ACCEPT_TYP_JWT` | `true` to accept an access token whose header type is a plain `JWT` (Keycloak's), with the payload type `Bearer` (default `false`) |
+//! | `FIELDSEAL_FACTORY_REGISTRY_DIR` | The artefact registry directory `artefact publish` writes, read by the survey lookup of `AssignCohort` (required; a development adapter) |
+//! | `FIELDSEAL_ROSTER_DIR` | The roster store: `IssueRoster` writes it and `AssignCohort` checks cohorts against it (required; a development adapter; owner-only permissions) |
 //! | `FIELDSEAL_DEV_USERS` | For `dev` identity: `login=role+role:amr+amr,…` |
 //! | `FIELDSEAL_CUSTODY` | `memory-dev`: keys and a development authority generated in memory, lost on restart (non-production only). `file-dev`: the authority's keys in a key directory and its trust bundle in a file (non-production only) |
 //! | `FIELDSEAL_CUSTODY_DIR` | For `file-dev`: the key directory (the `registration` P-256 and X25519 keys, the `record` key) |
 //! | `FIELDSEAL_TRUST_BUNDLE` | `memory-dev`: where to write the development trust bundle that devices are provisioned with. `file-dev`: the trust bundle to read (required) |
 //! | `FIELDSEAL_STATE_DIR` | A directory for the factory's state (tokens, accounts, tenancies, devices, nonces) as a journal, so a restart keeps registered devices (non-production only). Without it the state is in memory |
-//! | `FIELDSEAL_COHORTS` | Cohorts every new tenancy is assigned at registration, `cohort:generation,...` (default none) |
 //! | `FIELDSEAL_ALLOW_UNATTESTED` | `true` to accept software keys (non-production only, REG-017) |
 //!
 //! `fieldseal deployment render` writes exactly these variables from the deployment manifest
@@ -32,20 +35,25 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use fieldseal_adapters_factory_http::{FactoryHttp, HttpConfig};
+use fieldseal_adapters_factory_http::{BearerError, BearerVerifier, FactoryHttp, HttpConfig, OperatorEvent, OperatorEvents, no_reconcile};
 use fieldseal_adapters_file::custody::DirCustody;
+use fieldseal_adapters_file::directories::{PublishedSurveys, StoredCohorts};
+use fieldseal_adapters_file::registry::FileRegistry;
+use fieldseal_adapters_file::roster_issuer::FileRosterIssuer;
+use fieldseal_adapters_file::roster_store::RosterStore;
 use fieldseal_adapters_file::store::FileRegistryStore;
 use fieldseal_adapters_memory::policy::{BuiltInPolicyEngine, MemoryDecisionLog};
 use fieldseal_adapters_memory::registration::{MemoryIdentityProvider, MemoryReceivedProgress, MemoryRegistryStore, dev_authority};
 use fieldseal_adapters_memory::trust::SoftwareAttestationVerifier;
+use fieldseal_deployment::events::development_adapters_event;
 use fieldseal_adapters_oidc::{OidcConfig, OidcIdentityProvider};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_policy::domain::{Controls, EffectivePolicy};
-use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts};
+use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts, OperatorPorts};
 use fieldseal_registration::domain::checks::UnattestedKeys;
 use fieldseal_registration::domain::wire::factory_url_ok;
-use fieldseal_registration::domain::{CohortAssignment, MethodAssurance, TenancyTerms, Window};
-use fieldseal_registration::ports::{IdentityProvider, RegistryStore};
+use fieldseal_registration::domain::{MethodAssurance, TenancyTerms, Window};
+use fieldseal_registration::ports::{IdentityError, IdentityProvider, PendingSignIn, RegistryStore, SignInStart};
 use fieldseal_kernel::crypto::Purpose;
 use fieldseal_trust::domain::{AuthorityPublicKey, TrustBundle};
 use fieldseal_trust::ports::{AuthorityClock, KeyCustody, RandomSource};
@@ -65,6 +73,61 @@ struct OsRandom;
 impl RandomSource for OsRandom {
     fn fill(&self, buf: &mut [u8]) {
         getrandom::getrandom(buf).expect("the operating system's random source");
+    }
+}
+
+/// The OIDC adapter, shared by the portal's sign-in and the operator API's Bearer check, so
+/// the two read one key set and one configuration.
+#[derive(Clone)]
+struct SharedOidc(std::sync::Arc<OidcIdentityProvider>);
+
+impl IdentityProvider for SharedOidc {
+    fn start_sign_in(&self, redirect_uri: &str) -> Result<SignInStart, IdentityError> {
+        self.0.start_sign_in(redirect_uri)
+    }
+
+    fn finish_sign_in(&self, pending: &PendingSignIn, callback: &std::collections::BTreeMap<String, String>) -> Result<fieldseal_registration::domain::AuthenticatedPerson, IdentityError> {
+        self.0.finish_sign_in(pending, callback)
+    }
+}
+
+impl BearerVerifier for SharedOidc {
+    fn account_for_subject(&self, sub: &str) -> fieldseal_registration::domain::AccountId {
+        self.0.account_for_subject(sub)
+    }
+
+    fn subject_of_account(&self, account: &fieldseal_registration::domain::AccountId) -> Option<String> {
+        self.0.subject_of_account(account)
+    }
+
+    fn verify(&self, token: &str) -> Result<fieldseal_registration::domain::AuthenticatedPerson, BearerError> {
+        self.0.verify_access_token(token).map_err(|e| match e {
+            IdentityError::NotAuthenticated(reason) => {
+                // The reason names the check that failed and never holds the token.
+                eprintln!("fieldseal-factory: operator token refused: {reason:?}");
+                BearerError::Invalid(reason)
+            }
+            IdentityError::Unavailable(reason) => BearerError::Unavailable(reason),
+        })
+    }
+}
+
+/// With the development identity there is no identity provider to issue access tokens, so the
+/// operator API answers `503`.
+struct NoBearer;
+
+impl BearerVerifier for NoBearer {
+    /// The development identity's rule (`dev|{login}`, see the users wired in `run`).
+    fn account_for_subject(&self, sub: &str) -> fieldseal_registration::domain::AccountId {
+        fieldseal_registration::domain::AccountId(format!("dev|{sub}"))
+    }
+
+    fn subject_of_account(&self, account: &fieldseal_registration::domain::AccountId) -> Option<String> {
+        account.0.strip_prefix("dev|").map(str::to_owned)
+    }
+
+    fn verify(&self, _: &str) -> Result<fieldseal_registration::domain::AuthenticatedPerson, BearerError> {
+        Err(BearerError::Unavailable("FIELDSEAL_IDENTITY=dev has no access tokens".into()))
     }
 }
 
@@ -98,20 +161,13 @@ struct Config {
     custody: Custody,
     trust_bundle: Option<String>,
     state_dir: Option<String>,
-    cohorts: Vec<CohortAssignment>,
+    registry_dir: String,
+    roster_dir: String,
     unattested: UnattestedKeys,
 }
 
 /// A development user: login, role names, `amr` values.
 type DevUser = (String, Vec<String>, Vec<String>);
-
-/// An unsigned decimal number: digits only, no sign, no whitespace, no leading zero.
-fn uint(text: &str, what: &str) -> Result<u64, String> {
-    if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) || (text.len() > 1 && text.starts_with('0')) {
-        return Err(format!("{what}: `{text}` is not a whole number"));
-    }
-    text.parse().map_err(|_| format!("{what}: `{text}` is out of range"))
-}
 
 /// A comma-separated list in which every entry is non-empty, trimmed and unique.
 fn entries(text: &str, sep: char, what: &str) -> Result<Vec<String>, String> {
@@ -202,6 +258,9 @@ impl Config {
                 c.phishing_resistant_amr = list("FIELDSEAL_OIDC_PHISHING_RESISTANT_AMR")?;
                 c.phishing_resistant_acr = list("FIELDSEAL_OIDC_PHISHING_RESISTANT_ACR")?;
                 c.asserted_methods = flag("FIELDSEAL_OIDC_ASSERTED_METHODS")?;
+                c.api_audience = opt("FIELDSEAL_OIDC_API_AUDIENCE")?;
+                c.cli_client_id = opt("FIELDSEAL_OIDC_CLI_CLIENT_ID")?;
+                c.accept_typ_jwt = flag("FIELDSEAL_OIDC_ACCEPT_TYP_JWT")?;
                 Identity::Oidc(Box::new(c))
             }
             "dev" => {
@@ -224,34 +283,23 @@ impl Config {
             }
             other => return Err(format!("FIELDSEAL_CUSTODY={other}: use memory-dev or file-dev")),
         };
-        let cohorts = match opt("FIELDSEAL_COHORTS")? {
-            None => Vec::new(),
-            Some(text) => entries(&text, ',', "FIELDSEAL_COHORTS")?
-                .iter()
-                .map(|c| {
-                    let (name, generation) = c.split_once(':').ok_or_else(|| format!("FIELDSEAL_COHORTS: `{c}` is not cohort:generation"))?;
-                    let generation = u32::try_from(uint(generation, "FIELDSEAL_COHORTS generation")?).map_err(|_| format!("FIELDSEAL_COHORTS: `{c}` has a generation out of range"))?;
-                    Ok(CohortAssignment {
-                        cohort: fieldseal_kernel::id::CohortId::new(name).map_err(|_| format!("FIELDSEAL_COHORTS: `{c}` has an empty cohort"))?,
-                        generation: fieldseal_kernel::id::Generation(generation),
-                    })
-                })
-                .collect::<Result<Vec<_>, String>>()?,
-        };
-        if let Some(dup) = cohorts.iter().enumerate().find(|(i, c)| cohorts[..*i].iter().any(|d| d.cohort == c.cohort)) {
-            return Err(format!("FIELDSEAL_COHORTS: cohort `{}` is listed twice", dup.1.cohort.as_str()));
-        }
         let state_dir = opt("FIELDSEAL_STATE_DIR")?;
         if state_dir.is_some() {
             non_production("FIELDSEAL_STATE_DIR (the file-backed state store is for development)")?;
         }
+        // The operator API reads the artefact registry and writes the roster store; both are
+        // file adapters, and there is no production adapter for either yet.
+        let registry_dir = need("FIELDSEAL_FACTORY_REGISTRY_DIR")?;
+        non_production("FIELDSEAL_FACTORY_REGISTRY_DIR (the file artefact registry)")?;
+        let roster_dir = need("FIELDSEAL_ROSTER_DIR")?;
+        non_production("FIELDSEAL_ROSTER_DIR (the file roster store)")?;
         let unattested = if flag("FIELDSEAL_ALLOW_UNATTESTED")? {
             non_production("FIELDSEAL_ALLOW_UNATTESTED")?;
             UnattestedKeys::AllowNonProduction
         } else {
             UnattestedKeys::Refuse
         };
-        Ok(Self { production, bind, public_url, identity, custody, trust_bundle: opt("FIELDSEAL_TRUST_BUNDLE")?, state_dir, cohorts, unattested })
+        Ok(Self { production, bind, public_url, identity, custody, trust_bundle: opt("FIELDSEAL_TRUST_BUNDLE")?, state_dir, registry_dir, roster_dir, unattested })
     }
 }
 
@@ -311,6 +359,38 @@ fn load_authority(config: &Config, now: AuthorityTime) -> Result<Authority, Stri
     }
 }
 
+/// Every port of this configuration that is bound to a development adapter, as (port, adapter)
+/// (DEP-051). The factory refuses to start in production with any of them.
+fn development_adapters(config: &Config) -> Vec<(&'static str, &'static str)> {
+    let mut out = vec![("Signer", match config.custody {
+        Custody::MemoryDev => "memory-dev",
+        Custody::FileDev { .. } => "file-dev",
+    })];
+    out.push(("TenancyRegistry", if config.state_dir.is_some() { "file-dev" } else { "memory" }));
+    if config.unattested == UnattestedKeys::AllowNonProduction {
+        out.push(("AttestationVerifier", "software"));
+    }
+    if matches!(config.identity, Identity::Dev(_)) {
+        out.push(("IdentityProvider", "memory-dev"));
+    }
+    out.push(("ArtefactRegistry", "file-dev"));
+    out.push(("RosterSource", "file-dev"));
+    out
+}
+
+/// The event line for a change the operator API made. It carries no roster value and no
+/// account subject (DEP-051).
+fn operator_event(e: &OperatorEvent) -> String {
+    match e {
+        OperatorEvent::AssignmentMade { survey, cohort, generation } => {
+            format!("{{\"event\":\"assignment-made\",\"survey\":{survey:?},\"cohort\":{cohort:?},\"generation\":{generation}}}")
+        }
+        OperatorEvent::RosterIssued { cohort, version, digest } => {
+            format!("{{\"event\":\"roster-issued\",\"cohort\":{cohort:?},\"version\":{version},\"digest\":{digest:?}}}")
+        }
+    }
+}
+
 fn run(config: Config) -> Result<(), String> {
     let clock = SystemClock;
     let now = clock.now();
@@ -319,7 +399,7 @@ fn run(config: Config) -> Result<(), String> {
         factory_url: config.public_url.clone(),
         signing_key: authority.signing,
         sealing_key: authority.sealing,
-        terms: TenancyTerms { record_key: authority.record, window: authority.window, cohorts: config.cohorts.clone() },
+        terms: TenancyTerms { record_key: authority.record, window: authority.window, cohorts: vec![] },
         unattested: config.unattested,
         posture_nonce_ttl_ms: 10 * 60 * 1000,
         access_token_ttl_ms: 10 * 60 * 1000,
@@ -334,8 +414,11 @@ fn run(config: Config) -> Result<(), String> {
         None => Box::new(MemoryRegistryStore::new()),
     };
     let (verifier, engine, log, random, progress) = (SoftwareAttestationVerifier, BuiltInPolicyEngine, MemoryDecisionLog::new(), OsRandom, MemoryReceivedProgress::new());
-    let idp: Box<dyn IdentityProvider> = match &config.identity {
-        Identity::Oidc(c) => Box::new(OidcIdentityProvider::new(c.as_ref().clone()).map_err(|e| e.to_string())?),
+    let (idp, bearer): (Box<dyn IdentityProvider>, Box<dyn BearerVerifier>) = match &config.identity {
+        Identity::Oidc(c) => {
+            let oidc = SharedOidc(std::sync::Arc::new(OidcIdentityProvider::new(c.as_ref().clone()).map_err(|e| e.to_string())?));
+            (Box::new(oidc.clone()), Box::new(oidc))
+        }
         Identity::Dev(users) => {
             let idp = MemoryIdentityProvider::new();
             for (login, roles, amr) in users {
@@ -344,9 +427,16 @@ fn run(config: Config) -> Result<(), String> {
                 idp.add(login, &format!("dev|{login}"), &roles, &amr, MethodAssurance::FromProvider);
             }
             idp.set_default(users.first().map(|u| u.0.as_str()));
-            Box::new(idp)
+            (Box::new(idp), Box::new(NoBearer))
         }
     };
+    // The operator API's ports: the artefact registry (read) and the roster store (read and
+    // write). Phase 13 builds bundles from the same two.
+    let open_rosters = || RosterStore::open(&config.roster_dir).map_err(|e| format!("{}: {e}", config.roster_dir));
+    let roster_issuer = FileRosterIssuer::new(open_rosters()?);
+    let surveys = PublishedSurveys(FileRegistry::new(&config.registry_dir));
+    let cohorts = StoredCohorts(open_rosters()?);
+    eprintln!("{}", development_adapters_event("fieldseal-factory", &development_adapters(&config)));
     let factory = Factory::new(
         FactoryPorts {
             store: store.as_ref(),
@@ -364,8 +454,11 @@ fn run(config: Config) -> Result<(), String> {
         &policy,
         &factory_config,
     )
-    .map_err(|e| e.to_string())?;
-    let http = FactoryHttp::new(&factory, idp.as_ref(), HttpConfig { public_url: config.public_url.clone(), session_ttl_ms: 8 * 3600 * 1000 });
+    .map_err(|e| e.to_string())?
+    .with_operator_ports(OperatorPorts { rosters: &roster_issuer, surveys: &surveys, cohorts: &cohorts });
+    let events: OperatorEvents = std::sync::Arc::new(|e| eprintln!("{}", operator_event(e)));
+    let http = FactoryHttp::new(&factory, idp.as_ref(), HttpConfig { public_url: config.public_url.clone(), session_ttl_ms: 8 * 3600 * 1000 })
+        .with_operator_api(bearer.as_ref(), no_reconcile(), events);
     let server = tiny_http::Server::http(&config.bind).map_err(|e| format!("{}: {e}", config.bind))?;
     eprintln!("fieldseal-factory: listening on {} as {} (production: {})", config.bind, config.public_url, config.production);
     http.run(&server);

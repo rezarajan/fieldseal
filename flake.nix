@@ -233,6 +233,8 @@
                 for d in ${pkgs.lib.concatStringsSep " " mounts}; do
                   mkdir -p ".$d"
                   chown -R 10001:10001 ".$d"
+                  # The roster store refuses a directory that group or others can reach.
+                  case "$d" in /rosters) chmod 0700 ".$d" ;; esac
                 done
               '';
               config = {
@@ -256,9 +258,12 @@
               pkgs.cacert
             ];
             fakeRootCommands = ''
-              mkdir -p tmp authority published factory-state clistate
+              mkdir -p tmp authority published factory-state clistate rosters
               chmod 1777 tmp
               chown 10001:10001 published clistate
+              # The roster store's directory, as in the factory image: owner-only, read here.
+              chmod 0700 rosters
+              chown 10001:10001 rosters
             '';
             config = {
               Entrypoint = [ "${webServerBin}/bin/fieldseal-web" ];
@@ -277,7 +282,7 @@
           # The stack's scripts and examples, as /opt/fieldseal in the CLI and demo images.
           stackOpt = pkgs.runCommand "fieldseal-stack-opt" { nativeBuildInputs = [ pkgs.bash ]; } ''
             mkdir -p $out/opt/fieldseal/tools
-            for f in init demo enroll; do cp ${./tools}/stack-$f.sh $out/opt/fieldseal/tools/; done
+            for f in init demo enroll browser; do cp ${./tools}/stack-$f.sh $out/opt/fieldseal/tools/; done
             cp ${./tools/local-stack-passkey.py} $out/opt/fieldseal/tools/local-stack-passkey.py
             cp -r ${./examples} $out/opt/fieldseal/examples
             chmod -R u+w $out
@@ -320,7 +325,11 @@
             };
           images = pkgs.lib.optionalAttrs isLinux {
             web-image = webImage;
-            factory-image = serviceImage "fieldseal-factory" factoryBin [ 8080 ] [ "/state/factory" ];
+            factory-image = serviceImage "fieldseal-factory" factoryBin [ 8080 ]
+                [
+                  "/state/factory"
+                  "/rosters"
+                ];
             intake-image =
               serviceImage "fieldseal-intake" intakeBin [ 8480 8481 ]
                 [

@@ -18,6 +18,8 @@ path = "src/main.rs"
 fieldseal-kernel.workspace = true
 fieldseal-instrument.workspace = true
 fieldseal-adapters-authoring.workspace = true
+fieldseal-adapters-file.workspace = true
+fieldseal-distribution.workspace = true
 fieldseal-adapters-html.workspace = true
 fieldseal-adapters-web.workspace = true
 fieldseal-adapters-web-demo = { path = "../../adapters/web-demo" }

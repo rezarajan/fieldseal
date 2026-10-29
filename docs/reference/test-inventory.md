@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-341 tests prove 138 requirements.
+455 tests prove 147 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -60,6 +60,24 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:103](../../crates/adapters/authoring/tests/translation_report.rs#L103)) | INS-261 | INS-261 (instrument) |
 | `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:134](../../crates/adapters/authoring/tests/translation_report.rs#L134)) | INS-260 | INS-260 (instrument) |
 | `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:144](../../crates/adapters/authoring/tests/translation_report.rs#L144)) | INS-260 | INS-260 (instrument) |
+| `reg_046_an_operator_can_assign_and_list` ([assignments.rs:26](../../crates/adapters/factory-http/tests/assignments.rs#L26)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_collector_is_not_authorised` ([assignments.rs:42](../../crates/adapters/factory-http/tests/assignments.rs#L42)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_weak_method_is_refused` ([assignments.rs:52](../../crates/adapters/factory-http/tests/assignments.rs#L52)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_unknown_survey_or_cohort_is_refused` ([assignments.rs:60](../../crates/adapters/factory-http/tests/assignments.rs#L60)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_assignment_records_generation_1_for_each_cohort_on_each_tenancy` ([assignments.rs:71](../../crates/adapters/factory-http/tests/assignments.rs#L71)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_assignment_reaches_only_the_target_accounts_tenancies` ([assignments.rs:83](../../crates/adapters/factory-http/tests/assignments.rs#L83)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_assignment_applies_to_tenancies_the_account_registers_later` ([assignments.rs:95](../../crates/adapters/factory-http/tests/assignments.rs#L95)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_assignment_creates_the_account_when_it_does_not_exist` ([assignments.rs:108](../../crates/adapters/factory-http/tests/assignments.rs#L108)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_subject_may_hold_a_pipe` ([assignments.rs:120](../../crates/adapters/factory-http/tests/assignments.rs#L120)) | REG-046 | REG-046 (registration) |
+| `reg_046_the_assignment_names_the_account_by_subject` ([assignments.rs:134](../../crates/adapters/factory-http/tests/assignments.rs#L134)) | REG-046 | REG-046 (registration) |
+| `reg_046_an_identical_assignment_is_unchanged_and_writes_nothing` ([assignments.rs:147](../../crates/adapters/factory-http/tests/assignments.rs#L147)) | REG-046 | REG-046 (registration) |
+| `reg_046_each_assignment_is_journaled_with_account_roles_methods_and_time` ([assignments.rs:161](../../crates/adapters/factory-http/tests/assignments.rs#L161)) | REG-046 | REG-046 (registration) |
+| `reg_032_an_assignment_change_reissues_the_certificate_with_the_new_cohort_set` ([assignments.rs:177](../../crates/adapters/factory-http/tests/assignments.rs#L177)) | REG-032 | REG-032 (registration) |
+| `reg_032_a_tenancy_of_another_account_keeps_its_certificate` ([assignments.rs:195](../../crates/adapters/factory-http/tests/assignments.rs#L195)) | REG-032 | REG-032 (registration) |
+| `reg_046_an_account_that_is_empty_too_long_or_holds_a_control_character_is_malformed` ([assignments.rs:205](../../crates/adapters/factory-http/tests/assignments.rs#L205)) | REG-046 | REG-046 (registration) |
+| `reg_046_the_token_is_checked_before_the_body_is_read` ([assignments.rs:217](../../crates/adapters/factory-http/tests/assignments.rs#L217)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_journaled_assignment_reaches_a_tenancy_that_registers_after_it` ([assignments.rs:248](../../crates/adapters/factory-http/tests/assignments.rs#L248)) | REG-046 | REG-046 (registration) |
+| `reg_046_assigning_again_applies_a_journaled_assignment_to_a_registered_tenancy` ([assignments.rs:263](../../crates/adapters/factory-http/tests/assignments.rs#L263)) | REG-046 | REG-046 (registration) |
 | `reg_002_sign_in_redirects_to_the_provider_with_a_state` ([portal_session.rs:151](../../crates/adapters/factory-http/tests/portal_session.rs#L151)) | REG-002 | REG-002 (registration) |
 | `reg_002_callback_with_an_unknown_state_is_refused` ([portal_session.rs:163](../../crates/adapters/factory-http/tests/portal_session.rs#L163)) | REG-002 | REG-002 (registration) |
 | `reg_092_a_session_cookie_is_httponly_samesite_lax_and_secure_on_https` ([portal_session.rs:173](../../crates/adapters/factory-http/tests/portal_session.rs#L173)) | REG-092 | REG-092 (registration) |
@@ -68,6 +86,17 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `reg_092_a_post_with_another_sessions_token_is_refused` ([portal_session.rs:213](../../crates/adapters/factory-http/tests/portal_session.rs#L213)) | REG-092 | REG-092 (registration) |
 | `reg_092_sign_out_ends_the_session` ([portal_session.rs:227](../../crates/adapters/factory-http/tests/portal_session.rs#L227)) | REG-092 | REG-092 (registration) |
 | `reg_092_the_session_cookie_name_is_fs_session` ([portal_session.rs:243](../../crates/adapters/factory-http/tests/portal_session.rs#L243)) | REG-092 | REG-092 (registration) |
+| `reg_047_an_operator_can_issue_a_roster_version` ([rosters.rs:71](../../crates/adapters/factory-http/tests/rosters.rs#L71)) | REG-047 | REG-047 (registration) |
+| `reg_047_a_collector_is_not_authorised` ([rosters.rs:82](../../crates/adapters/factory-http/tests/rosters.rs#L82)) | REG-047 | REG-047 (registration) |
+| `reg_047_a_weak_method_is_refused` ([rosters.rs:91](../../crates/adapters/factory-http/tests/rosters.rs#L91)) | REG-047 | REG-047 (registration) |
+| `reg_047_an_invalid_roster_is_422_and_stores_nothing` ([rosters.rs:99](../../crates/adapters/factory-http/tests/rosters.rs#L99)) | REG-047 | REG-047 (registration) |
+| `reg_047_a_lower_version_is_not_newer` ([rosters.rs:117](../../crates/adapters/factory-http/tests/rosters.rs#L117)) | REG-047 | REG-047 (registration) |
+| `reg_047_different_content_at_an_existing_version_is_version_taken` ([rosters.rs:126](../../crates/adapters/factory-http/tests/rosters.rs#L126)) | REG-047 | REG-047 (registration) |
+| `reg_047_identical_content_is_unchanged_and_writes_no_record` ([rosters.rs:135](../../crates/adapters/factory-http/tests/rosters.rs#L135)) | REG-047 | REG-047 (registration) |
+| `reg_047_a_stop_between_the_store_write_and_the_record_heals_on_the_next_issue` ([rosters.rs:146](../../crates/adapters/factory-http/tests/rosters.rs#L146)) | REG-047 | REG-047 (registration) |
+| `reg_047_each_issue_is_journaled_with_account_roles_methods_time_cohort_version_and_digest` ([rosters.rs:161](../../crates/adapters/factory-http/tests/rosters.rs#L161)) | REG-047 | REG-047 (registration) |
+| `reg_047_the_journal_and_events_hold_no_subject_data` ([rosters.rs:172](../../crates/adapters/factory-http/tests/rosters.rs#L172)) | REG-047 | REG-047 (registration) |
+| `reg_047_an_issue_notifies_the_reconciler` ([rosters.rs:188](../../crates/adapters/factory-http/tests/rosters.rs#L188)) | REG-047 | REG-047 (registration) |
 | `the_new_bytes_replace_the_old` ([atomic.rs:101](../../crates/adapters/file/src/atomic.rs#L101)) | INT-085 | INT-085 (intake) |
 | `a_failed_write_leaves_the_old_file_in_place` ([atomic.rs:112](../../crates/adapters/file/src/atomic.rs#L112)) | INT-085 | INT-085 (intake) |
 | `no_temporary_file_remains` ([atomic.rs:127](../../crates/adapters/file/src/atomic.rs#L127)) | INT-085 | INT-085 (intake) |
@@ -75,26 +104,35 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `a_new_write_never_replaces` ([atomic.rs:156](../../crates/adapters/file/src/atomic.rs#L156)) | INT-085 | INT-085 (intake) |
 | `a_missing_directory_holds_no_files` ([registry.rs:150](../../crates/adapters/file/src/registry.rs#L150)) | PUB-062 | PUB-062 (publishing) |
 | `a_directory_that_cannot_be_listed_is_a_backend_error` ([registry.rs:161](../../crates/adapters/file/src/registry.rs#L161)) | PUB-062 | PUB-062 (publishing) |
-| `pub_060_the_file_registry_satisfies_the_artefact_registry_contract` ([contracts.rs:126](../../crates/adapters/file/tests/contracts.rs#L126)) | PUB-060 | PUB-060 (publishing) |
-| `dis_080_the_file_roster_source_satisfies_the_roster_source_contract` ([contracts.rs:135](../../crates/adapters/file/tests/contracts.rs#L135)) | DIS-080 | DIS-080 (distribution) |
-| `dis_015_the_file_bundle_store_satisfies_the_bundle_store_contract` ([contracts.rs:165](../../crates/adapters/file/tests/contracts.rs#L165)) | DIS-015 | DIS-015 (distribution) |
-| `dis_012_the_file_runtime_profiles_satisfy_the_runtime_profiles_contract` ([contracts.rs:174](../../crates/adapters/file/tests/contracts.rs#L174)) | DIS-012 | DIS-012 (distribution) |
-| `dis_012_a_tenancy_that_reported_an_older_schema_reports_that_schema_back` ([contracts.rs:207](../../crates/adapters/file/tests/contracts.rs#L207)) | DIS-012 | DIS-012 (distribution) |
-| `dis_012_the_profile_survives_a_restart_of_the_journal` ([contracts.rs:249](../../crates/adapters/file/tests/contracts.rs#L249)) | DIS-012 | DIS-012 (distribution) |
-| `dis_080_a_roster_version_once_issued_does_not_change` ([contracts.rs:281](../../crates/adapters/file/tests/contracts.rs#L281)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_a_lower_version_is_refused` ([contracts.rs:314](../../crates/adapters/file/tests/contracts.rs#L314)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_a_cohort_name_cannot_escape_the_store_directory` ([contracts.rs:341](../../crates/adapters/file/tests/contracts.rs#L341)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_a_roster_that_no_longer_matches_its_checksum_is_not_served` ([contracts.rs:356](../../crates/adapters/file/tests/contracts.rs#L356)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_roster_files_are_readable_only_by_their_owner` ([contracts.rs:371](../../crates/adapters/file/tests/contracts.rs#L371)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_a_source_serves_the_latest_roster_at_the_tenancys_generation` ([contracts.rs:391](../../crates/adapters/file/tests/contracts.rs#L391)) | DIS-080 | DIS-080 (distribution) |
-| `dis_023_bundle_files_carry_the_dated_name` ([contracts.rs:412](../../crates/adapters/file/tests/contracts.rs#L412)) | DIS-023 | DIS-023 (distribution) |
-| `dis_015_a_second_bundle_with_an_old_sequence_is_refused` ([contracts.rs:440](../../crates/adapters/file/tests/contracts.rs#L440)) | DIS-015 | DIS-015 (distribution) |
-| `dis_015_a_bundle_whose_write_was_interrupted_is_not_served` ([contracts.rs:465](../../crates/adapters/file/tests/contracts.rs#L465)) | DIS-015 | DIS-015 (distribution) |
-| `dis_080_two_writers_racing_for_one_version_store_exactly_one` ([contracts.rs:487](../../crates/adapters/file/tests/contracts.rs#L487)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_two_writers_racing_with_identical_content_both_succeed` ([contracts.rs:525](../../crates/adapters/file/tests/contracts.rs#L525)) | DIS-080 | DIS-080 (distribution) |
-| `dis_080_a_store_directory_wider_than_owner_only_is_refused` ([contracts.rs:549](../../crates/adapters/file/tests/contracts.rs#L549)) | DIS-080 | DIS-080 (distribution) |
-| `pub_062_a_withdrawal_is_stored_once_under_a_name_from_its_content` ([contracts.rs:591](../../crates/adapters/file/tests/contracts.rs#L591)) | PUB-062 | PUB-062 (publishing) |
-| `pub_062_a_registry_directory_that_cannot_be_read_is_an_error_not_an_empty_registry` ([contracts.rs:626](../../crates/adapters/file/tests/contracts.rs#L626)) | PUB-062 | PUB-062 (publishing) |
+| `pub_060_the_file_registry_satisfies_the_artefact_registry_contract` ([contracts.rs:127](../../crates/adapters/file/tests/contracts.rs#L127)) | PUB-060 | PUB-060 (publishing) |
+| `dis_080_the_file_roster_source_satisfies_the_roster_source_contract` ([contracts.rs:136](../../crates/adapters/file/tests/contracts.rs#L136)) | DIS-080 | DIS-080 (distribution) |
+| `dis_015_the_file_bundle_store_satisfies_the_bundle_store_contract` ([contracts.rs:166](../../crates/adapters/file/tests/contracts.rs#L166)) | DIS-015 | DIS-015 (distribution) |
+| `dis_012_the_file_runtime_profiles_satisfy_the_runtime_profiles_contract` ([contracts.rs:175](../../crates/adapters/file/tests/contracts.rs#L175)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_a_tenancy_that_reported_an_older_schema_reports_that_schema_back` ([contracts.rs:208](../../crates/adapters/file/tests/contracts.rs#L208)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_the_profile_survives_a_restart_of_the_journal` ([contracts.rs:250](../../crates/adapters/file/tests/contracts.rs#L250)) | DIS-012 | DIS-012 (distribution) |
+| `dis_080_a_roster_version_once_issued_does_not_change` ([contracts.rs:282](../../crates/adapters/file/tests/contracts.rs#L282)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_lower_version_is_refused` ([contracts.rs:315](../../crates/adapters/file/tests/contracts.rs#L315)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_cohort_name_cannot_escape_the_store_directory` ([contracts.rs:342](../../crates/adapters/file/tests/contracts.rs#L342)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_roster_that_no_longer_matches_its_checksum_is_not_served` ([contracts.rs:357](../../crates/adapters/file/tests/contracts.rs#L357)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_roster_files_are_readable_only_by_their_owner` ([contracts.rs:372](../../crates/adapters/file/tests/contracts.rs#L372)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_source_serves_the_latest_roster_at_the_tenancys_generation` ([contracts.rs:392](../../crates/adapters/file/tests/contracts.rs#L392)) | DIS-080 | DIS-080 (distribution) |
+| `dis_023_bundle_files_carry_the_dated_name` ([contracts.rs:413](../../crates/adapters/file/tests/contracts.rs#L413)) | DIS-023 | DIS-023 (distribution) |
+| `dis_015_a_second_bundle_with_an_old_sequence_is_refused` ([contracts.rs:441](../../crates/adapters/file/tests/contracts.rs#L441)) | DIS-015 | DIS-015 (distribution) |
+| `dis_015_a_bundle_whose_write_was_interrupted_is_not_served` ([contracts.rs:466](../../crates/adapters/file/tests/contracts.rs#L466)) | DIS-015 | DIS-015 (distribution) |
+| `dis_080_two_writers_racing_for_one_version_store_exactly_one` ([contracts.rs:488](../../crates/adapters/file/tests/contracts.rs#L488)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_two_writers_racing_with_identical_content_both_succeed` ([contracts.rs:526](../../crates/adapters/file/tests/contracts.rs#L526)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_store_directory_wider_than_owner_only_is_refused` ([contracts.rs:550](../../crates/adapters/file/tests/contracts.rs#L550)) | DIS-080 | DIS-080 (distribution) |
+| `pub_062_a_withdrawal_is_stored_once_under_a_name_from_its_content` ([contracts.rs:592](../../crates/adapters/file/tests/contracts.rs#L592)) | PUB-062 | PUB-062 (publishing) |
+| `pub_062_a_registry_directory_that_cannot_be_read_is_an_error_not_an_empty_registry` ([contracts.rs:627](../../crates/adapters/file/tests/contracts.rs#L627)) | PUB-062 | PUB-062 (publishing) |
+| `reg_046_the_file_registry_store_satisfies_the_registry_store_contract` ([contracts.rs:652](../../crates/adapters/file/tests/contracts.rs#L652)) | REG-046 | REG-046 (registration) |
+| `reg_046_assignments_and_roster_issues_survive_a_restart_of_the_journal` ([contracts.rs:661](../../crates/adapters/file/tests/contracts.rs#L661)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_journal_record_that_does_not_decode_is_refused_not_skipped` ([contracts.rs:694](../../crates/adapters/file/tests/contracts.rs#L694)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_corrupt_assignment_record_makes_the_store_refuse_to_open` ([contracts.rs:711](../../crates/adapters/file/tests/contracts.rs#L711)) | REG-046 | REG-046 (registration) |
+| `reg_046_the_survey_and_cohort_directories_answer_from_the_registry_and_the_roster_store` ([contracts.rs:747](../../crates/adapters/file/tests/contracts.rs#L747)) | REG-046 | REG-046 (registration) |
+| `reg_047_the_file_roster_issuer_checks_before_it_writes_and_maps_the_store_outcomes` ([contracts.rs:764](../../crates/adapters/file/tests/contracts.rs#L764)) | REG-047 | REG-047 (registration) |
+| `reg_047_the_file_roster_issuer_satisfies_the_roster_issuer_contract` ([contracts.rs:793](../../crates/adapters/file/tests/contracts.rs#L793)) | REG-047 | REG-047 (registration) |
+| `reg_046_the_file_directories_satisfy_the_directory_contracts` ([contracts.rs:810](../../crates/adapters/file/tests/contracts.rs#L810)) | REG-046 | REG-046 (registration) |
+| `reg_046_the_published_surveys_satisfy_the_survey_directory_contract` ([contracts.rs:819](../../crates/adapters/file/tests/contracts.rs#L819)) | REG-046 | REG-046 (registration) |
 | `int_006_the_file_tenancy_registry_satisfies_the_contract` ([intake_ports.rs:47](../../crates/adapters/file/tests/intake_ports.rs#L47)) | INT-006 | INT-006 (intake) |
 | `int_040_the_file_roster_history_satisfies_the_contract` ([intake_ports.rs:57](../../crates/adapters/file/tests/intake_ports.rs#L57)) | INT-040 | INT-040 (intake) |
 | `int_070_the_published_instruments_reader_satisfies_the_contract` ([intake_ports.rs:75](../../crates/adapters/file/tests/intake_ports.rs#L75)) | INT-070 | INT-070 (intake) |
@@ -129,6 +167,30 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `int_072_a_snapshot_refuses_a_row_that_does_not_fit_its_column` ([snapshot.rs:58](../../crates/adapters/landing-files/tests/snapshot.rs#L58)) | INT-072 | INT-072 (intake) |
 | `int_011_the_file_platform_satisfies_the_data_platform_contract` ([snapshot.rs:80](../../crates/adapters/landing-files/tests/snapshot.rs#L80)) | INT-011 | INT-011 (intake) |
 | `int_085_the_landing_files_keep_their_bytes` ([snapshot.rs:89](../../crates/adapters/landing-files/tests/snapshot.rs#L89)) | INT-085 | INT-085 (intake) |
+| `reg_070a_a_valid_token_yields_the_person_roles_and_methods` ([access_token.rs:138](../../crates/adapters/oidc/tests/access_token.rs#L138)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_bad_signature_is_refused` ([access_token.rs:149](../../crates/adapters/oidc/tests/access_token.rs#L149)) | REG-070a | REG-070a (registration) |
+| `reg_070a_alg_none_and_hs256_are_refused` ([access_token.rs:164](../../crates/adapters/oidc/tests/access_token.rs#L164)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_wrong_issuer_is_refused` ([access_token.rs:176](../../crates/adapters/oidc/tests/access_token.rs#L176)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_token_without_the_api_audience_is_refused` ([access_token.rs:184](../../crates/adapters/oidc/tests/access_token.rs#L184)) | REG-070a | REG-070a (registration) |
+| `reg_070a_an_id_token_is_refused_as_an_access_token` ([access_token.rs:202](../../crates/adapters/oidc/tests/access_token.rs#L202)) | REG-070a | REG-070a (registration) |
+| `reg_070a_an_expired_token_is_refused` ([access_token.rs:217](../../crates/adapters/oidc/tests/access_token.rs#L217)) | REG-070a | REG-070a (registration) |
+| `reg_070a_iat_or_nbf_in_the_future_is_refused` ([access_token.rs:231](../../crates/adapters/oidc/tests/access_token.rs#L231)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_missing_sub_is_refused` ([access_token.rs:244](../../crates/adapters/oidc/tests/access_token.rs#L244)) | REG-070a | REG-070a (registration) |
+| `reg_070a_typ_at_jwt_is_accepted` ([access_token.rs:255](../../crates/adapters/oidc/tests/access_token.rs#L255)) | REG-070a | REG-070a (registration) |
+| `reg_070a_typ_jwt_is_refused_unless_configured` ([access_token.rs:264](../../crates/adapters/oidc/tests/access_token.rs#L264)) | REG-070a | REG-070a (registration) |
+| `reg_070a_typ_jwt_is_accepted_only_with_the_payload_typ_bearer` ([access_token.rs:277](../../crates/adapters/oidc/tests/access_token.rs#L277)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_token_carrying_a_nonce_is_refused` ([access_token.rs:292](../../crates/adapters/oidc/tests/access_token.rs#L292)) | REG-070a | REG-070a (registration) |
+| `reg_070a_an_id_token_from_the_cli_client_that_carries_the_api_audience_is_refused` ([access_token.rs:304](../../crates/adapters/oidc/tests/access_token.rs#L304)) | REG-070a | REG-070a (registration) |
+| `reg_070a_another_typ_is_refused` ([access_token.rs:327](../../crates/adapters/oidc/tests/access_token.rs#L327)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_token_for_another_client_is_refused` ([access_token.rs:342](../../crates/adapters/oidc/tests/access_token.rs#L342)) | REG-070a | REG-070a (registration) |
+| `reg_070a_azp_stands_in_when_client_id_is_absent` ([access_token.rs:364](../../crates/adapters/oidc/tests/access_token.rs#L364)) | REG-070a | REG-070a (registration) |
+| `reg_070a_acr_without_amr_is_phishing_resistant_by_acr` ([access_token.rs:376](../../crates/adapters/oidc/tests/access_token.rs#L376)) | REG-070a | REG-070a (registration) |
+| `reg_070a_the_key_set_is_refetched_once_on_an_unknown_kid` ([access_token.rs:395](../../crates/adapters/oidc/tests/access_token.rs#L395)) | REG-070a | REG-070a (registration) |
+| `reg_070a_without_an_api_audience_and_cli_client_no_access_token_is_accepted` ([access_token.rs:418](../../crates/adapters/oidc/tests/access_token.rs#L418)) | REG-070a | REG-070a (registration) |
+| `reg_070a_unknown_kids_inside_the_interval_cause_at_most_one_fetch` ([access_token.rs:429](../../crates/adapters/oidc/tests/access_token.rs#L429)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_refused_header_costs_no_key_set_fetch` ([access_token.rs:456](../../crates/adapters/oidc/tests/access_token.rs#L456)) | REG-070a | REG-070a (registration) |
+| `reg_070a_client_id_and_azp_must_agree_when_both_are_present` ([access_token.rs:466](../../crates/adapters/oidc/tests/access_token.rs#L466)) | REG-070a | REG-070a (registration) |
+| `reg_070a_an_encryption_key_or_one_for_another_algorithm_never_verifies` ([access_token.rs:477](../../crates/adapters/oidc/tests/access_token.rs#L477)) | REG-070a | REG-070a (registration) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
 | `reg_092_ids_and_tokens_are_unique_and_unguessable_length` ([sessions.rs:47](../../crates/adapters/portal/tests/sessions.rs#L47)) | REG-092 | REG-092 (registration) |
@@ -192,6 +254,18 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `cli_048_a_key_file_of_the_wrong_length_or_mode_is_refused` ([intake_results.rs:235](../../crates/apps/cli/tests/intake_results.rs#L235)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_contract_files_are_named_by_fingerprint_hex` ([intake_results.rs:256](../../crates/apps/cli/tests/intake_results.rs#L256)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_an_instrument_with_no_verified_publication_is_refused` ([intake_results.rs:270](../../crates/apps/cli/tests/intake_results.rs#L270)) | CLI-048 | CLI-048 (cli) |
+| `cli_055_assign_signs_in_through_a_loopback_redirect_and_sends_the_access_token` ([roster_assign.rs:73](../../crates/apps/cli/tests/roster_assign.rs#L73)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_one_sign_in_serves_several_assign_options` ([roster_assign.rs:105](../../crates/apps/cli/tests/roster_assign.rs#L105)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_no_token_is_written_to_disk` ([roster_assign.rs:119](../../crates/apps/cli/tests/roster_assign.rs#L119)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_login_with_browser_none_completes_without_a_person_when_the_idp_redirects` ([roster_assign.rs:137](../../crates/apps/cli/tests/roster_assign.rs#L137)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_a_login_page_makes_it_fail_with_needs_a_person` ([roster_assign.rs:148](../../crates/apps/cli/tests/roster_assign.rs#L148)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_a_removal_request_names_reg_045` ([roster_assign.rs:160](../../crates/apps/cli/tests/roster_assign.rs#L160)) | CLI-055, REG-045 | CLI-055 (cli); REG-045 (registration) |
+| `cli_055_state_mismatch_is_refused` ([roster_assign.rs:174](../../crates/apps/cli/tests/roster_assign.rs#L174)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_a_callback_with_another_state_or_an_error_without_ours_is_ignored` ([roster_assign.rs:186](../../crates/apps/cli/tests/roster_assign.rs#L186)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_the_output_shows_the_account_the_cohort_and_the_survey` ([roster_assign.rs:217](../../crates/apps/cli/tests/roster_assign.rs#L217)) | CLI-055 | CLI-055 (cli) |
+| `cli_055_missing_issuer_and_client_id_exit_2` ([roster_assign.rs:234](../../crates/apps/cli/tests/roster_assign.rs#L234)) | CLI-055 | CLI-055 (cli) |
+| `reg_001_device_commands_never_call_the_oidc_client_or_read_its_variables` ([roster_assign.rs:250](../../crates/apps/cli/tests/roster_assign.rs#L250)) | REG-001 | REG-001 (registration) |
+| `cli_055_a_cleartext_factory_url_is_refused_unless_it_is_loopback` ([roster_assign.rs:310](../../crates/apps/cli/tests/roster_assign.rs#L310)) | CLI-055 | CLI-055 (cli) |
 | `cli_050_check_fails_on_a_field_the_instrument_reads_and_a_subject_lacks` ([roster_cli.rs:90](../../crates/apps/cli/tests/roster_cli.rs#L90)) | CLI-050 | CLI-050 (cli) |
 | `cli_050_check_requires_a_survey_folder` ([roster_cli.rs:110](../../crates/apps/cli/tests/roster_cli.rs#L110)) | CLI-050 | CLI-050 (cli) |
 | `cli_050_check_writes_nothing` ([roster_cli.rs:122](../../crates/apps/cli/tests/roster_cli.rs#L122)) | CLI-050 | CLI-050 (cli) |
@@ -201,6 +275,13 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `cli_052_diff_with_reveal_warns_on_stderr` ([roster_cli.rs:189](../../crates/apps/cli/tests/roster_cli.rs#L189)) | CLI-052 | CLI-052 (cli) |
 | `cli_053_list_prints_no_subject_ids` ([roster_cli.rs:200](../../crates/apps/cli/tests/roster_cli.rs#L200)) | CLI-053 | CLI-053 (cli) |
 | `dis_081_a_diff_is_computable_without_exposing_a_subject` ([roster_cli.rs:223](../../crates/apps/cli/tests/roster_cli.rs#L223)) | DIS-081 | DIS-081 (distribution) |
+| `cli_051_issue_runs_check_first_and_sends_nothing_when_it_fails` ([roster_issue.rs:43](../../crates/apps/cli/tests/roster_issue.rs#L43)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_issue_signs_in_once_for_several_files` ([roster_issue.rs:64](../../crates/apps/cli/tests/roster_issue.rs#L64)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_issue_refuses_a_version_not_higher_than_the_latest` ([roster_issue.rs:84](../../crates/apps/cli/tests/roster_issue.rs#L84)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_issue_accepts_identical_content_at_the_same_version` ([roster_issue.rs:94](../../crates/apps/cli/tests/roster_issue.rs#L94)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_issue_refuses_different_content_at_an_existing_version` ([roster_issue.rs:104](../../crates/apps/cli/tests/roster_issue.rs#L104)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_no_token_is_written_to_disk` ([roster_issue.rs:114](../../crates/apps/cli/tests/roster_issue.rs#L114)) | CLI-051 | CLI-051 (cli) |
+| `cli_051_a_cleartext_factory_url_is_refused_unless_it_is_loopback` ([roster_issue.rs:131](../../crates/apps/cli/tests/roster_issue.rs#L131)) | CLI-051 | CLI-051 (cli) |
 | `wire_213_the_embedded_corpus_lists_every_file` ([strict_schema_corpus.rs:29](../../crates/apps/cli/tests/strict_schema_corpus.rs#L29)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `cli_043_conformance_list_names_strict_schema` ([strict_schema_corpus.rs:49](../../crates/apps/cli/tests/strict_schema_corpus.rs#L49)) | CLI-043 | CLI-043 (cli) |
 | `cli_043_the_strict_schema_suite_rejects_every_corpus_document` ([strict_schema_corpus.rs:56](../../crates/apps/cli/tests/strict_schema_corpus.rs#L56)) | CLI-043 | CLI-043 (cli) |
@@ -217,6 +298,22 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `cli_041_schema_export_is_deterministic_and_addressed` ([survey_cli.rs:165](../../crates/apps/cli/tests/survey_cli.rs#L165)) | CLI-041 | CLI-041 (cli) |
 | `cli_041_schema_check_validates_a_source_file_against_its_schema` ([survey_cli.rs:195](../../crates/apps/cli/tests/survey_cli.rs#L195)) | CLI-041 | CLI-041 (cli) |
 | `ins_260_a_stale_translation_is_listed_with_old_and_new_text` ([survey_cli.rs:206](../../crates/apps/cli/tests/survey_cli.rs#L206)) | INS-260 | INS-260 (instrument) |
+| `reg_002_the_factory_adapter_signs_in_against_the_dev_idp` ([flows.rs:92](../../crates/apps/dev-idp/tests/flows.rs#L92)) | REG-002 | REG-002 (registration) |
+| `reg_002_a_confidential_client_with_the_wrong_secret_or_a_used_code_is_refused` ([flows.rs:114](../../crates/apps/dev-idp/tests/flows.rs#L114)) | REG-002 | REG-002 (registration) |
+| `reg_070a_the_cli_flow_obtains_an_access_token_the_verifier_accepts` ([flows.rs:135](../../crates/apps/dev-idp/tests/flows.rs#L135)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_portal_clients_access_token_is_refused_at_the_api` ([flows.rs:158](../../crates/apps/dev-idp/tests/flows.rs#L158)) | REG-070a | REG-070a (registration) |
+| `reg_070a_login_hint_approves_without_a_page` ([flows.rs:169](../../crates/apps/dev-idp/tests/flows.rs#L169)) | REG-070a | REG-070a (registration) |
+| `reg_070a_without_a_login_hint_the_login_page_lists_the_logins` ([flows.rs:181](../../crates/apps/dev-idp/tests/flows.rs#L181)) | REG-070a | REG-070a (registration) |
+| `reg_002_pkce_s256_is_required` ([flows.rs:201](../../crates/apps/dev-idp/tests/flows.rs#L201)) | REG-002 | REG-002 (registration) |
+| `reg_002_an_unregistered_redirect_uri_is_refused` ([flows.rs:233](../../crates/apps/dev-idp/tests/flows.rs#L233)) | REG-002 | REG-002 (registration) |
+| `reg_002_the_issuer_follows_the_bind_address` ([flows.rs:265](../../crates/apps/dev-idp/tests/flows.rs#L265)) | REG-002 | REG-002 (registration) |
+| `reg_002_only_loopback_addresses_bind` ([flows.rs:284](../../crates/apps/dev-idp/tests/flows.rs#L284)) | REG-002 | REG-002 (registration) |
+| `reg_002_the_configuration_is_strict_and_a_missing_secret_is_named` ([flows.rs:295](../../crates/apps/dev-idp/tests/flows.rs#L295)) | REG-002 | REG-002 (registration) |
+| `reg_046_an_assignment_for_a_subject_reaches_the_tenancy_that_person_registers` ([flows.rs:313](../../crates/apps/dev-idp/tests/flows.rs#L313)) | REG-046 | REG-046 (registration) |
+| `dep_023_exits_2_without_development_tool` ([refusals.rs:33](../../crates/apps/dev-idp/tests/refusals.rs#L33)) | DEP-023 | DEP-023 (deployment) |
+| `dep_023_exits_2_in_production` ([refusals.rs:38](../../crates/apps/dev-idp/tests/refusals.rs#L38)) | DEP-023 | DEP-023 (deployment) |
+| `dep_023_exits_2_on_a_non_loopback_bind` ([refusals.rs:45](../../crates/apps/dev-idp/tests/refusals.rs#L45)) | DEP-023 | DEP-023 (deployment) |
+| `dep_023_it_appears_in_no_image_compose_file_or_manifest` ([refusals.rs:52](../../crates/apps/dev-idp/tests/refusals.rs#L52)) | DEP-023 | DEP-023 (deployment) |
 | `reg_006_dis_030_del_042_the_air_gapped_flow_moves_only_files_and_codes` ([air_gapped.rs:43](../../crates/apps/e2e/tests/air_gapped.rs#L43)) | DEL-042, DIS-030, REG-006 | DEL-042 (delivery); DIS-030 (distribution); REG-006 (registration) |
 | `del_002_int_050_the_connected_flow_lands_what_was_captured_and_the_device_clears` ([connected.rs:33](../../crates/apps/e2e/tests/connected.rs#L33)) | DEL-002, INT-050 | DEL-002 (delivery); INT-050 (intake) |
 | `reg_006_an_expired_registration_token_is_refused_by_the_factory_and_registers_nothing` ([faults_authority.rs:22](../../crates/apps/e2e/tests/faults_authority.rs#L22)) | REG-006 | REG-006 (registration) |
@@ -286,6 +383,17 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_085_hostile_instrument_text_is_refused_or_escaped` ([html_injection.rs:139](../../crates/apps/security-tests/tests/html_injection.rs#L139)) | INS-085 | INS-085 (instrument) |
 | `ins_208_hostile_roster_fields_and_answers_are_escaped_by_the_renderer` ([html_injection.rs:158](../../crates/apps/security-tests/tests/html_injection.rs#L158)) | INS-208 | INS-208 (instrument) |
 | `ins_208_pathological_text_renders_without_panic` ([html_injection.rs:173](../../crates/apps/security-tests/tests/html_injection.rs#L173)) | INS-208 | INS-208 (instrument) |
+| `reg_070a_the_api_audience_mapper_adds_to_the_access_token_only` ([keycloak_realm.rs:37](../../crates/apps/security-tests/tests/keycloak_realm.rs#L37)) | REG-070a | REG-070a (registration) |
+| `reg_070a_no_client_puts_the_api_audience_in_an_id_token` ([keycloak_realm.rs:47](../../crates/apps/security-tests/tests/keycloak_realm.rs#L47)) | REG-070a | REG-070a (registration) |
+| `reg_070a_fieldseal_cli_is_a_public_client_with_pkce_s256` ([keycloak_realm.rs:64](../../crates/apps/security-tests/tests/keycloak_realm.rs#L64)) | REG-070a | REG-070a (registration) |
+| `reg_070a_product_owner_has_a_fixed_id` ([keycloak_realm.rs:84](../../crates/apps/security-tests/tests/keycloak_realm.rs#L84)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_collector_role_account_is_refused_with_403` ([operator_api.rs:203](../../crates/apps/security-tests/tests/operator_api.rs#L203)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_weak_sign_in_method_is_refused_with_403` ([operator_api.rs:214](../../crates/apps/security-tests/tests/operator_api.rs#L214)) | REG-070a | REG-070a (registration) |
+| `reg_070a_a_verifier_refusal_is_401_token_invalid` ([operator_api.rs:227](../../crates/apps/security-tests/tests/operator_api.rs#L227)) | REG-070a | REG-070a (registration) |
+| `reg_070a_no_authorization_header_is_401_bearer_required` ([operator_api.rs:238](../../crates/apps/security-tests/tests/operator_api.rs#L238)) | REG-070a | REG-070a (registration) |
+| `reg_070a_the_same_refusals_apply_to_post_v1_rosters` ([operator_api.rs:253](../../crates/apps/security-tests/tests/operator_api.rs#L253)) | REG-070a | REG-070a (registration) |
+| `reg_046_a_portal_session_cookie_is_never_accepted_on_the_assignment_routes` ([operator_api.rs:272](../../crates/apps/security-tests/tests/operator_api.rs#L272)) | REG-046 | REG-046 (registration) |
+| `reg_046_a_bearer_token_is_never_accepted_on_the_portal_pages` ([operator_api.rs:296](../../crates/apps/security-tests/tests/operator_api.rs#L296)) | REG-046 | REG-046 (registration) |
 | `reg_attack_code_phishing_there_is_no_device_originated_code_and_weak_sign_in_mints_no_token` ([registration_attacks.rs:148](../../crates/apps/security-tests/tests/registration_attacks.rs#L148)) | ADR-0007, REG-002, REG-020 | ADR-0007 (ADR 0007); REG-002 (registration); REG-020 (registration) |
 | `reg_attack_token_theft_single_use_short_lived_and_the_words_do_not_match` ([registration_attacks.rs:169](../../crates/apps/security-tests/tests/registration_attacks.rs#L169)) | ADR-0007, REG-002, REG-020 | ADR-0007 (ADR 0007); REG-002 (registration); REG-020 (registration) |
 | `reg_attack_key_substitution_by_a_relay_or_file_carrier_fails` ([registration_attacks.rs:191](../../crates/apps/security-tests/tests/registration_attacks.rs#L191)) | ADR-0007, REG-002, REG-020 | ADR-0007 (ADR 0007); REG-002 (registration); REG-020 (registration) |
@@ -313,7 +421,13 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:65](../../crates/apps/web/tests/dev_loop.rs#L65)) | WEB-111 | WEB-111 (web-app) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
+| `web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examples_otherwise` ([roster_store.rs:57](../../crates/apps/web/tests/roster_store.rs#L57)) | WEB-110 | WEB-110 (web-app) |
 | `the_runtime_profile_names_the_schema_the_core_implements` ([lib.rs:39](../../crates/bindings/uniffi/src/lib.rs#L39)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `dep_012_a_cohorts_key_in_the_tenancy_registry_config_is_no_longer_rendered` ([factory_component.rs:91](../../crates/contexts/deployment/tests/factory_component.rs#L91)) | DEP-012 | DEP-012 (deployment) |
+| `dep_012_the_factory_component_renders_the_new_variables` ([factory_component.rs:101](../../crates/contexts/deployment/tests/factory_component.rs#L101)) | DEP-012 | DEP-012 (deployment) |
+| `dep_002_a_manifest_without_the_new_factory_ports_is_refused` ([factory_component.rs:117](../../crates/contexts/deployment/tests/factory_component.rs#L117)) | DEP-002 | DEP-002 (deployment) |
+| `dep_002_the_example_manifests_bind_the_new_factory_ports` ([factory_component.rs:128](../../crates/contexts/deployment/tests/factory_component.rs#L128)) | DEP-002 | DEP-002 (deployment) |
+| `dep_023_validate_refuses_the_factory_file_adapters_in_production` ([factory_component.rs:141](../../crates/contexts/deployment/tests/factory_component.rs#L141)) | DEP-023 | DEP-023 (deployment) |
 | `dep_057_the_intake_component_renders_the_listed_variables` ([intake_component.rs:79](../../crates/contexts/deployment/tests/intake_component.rs#L79)) | DEP-057 | DEP-057 (deployment) |
 | `dep_057_a_file_submission_store_is_a_development_adapter` ([intake_component.rs:104](../../crates/contexts/deployment/tests/intake_component.rs#L104)) | DEP-057 | DEP-057 (deployment) |
 | `dep_023_validate_refuses_intake_development_adapters_in_production` ([intake_component.rs:111](../../crates/contexts/deployment/tests/intake_component.rs#L111)) | DEP-023 | DEP-023 (deployment) |

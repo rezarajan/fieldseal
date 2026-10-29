@@ -20,6 +20,9 @@ pub fn ports(component: Component) -> &'static [(&'static str, &'static [&'stati
             ("AttestationVerifier", &["android-key-attestation", "software", "memory"]),
             ("PolicyEngine", &["opa", "built-in"]),
             ("TenancyRegistry", &["postgres", "file-dev", "memory"]),
+            // The operator API reads the artefact registry and writes the roster store (REG-046, REG-047).
+            ("ArtefactRegistry", &["file-dev"]),
+            ("RosterSource", &["file-dev"]),
         ],
         Component::Intake => &[
             ("RecordKeyUnsealer", &["pkcs11-hsm", "file-dev", "memory"]),

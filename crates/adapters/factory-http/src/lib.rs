@@ -11,6 +11,18 @@
 //! | `POST /v1/api-token` | `Fieldseal-PoP` | `IssueApiToken` |
 //! | `POST /v1/posture/nonce`, `POST /v1/posture` | `Fieldseal-PoP` | `CheckPosture` |
 //!
+//! **Operator API** (JSON responses, canonical CBOR request bodies, `Authorization: Bearer`):
+//!
+//! | Method and path | Use case |
+//! |---|---|
+//! | `POST /v1/rosters` | `IssueRoster` |
+//! | `POST /v1/assignments` | `AssignCohort` |
+//! | `GET /v1/assignments` | `ListAssignments` |
+//!
+//! A route verifies the Bearer access token with the [`BearerVerifier`], then the use case
+//! requires the `operator` role and a phishing-resistant sign-in. These routes read no
+//! cookie, and the portal pages read no Bearer token. No roster body is logged.
+//!
 //! PoP-protected endpoints take the WIRE-170 token in the `Fieldseal-PoP` header and, when
 //! an access token is used, `Authorization: FieldsealPoP <base64url>`.
 //!
@@ -29,13 +41,16 @@ pub mod html;
 pub mod messages;
 
 use std::io::Read as _;
+use std::sync::Arc;
 
 use fieldseal_kernel::digest::lower_hex;
-use fieldseal_kernel::id::TenancyId;
+use fieldseal_kernel::Value;
+use fieldseal_kernel::cbor;
+use fieldseal_kernel::id::{CohortId, TenancyId};
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::application::{Factory, RegistrationError, Submission};
 use fieldseal_registration::domain::wire::{POP_HEADER, base64url_decode, base64url_encode, decode_request_file};
-use fieldseal_registration::domain::{AuthenticatedPerson, DeviceId, RegistrationRoute, Role, TenancyRecord, TenancyState};
+use fieldseal_registration::domain::{AccountId, AuthenticatedPerson, DeviceId, RegistrationRoute, Role, TenancyRecord, TenancyState};
 use fieldseal_registration::ports::IdentityProvider;
 use serde_json::{Value as Json, json};
 
@@ -57,6 +72,83 @@ const CSP: &str = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'
 fn html(status: u16, body: String) -> Response {
     Response::html(status, body, CSP)
 }
+
+/// Why a Bearer access token was refused.
+#[derive(Clone, PartialEq, Eq, Debug, thiserror::Error)]
+pub enum BearerError {
+    /// The token is not valid: a bad signature, issuer, audience, type or client, a `nonce`,
+    /// or expired. The reason is for the factory's own log and is never sent to the caller.
+    #[error("token invalid: {0}")]
+    Invalid(String),
+    /// The identity provider's keys could not be fetched.
+    #[error("identity provider unavailable: {0}")]
+    Unavailable(String),
+}
+
+/// Verifies the access token of an operator API call (Technical Plan 7.5). The implementation
+/// returns who the token names; it does not decide whether that person may operate: the use
+/// case requires the `operator` role and a phishing-resistant method.
+pub trait BearerVerifier {
+    /// Verifies `token`, the text after `Bearer `.
+    fn verify(&self, token: &str) -> Result<AuthenticatedPerson, BearerError>;
+
+    /// The account a person with the identity provider subject `sub` signs in as. It is the
+    /// rule the sign-in uses to build `AuthenticatedPerson::account`, so that an assignment
+    /// made for a subject reaches that person's tenancies. The operator sends the bare
+    /// subject and the factory maps it here.
+    fn account_for_subject(&self, sub: &str) -> AccountId;
+
+    /// The inverse of `account_for_subject`: the bare subject of an account id this verifier
+    /// built, or `None` when the id does not carry this verifier's prefix.
+    fn subject_of_account(&self, account: &AccountId) -> Option<String>;
+}
+
+/// Told which tenancies' bundles must be rebuilt after a journaled change. A no-op until the
+/// factory builds bundles (Phase 13).
+pub type ReconcileNotify = Arc<dyn Fn(TenancyId) + Send + Sync>;
+
+/// A [`ReconcileNotify`] that does nothing.
+pub fn no_reconcile() -> ReconcileNotify {
+    Arc::new(|_| {})
+}
+
+/// What the operator API tells the factory's event log. It carries no roster value and no
+/// account subject (DEP-051).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum OperatorEvent {
+    /// A cohort was assigned (`assignment-made`).
+    AssignmentMade {
+        /// The survey.
+        survey: String,
+        /// The cohort.
+        cohort: String,
+        /// The generation recorded.
+        generation: u32,
+    },
+    /// A roster version was stored (`roster-issued`).
+    RosterIssued {
+        /// The cohort.
+        cohort: String,
+        /// The version.
+        version: u64,
+        /// SHA-256 of the stored roster, in lower-case hex.
+        digest: String,
+    },
+}
+
+/// Receives the [`OperatorEvent`]s.
+pub type OperatorEvents = Arc<dyn Fn(&OperatorEvent) + Send + Sync>;
+
+/// The operator API's collaborators.
+struct OperatorApi<'a> {
+    bearer: &'a dyn BearerVerifier,
+    notify: ReconcileNotify,
+    events: OperatorEvents,
+}
+
+/// The largest operator request body read (assignments are three short texts; rosters use
+/// [`MAX_BODY`]).
+const MAX_ASSIGNMENT_BODY: usize = 4096;
 
 /// The adapter's settings, from the environment.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -117,6 +209,11 @@ pub fn error_code(e: &RegistrationError) -> &'static str {
         RegistrationError::Revoked => "revoked",
         RegistrationError::NotFound => "not-found",
         RegistrationError::TenancyExists => "tenancy-exists",
+        RegistrationError::UnknownSurvey => "unknown-survey",
+        RegistrationError::UnknownCohort => "unknown-cohort",
+        RegistrationError::RosterInvalid(_) => "roster-invalid",
+        RegistrationError::VersionTaken => "version-taken",
+        RegistrationError::NotNewer => "not-newer",
         RegistrationError::Port(_) => "unavailable",
     }
 }
@@ -130,8 +227,11 @@ fn status_of(e: &RegistrationError) -> u16 {
         | RegistrationError::WrongAccount
         | RegistrationError::Revoked
         | RegistrationError::NotRegistered => 403,
-        RegistrationError::NotFound => 404,
-        RegistrationError::DeviceLimitReached
+        RegistrationError::NotFound | RegistrationError::UnknownSurvey | RegistrationError::UnknownCohort => 404,
+        RegistrationError::RosterInvalid(_) => 422,
+        RegistrationError::VersionTaken
+        | RegistrationError::NotNewer
+        | RegistrationError::DeviceLimitReached
         | RegistrationError::NotPending
         | RegistrationError::NotHeld
         | RegistrationError::TenancyExists
@@ -147,7 +247,23 @@ fn api_error(e: &RegistrationError) -> Response {
     if let RegistrationError::PolicyDenied(reasons) = e {
         body["reasons"] = json!(reasons);
     }
+    if let RegistrationError::RosterInvalid(reason) = e {
+        // Paths and messages of the closed-schema check name a subject by position, never by id.
+        body["reason"] = json!(reason);
+    }
+    if matches!(e, RegistrationError::UnknownSurvey | RegistrationError::UnknownCohort | RegistrationError::VersionTaken | RegistrationError::NotNewer) {
+        body["message"] = json!(messages::text(&format!("api.{}", error_code(e))));
+    }
     Response::json(status_of(e), body)
+}
+
+/// The subject an operator sent for an account, which the bearer verifier strips from the
+/// account id it built (`{issuer}|{subject}`). A subject may hold `|` (Auth0 uses
+/// `auth0|123`), so the id is never split on one. The journal keeps only the account id; the
+/// subject is derived here, so no second copy can disagree with it. An id that does not carry
+/// the verifier's prefix is shown whole.
+fn subject_of(bearer: &dyn BearerVerifier, account: &AccountId) -> String {
+    bearer.subject_of_account(account).unwrap_or_else(|| account.0.clone())
 }
 
 fn parse_tenancy(hex: &str) -> Option<TenancyId> {
@@ -174,25 +290,44 @@ pub struct FactoryHttp<'a> {
     idp: &'a dyn IdentityProvider,
     config: HttpConfig,
     sessions: PortalSessions,
+    operator: Option<OperatorApi<'a>>,
 }
 
 impl<'a> FactoryHttp<'a> {
     /// The adapter.
     pub fn new(factory: &'a Factory<'a>, idp: &'a dyn IdentityProvider, config: HttpConfig) -> Self {
         let sessions = PortalSessions::new(SESSION_COOKIE, config.secure_cookies(), config.session_ttl_ms);
-        Self { factory, idp, config, sessions }
+        Self { factory, idp, config, sessions, operator: None }
+    }
+
+    /// Serves the operator API: Bearer tokens are verified by `bearer`, `notify` is told
+    /// which tenancies a journaled change touched, and `events` receives `assignment-made`
+    /// and `roster-issued`. Without this the operator routes answer `503 unavailable`.
+    #[must_use]
+    pub fn with_operator_api(mut self, bearer: &'a dyn BearerVerifier, notify: ReconcileNotify, events: OperatorEvents) -> Self {
+        self.operator = Some(OperatorApi { bearer, notify, events });
+        self
     }
 
     /// Serves requests from `server` until it is closed.
     pub fn run(&self, server: &tiny_http::Server) {
         for mut req in server.incoming_requests() {
-            let mut body = Vec::new();
-            let too_big = req.as_reader().take(MAX_BODY as u64 + 1).read_to_end(&mut body).is_err() || body.len() > MAX_BODY;
-            let headers = req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
-            let response = if too_big {
-                Response::json(413, json!({ "error": "too-large" }))
+            let headers: std::collections::BTreeMap<String, String> =
+                req.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
+            // The operator routes authorise before any of the body is read, so that only a
+            // verified operator can make the factory read it.
+            let head = Request::new(req.method().as_str(), req.url(), headers.clone(), Vec::new());
+            let refused = if Self::is_operator_route(&head) { self.operator(&head).err() } else { None };
+            let response = if let Some(refused) = refused {
+                refused
             } else {
-                self.handle(&Request::new(req.method().as_str(), req.url(), headers, body))
+                let mut body = Vec::new();
+                let too_big = req.as_reader().take(MAX_BODY as u64 + 1).read_to_end(&mut body).is_err() || body.len() > MAX_BODY;
+                if too_big {
+                    Response::json(413, json!({ "error": "too-large" }))
+                } else {
+                    self.handle(&Request::new(req.method().as_str(), req.url(), headers, body))
+                }
             };
             let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);
             for (k, v) in response.headers.iter().chain(&[
@@ -205,6 +340,12 @@ impl<'a> FactoryHttp<'a> {
             }
             let _ = req.respond(out);
         }
+    }
+
+    /// Whether `req` is one of the operator routes, which verify a Bearer token.
+    fn is_operator_route(req: &Request) -> bool {
+        let segments: Vec<&str> = req.path.trim_matches('/').split('/').collect();
+        matches!((req.method.as_str(), segments.as_slice()), ("POST", ["v1", "rosters" | "assignments"]) | ("GET", ["v1", "assignments"]))
     }
 
     /// Handles one request.
@@ -235,6 +376,10 @@ impl<'a> FactoryHttp<'a> {
                 Ok(o) => Response::json(200, json!({ "ok": o.ok, "reasons": o.reasons })),
                 Err(e) => api_error(&e),
             }),
+            // Operator API: Bearer access token only.
+            ("POST", ["v1", "rosters"]) => self.api_issue_roster(req),
+            ("POST", ["v1", "assignments"]) => self.api_assign(req),
+            ("GET", ["v1", "assignments"]) => self.api_assignments(req),
             // Portal.
             ("GET", [""]) => self.portal_home(req),
             ("GET", ["sign-in"]) => self.sign_in(),
@@ -307,6 +452,138 @@ impl<'a> FactoryHttp<'a> {
         let url = format!("{}{}", self.config.public_url.trim_end_matches('/'), req.path);
         match self.factory.authenticate_api(pop, &req.method, &url, access.as_ref()) {
             Ok(record) => f(record),
+            Err(e) => api_error(&e),
+        }
+    }
+
+    // -----------------------------------------------------------------------------------
+    // Operator API.
+
+    /// Verifies the Bearer access token of `req` and makes the operator checks. [`Self::run`]
+    /// calls it with the headers alone, before it reads the body of an operator route, so a
+    /// body is read only for a person who may send it (the use case checks again). Only the
+    /// `Authorization` header is read: a portal session cookie is never accepted here.
+    fn operator<'s>(&'s self, req: &Request) -> Result<(&'s OperatorApi<'a>, AuthenticatedPerson), Response> {
+        let Some(api) = &self.operator else {
+            return Err(api_error(&RegistrationError::Port("the operator API is not wired".into())));
+        };
+        let bearer_required = || Response::json(401, json!({ "error": "bearer-required" })).with("WWW-Authenticate", "Bearer".into());
+        let Some(token) = req.header("authorization").and_then(|a| a.strip_prefix("Bearer ")).map(str::trim).filter(|t| !t.is_empty()) else {
+            return Err(bearer_required());
+        };
+        let person = match api.bearer.verify(token) {
+            Ok(p) => p,
+            Err(BearerError::Invalid(_)) => {
+                return Err(Response::json(401, json!({ "error": "token-invalid" })).with("WWW-Authenticate", "Bearer error=\"invalid_token\"".into()));
+            }
+            Err(BearerError::Unavailable(_)) => return Err(Response::json(503, json!({ "error": "unavailable" }))),
+        };
+        self.factory.authorise_operator(&person).map_err(|e| api_error(&e))?;
+        Ok((api, person))
+    }
+
+    /// The `cohort` text of a canonical CBOR roster body, and nothing else of it: the issuer
+    /// checks the rest.
+    fn roster_cohort(body: &[u8]) -> Option<CohortId> {
+        match cbor::decode_limited(body, MAX_BODY).ok()? {
+            Value::Map(m) => match m.get("cohort")? {
+                Value::Text(t) => CohortId::new(t.as_str()).ok(),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn api_issue_roster(&self, req: &Request) -> Response {
+        let (api, person) = match self.operator(req) {
+            Ok(x) => x,
+            Err(r) => return r,
+        };
+        let Some(cohort) = Self::roster_cohort(&req.body) else {
+            return api_error(&RegistrationError::RosterInvalid("the roster body is not a canonical CBOR map with a cohort".into()));
+        };
+        match self.factory.issue_roster(&person, &cohort, &req.body) {
+            Ok(done) => {
+                let digest = format!("sha256:{}", lower_hex(done.digest.as_bytes()));
+                if !done.unchanged {
+                    (api.events)(&OperatorEvent::RosterIssued { cohort: cohort.as_str().to_owned(), version: done.version, digest: lower_hex(done.digest.as_bytes()) });
+                    for t in done.affected {
+                        (api.notify)(t);
+                    }
+                }
+                let status = if done.unchanged { "unchanged" } else { "issued" };
+                Response::json(200, json!({ "status": status, "cohort": cohort.as_str(), "version": done.version, "digest": digest }))
+            }
+            Err(e) => api_error(&e),
+        }
+    }
+
+    /// The three texts of an assignment body: `account` (the bare subject), `survey` and
+    /// `cohort`. A subject that is empty, longer than 255 bytes, or holds `|` or a control
+    /// character is refused: `|` is the separator of the account id the sign-in builds, so a
+    /// subject with one could name another issuer's account.
+    fn assignment_body(body: &[u8]) -> Option<(String, String, CohortId)> {
+        let Value::Map(m) = cbor::decode_limited(body, MAX_ASSIGNMENT_BODY).ok()? else { return None };
+        if m.len() != 3 {
+            return None;
+        }
+        let text = |k: &str| match m.get(k) {
+            Some(Value::Text(t)) if !t.is_empty() => Some(t.clone()),
+            _ => None,
+        };
+        let subject = text("account")?;
+        if subject.len() > 255 || subject.chars().any(char::is_control) {
+            return None;
+        }
+        Some((subject, text("survey")?, CohortId::new(text("cohort")?).ok()?))
+    }
+
+    fn api_assign(&self, req: &Request) -> Response {
+        let (api, person) = match self.operator(req) {
+            Ok(x) => x,
+            Err(r) => return r,
+        };
+        let Some((subject, survey, cohort)) = Self::assignment_body(&req.body) else {
+            return api_error(&RegistrationError::Malformed(fieldseal_kernel::WireError::new(fieldseal_kernel::ErrorCode::UnknownField, 0, "an assignment is {account, survey, cohort}")));
+        };
+        let account = api.bearer.account_for_subject(&subject);
+        match self.factory.assign_cohort(&person, &account, &survey, &cohort) {
+            Ok(done) => {
+                if !done.unchanged {
+                    (api.events)(&OperatorEvent::AssignmentMade { survey: survey.clone(), cohort: cohort.as_str().to_owned(), generation: done.assignment.generation.0 });
+                }
+                for t in done.changed {
+                    (api.notify)(t);
+                }
+                let status = if done.unchanged { "unchanged" } else { "assigned" };
+                Response::json(
+                    200,
+                    json!({ "status": status, "account": subject, "survey": survey, "cohort": cohort.as_str(), "generation": done.assignment.generation.0 }),
+                )
+            }
+            Err(e) => api_error(&e),
+        }
+    }
+
+    fn api_assignments(&self, req: &Request) -> Response {
+        let (api, person) = match self.operator(req) {
+            Ok(x) => x,
+            Err(r) => return r,
+        };
+        match self.factory.list_assignments(&person) {
+            Ok(list) => {
+                let rows: Vec<Json> = list
+                    .iter()
+                    .map(|a| {
+                        json!({
+                            "seq": a.seq.0, "account": subject_of(api.bearer, &a.account), "survey": a.survey, "cohort": a.cohort.as_str(),
+                            "generation": a.generation.0, "by": a.by.0, "roles": a.roles, "methods": a.methods,
+                            "at": iso8601(a.at),
+                        })
+                    })
+                    .collect();
+                Response::json(200, json!({ "assignments": rows }))
+            }
             Err(e) => api_error(&e),
         }
     }
