@@ -14,8 +14,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use fieldseal_adapters_memory::demo::DEMO_SCHEMA;
 use fieldseal_adapters_memory::policy::{BuiltInPolicyEngine, MemoryDecisionLog};
-use fieldseal_adapters_memory::registration::{MemoryReceivedProgress, MemoryRegistryStore, SoftwareDevice};
+use fieldseal_adapters_memory::registration::{
+    MemoryReceivedProgress, MemoryRegistryStore, SoftwareDevice, reported_version,
+};
 use fieldseal_adapters_memory::trust::{FixedClock, SoftwareAttestationVerifier};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::crypto::Purpose;
@@ -26,12 +29,11 @@ use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts, 
 use fieldseal_registration::domain::checks::UnattestedKeys;
 use fieldseal_registration::domain::wire::{RequestBody, decode_request, decode_request_file, encode_request_file};
 use fieldseal_registration::domain::{
-    AccountId, AuthRecord, AuthenticatedPerson, AuthenticationMethods, FingerprintWords, IssuedToken, MethodAssurance, RegistrationRoute, RegistrationToken, Role,
+    AccountId, AuthRecord, AuthenticatedPerson, AuthenticationMethods, FingerprintWords,
+    IssuedToken, MethodAssurance, RegistrationRoute, RegistrationToken, ReportedProfile, Role,
     TenancyState, TenancyTerms, TokenSecret, Window,
 };
-use fieldseal_registration::ports::{
-    IssuedNonce, RegistryStore, RegistryStoreError, TokenError,
-};
+use fieldseal_registration::ports::{IssuedNonce, RegistryStore, RegistryStoreError, TokenError};
 use fieldseal_trust::application::VerifyEvidence;
 use fieldseal_trust::domain::{AuthorityPublicKey, KeyRole, TrustBundle};
 use fieldseal_trust::ports::KeyCustody;
@@ -444,7 +446,12 @@ fn request(args: &Args, out: &mut Outcome) -> Res {
         },
         None => SoftwareDevice::new(&OsRandom),
     };
-    let body: RequestBody = device.body(&token, args.value("--label"));
+    // The CLI device reports the schema version it builds bundles for (`bundle build`) and no catalogue.
+    let profile = ReportedProfile {
+        instrument_schema: reported_version(DEMO_SCHEMA),
+        catalogue_reference: None,
+    };
+    let body: RequestBody = device.body_with_profile(&token, args.value("--label"), profile);
     let words = FingerprintWords::from_body_digest(&body.digest());
     let sealed = device.seal(&OsRandom, &bundle, at, &body, None);
     if let Some(d) = &dir

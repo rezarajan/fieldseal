@@ -15,7 +15,10 @@
 use std::path::{Path, PathBuf};
 
 use fieldseal_adapters_authoring::Format;
-use fieldseal_adapters_memory::publishing::{MemoryArtefactRegistry, MemoryReviewSystem, MemoryTransparencyLog};
+use fieldseal_adapters_file::registry::FileRegistry;
+use fieldseal_adapters_memory::publishing::{
+    MemoryArtefactRegistry, MemoryReviewSystem, MemoryTransparencyLog,
+};
 use fieldseal_instrument::application::{ValidationOptions, validate_instrument_with};
 use crate::artefact_kinds::{KindCx, LoadedInstrument, check_envelope, validate_kind, version_key};
 use fieldseal_kernel::Value;
@@ -39,8 +42,10 @@ use crate::custody::DirCustody;
 use crate::messages::msg;
 use crate::outcome::{Outcome, exit};
 use crate::policy_cmd::{effective_of, load_layers};
-use crate::stores::{FileLog, FileRegistry, LOCAL_LOG_ORIGIN};
-use crate::support::{Res, fail, hex, now, policy_paths, read, run_command, setting, unhex, usage, write};
+use crate::stores::{FileLog, LOCAL_LOG_ORIGIN};
+use crate::support::{
+    Res, fail, hex, now, policy_paths, read, run_command, setting, unhex, usage, write,
+};
 use crate::transport::NullTransport;
 use crate::trust_cmd::{custody_dir, load_bundle};
 

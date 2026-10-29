@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use fieldseal_instrument::domain::SchemaVersion;
 use fieldseal_kernel::crypto::{P256PublicKey, Purpose, Signature};
 use fieldseal_kernel::digest::sha256;
 use fieldseal_kernel::id::{CollectionPeriodId, Digest, Nonce, Seq, TenancyHandle, TenancyId};
@@ -13,8 +14,9 @@ use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::domain::auth::phishing_resistant_from_claims;
 use fieldseal_registration::domain::wire::{PopToken, PostureBody, RequestBody, TokenRefusal, factory_sealing_key};
 use fieldseal_registration::domain::{
-    AccessToken, Account, AccountId, AuthenticatedPerson, AuthenticationMethods, DeviceId, IssuedToken, KeyEvidence,
-    ManagementMode, MethodAssurance, NonceSource, RegisteredDevice, RegistrationToken, ReportedRestriction, Role, RollProof,
+    AccessToken, Account, AccountId, AuthenticatedPerson, AuthenticationMethods, DeviceId,
+    IssuedToken, KeyEvidence, ManagementMode, MethodAssurance, NonceSource, RegisteredDevice,
+    RegistrationToken, ReportedProfile, ReportedRestriction, ReportedVersion, Role, RollProof,
     TenancyRecord, TokenSecret,
 };
 use fieldseal_trust::application::{Authority, SOFTWARE_EVIDENCE_FORMAT};
@@ -29,6 +31,16 @@ use fieldseal_registration::ports::{
     FleetRegistry, IdentityError, IdentityProvider, IssuedNonce, Notifier, NotifierError, PendingSignIn, PortalEvent,
     ProgressError, ReceivedProgress, RegistryStore, RegistryStoreError, SignInStart, TokenError,
 };
+
+/// The instrument-schema version `v` as a registration request reports it (WIRE-130).
+/// Registration does not depend on the Instrument context, so the conversion lives here.
+pub fn reported_version(v: SchemaVersion) -> ReportedVersion {
+    ReportedVersion {
+        major: v.major,
+        minor: v.minor,
+        patch: v.patch,
+    }
+}
 
 struct TokenEntry {
     token: IssuedToken,
@@ -57,6 +69,18 @@ impl MemoryRegistryStore {
     /// An empty store.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Every tenancy held, by ID. Not on the [`RegistryStore`] port: only a file adapter that
+    /// replays a journal into this store counts tenancies across accounts.
+    pub fn all_tenancies(&self) -> Vec<TenancyRecord> {
+        self.state
+            .lock()
+            .expect("lock")
+            .tenancies
+            .values()
+            .cloned()
+            .collect()
     }
 }
 
@@ -504,6 +528,20 @@ impl SoftwareDevice {
 
     /// The request body for `token`, with software evidence over its nonce (REG-011).
     pub fn body(&self, token: &RegistrationToken, label: Option<&str>) -> RequestBody {
+        let profile = ReportedProfile {
+            instrument_schema: reported_version(crate::demo::DEMO_SCHEMA),
+            catalogue_reference: None,
+        };
+        self.body_with_profile(token, label, profile)
+    }
+
+    /// Like [`Self::body`], reporting `profile` (WIRE-130) in place of the demo schema.
+    pub fn body_with_profile(
+        &self,
+        token: &RegistrationToken,
+        label: Option<&str>,
+        profile: ReportedProfile,
+    ) -> RequestBody {
         RequestBody {
             token: token.secret,
             nonce: token.nonce,
@@ -520,6 +558,7 @@ impl SoftwareDevice {
             build: self.build.clone(),
             prev_closing: None,
             label: label.map(str::to_owned),
+            profile,
         }
     }
 

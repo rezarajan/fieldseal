@@ -8,9 +8,9 @@ use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_trust::domain::{AttestationEvidence, DeviceKeyKind};
 
 use crate::domain::{
-    AccessToken, Account, AccountId, AuthRecord, DeviceId, FingerprintWords, IssuedToken, KeyState, NonceSource,
-    RegisteredDevice, RegisteredKey, RegistrationRoute, RegistrationToken, Role, TenancyRecord, TenancyState, TokenSecret,
-    Window,
+    AccessToken, Account, AccountId, AuthRecord, DeviceId, FingerprintWords, IssuedToken, KeyState,
+    NonceSource, RegisteredDevice, RegisteredKey, RegistrationRoute, RegistrationToken,
+    ReportedProfile, ReportedVersion, Role, TenancyRecord, TenancyState, TokenSecret, Window,
 };
 use crate::ports::{
     IdentityProvider, IssuedNonce, Notifier, PortalEvent, ReceivedProgress, RegistryStore, RegistryStoreError, SignInStart,
@@ -68,7 +68,19 @@ pub fn sample_tenancy(id: u8, account: &str) -> TenancyRecord {
         pending_until: AuthorityTime(1_000),
         nonce_source: NonceSource::Factory,
         build: "test".into(),
-        authentication: AuthRecord { methods: vec!["hwk".into()], phishing_resistant: true, asserted: false },
+        profile: ReportedProfile {
+            instrument_schema: ReportedVersion {
+                major: 1,
+                minor: 0,
+                patch: 0,
+            },
+            catalogue_reference: None,
+        },
+        authentication: AuthRecord {
+            methods: vec!["hwk".into()],
+            phishing_resistant: true,
+            asserted: false,
+        },
         reasons: vec![],
         certificate: None,
         last_seen: None,
@@ -133,6 +145,35 @@ pub fn registry_store_contract<S: RegistryStore + Sync>(make: impl Fn() -> S) {
     shrunk.keys.clear();
     assert_eq!(store.put_tenancy(&shrunk), Err(RegistryStoreError::HistoryViolation), "keys are never deleted from history");
     assert_eq!(store.tenancy(&TenancyId::from([0xee; 32])), Ok(None));
+
+    // The reported profile round-trips, with and without a catalogue version (REG-091).
+    let mut reported = sample_tenancy(6, "acct-a");
+    reported.profile = ReportedProfile {
+        instrument_schema: ReportedVersion {
+            major: 1,
+            minor: 2,
+            patch: 3,
+        },
+        catalogue_reference: Some("ui-1.4".into()),
+    };
+    store
+        .put_tenancy(&reported)
+        .expect("put tenancy with a catalogue");
+    assert_eq!(
+        store
+            .tenancy(&reported.id)
+            .expect("tenancy")
+            .map(|t| t.profile),
+        Some(reported.profile.clone())
+    );
+    assert_eq!(
+        store
+            .tenancy(&tenancy.id)
+            .expect("tenancy")
+            .map(|t| t.profile),
+        Some(tenancy.profile.clone()),
+        "no catalogue stays none"
+    );
 
     // Devices.
     let device = RegisteredDevice {

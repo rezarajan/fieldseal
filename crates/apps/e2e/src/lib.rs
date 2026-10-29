@@ -21,9 +21,16 @@ use fieldseal_adapters_memory::bundle_opener::FileBundleOpener;
 use fieldseal_adapters_memory::collection::{SIMULATION_T0, SimulatedDevice};
 use fieldseal_adapters_memory::delivery::{MemoryFileAccess, MemoryPopLedger, MemoryPrivateStorage, MemoryRegistrationRecords, MemoryShareTarget};
 use fieldseal_adapters_memory::demo::{DEMO_SCHEMA, DemoWorld, EdgeServices};
-use fieldseal_adapters_memory::intake::{MemoryDataPlatform, MemoryInstrumentSource, MemoryRosterHistory, MemorySubmissionStore, MemoryTenancyRegistry};
-use fieldseal_adapters_memory::policy::{BuiltInPolicyEngine, MemoryDecisionLog, MemoryPolicySource};
-use fieldseal_adapters_memory::registration::{MemoryIdentityProvider, MemoryReceivedProgress, software_evidence};
+use fieldseal_adapters_memory::intake::{
+    MemoryDataPlatform, MemoryInstrumentSource, MemoryRosterHistory, MemorySubmissionStore,
+    MemoryTenancyRegistry,
+};
+use fieldseal_adapters_memory::policy::{
+    BuiltInPolicyEngine, MemoryDecisionLog, MemoryPolicySource,
+};
+use fieldseal_adapters_memory::registration::{
+    MemoryIdentityProvider, MemoryReceivedProgress, reported_version, software_evidence,
+};
 use fieldseal_adapters_memory::trust::{FixedClock, SeededRandom, SoftwareAttestationVerifier};
 use fieldseal_collection::application::{Platform, Provisioning, Runtime};
 use fieldseal_collection::domain::bundle::{HeldRoster, OpenedBundle};
@@ -54,7 +61,9 @@ use fieldseal_registration::application::{Factory, FactoryConfig, FactoryPorts, 
 use fieldseal_registration::domain::checks::UnattestedKeys;
 use fieldseal_registration::domain::wire::{RequestBody, factory_sealing_key};
 use fieldseal_registration::domain::{
-    AuthenticatedPerson, CohortAssignment, FingerprintWords, KeyEvidence, MethodAssurance, NonceSource, RegistrationRoute, RegistrationToken, TenancyRecord, TenancyState, TenancyTerms, Window,
+    AuthenticatedPerson, CohortAssignment, FingerprintWords, KeyEvidence, MethodAssurance,
+    NonceSource, RegistrationRoute, RegistrationToken, ReportedProfile, TenancyRecord,
+    TenancyState, TenancyTerms, Window,
 };
 use fieldseal_registration::ports::RegistryStore;
 use fieldseal_trust::domain::{AttestationClaims, AuthorityPublicKey, BootState, DeviceKeyKind, SecurityLevel};
@@ -534,6 +543,10 @@ impl Phone {
             build: "fieldseal-simulator/0.1.0".into(),
             prev_closing: None,
             label: Some(label.to_owned()),
+            profile: ReportedProfile {
+                instrument_schema: reported_version(profile().instrument_schema),
+                catalogue_reference: None,
+            },
         };
         let handle = self.device.keys.signing_handle(&sign_pub).ok_or("the signing key is not in the key store")?;
         let pop = self.device.keys.sign(&handle, &body.pop_message()).map_err(err)?;

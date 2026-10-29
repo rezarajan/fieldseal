@@ -7,7 +7,7 @@ The factory's HTTP adapter. It drives the Registration use cases (`fieldseal_reg
 - **Runtime API** (JSON responses, CBOR request bodies).
 - **Portal**: server-rendered HTML without scripts for sign-in, tokens, pending requests, devices and the air-gapped route.
 
-Layer: adapter. Depends on `fieldseal-kernel`, `fieldseal-trust`, `fieldseal-registration`, `tiny_http` (server), `ureq` with rustls (client), `qrcode`, `getrandom`, `serde_json`. See [registration.md](../../../docs/reference/spec/registration.md) for the requirements (REG-*).
+Layer: adapter. Depends on `fieldseal-kernel`, `fieldseal-trust`, `fieldseal-registration`, `fieldseal-adapters-portal` (sessions, CSRF and the HTTP types), `tiny_http` (server), `ureq` with rustls (client), `qrcode`, `serde_json`. See [registration.md](../../../docs/reference/spec/registration.md) for the requirements (REG-*).
 
 ## Interface
 
@@ -15,8 +15,8 @@ Crate root:
 
 - `FactoryHttp<'a>::new(&Factory, &dyn IdentityProvider, HttpConfig)`; `run(&tiny_http::Server)` (serves until the server closes); `handle(&Request) -> Response` (framework-free, testable without sockets).
 - `HttpConfig { public_url, session_ttl_ms }`.
-- `Request` (`method`, `path`, `query`, `headers`, `body`; `Request::new(method, target, headers, body)`), `Response` (`status`, `headers`, `body`).
-- `parse_form`, `multipart_field`, `iso8601(AuthorityTime)`, `error_code(&RegistrationError)`.
+- `Request`, `Response`, `parse_form`, `multipart_field`: re-exported from `fieldseal-adapters-portal`.
+- `iso8601(AuthorityTime)`, `error_code(&RegistrationError)`.
 - Consts `MAX_BODY` (1 MiB) and `SESSION_COOKIE` (`fs_session`).
 
 Routes served by `handle`:
@@ -37,6 +37,8 @@ Modules:
 - `html`: `escape`, `page(title_id, body, csrf)`, `words(&FingerprintWords)`, `qr_svg(text, label)` (inline SVG).
 - `messages`: `CATALOGUE` (stable message ID to English text), `text`, `format(id, args)` (named `{placeholders}`, values HTML-escaped), `t`.
 
+Sessions, the pending sign-in map, the session cookie and the CSRF check come from `fieldseal-adapters-portal` (`PortalSessions`, cookie name `fs_session`); this crate keeps the pages and passes its own content-security policy to `Response::html`.
+
 Ports consumed: `fieldseal_registration::ports::IdentityProvider` (and its `PendingSignIn`); the `Factory` use-case object is supplied by the caller.
 
 ## Invariants
@@ -52,8 +54,8 @@ Ports consumed: `fieldseal_registration::ports::IdentityProvider` (and its `Pend
 ## Side Effects
 
 - Network: `run` listens on the supplied `tiny_http::Server`; `FactoryHttpClient` makes outbound HTTP(S) calls with a 30 s global timeout (plain `http://` allowed for the loopback local stack).
-- Randomness: session ids and CSRF tokens come from the OS (`getrandom`); the adapter panics if it is unavailable.
-- State: in-memory, mutex-guarded session and pending-sign-in maps (lost on restart). Registry changes happen through the injected `Factory`.
+- Randomness: session ids and CSRF tokens come from the OS through `fieldseal-adapters-portal`, which panics if it is unavailable.
+- State: the in-memory session and pending-sign-in maps of `PortalSessions` (lost on restart). Registry changes happen through the injected `Factory`.
 - No direct filesystem access.
 
 ## Verification

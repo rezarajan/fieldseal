@@ -7,8 +7,9 @@ use fieldseal_kernel::id::{CohortId, Generation, KeyId, Nonce, Seq, TenancyHandl
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::domain::wire::TenancyCertificate;
 use fieldseal_registration::domain::{
-    AccessToken, Account, AccountId, AuthRecord, CohortAssignment, DeviceId, FingerprintWords, IssuedToken, KeyState, NonceSource,
-    RegisteredDevice, RegisteredKey, RegistrationToken, Role, TenancyRecord, TenancyState, TokenSecret, Window,
+    AccessToken, Account, AccountId, AuthRecord, CohortAssignment, DeviceId, FingerprintWords,
+    IssuedToken, KeyState, NonceSource, RegisteredDevice, RegisteredKey, RegistrationToken,
+    ReportedProfile, ReportedVersion, Role, TenancyRecord, TenancyState, TokenSecret, Window,
 };
 use fieldseal_registration::ports::IssuedNonce;
 use fieldseal_trust::domain::{AttestationClaims, AttestationEvidence, BootState, DeviceKeyKind, SecurityLevel};
@@ -230,6 +231,27 @@ fn get_claims(r: &mut R<'_>) -> Res<AttestationClaims> {
     })
 }
 
+fn put_profile(w: &mut W, p: &ReportedProfile) {
+    w.str(&p.instrument_schema.to_string());
+    w.opt(&p.catalogue_reference, |w, c| w.str(c));
+}
+
+/// Reads a reported profile, refusing a version or catalogue text the wire would refuse.
+fn get_profile(r: &mut R<'_>) -> Res<ReportedProfile> {
+    let schema = r.str()?;
+    Ok(ReportedProfile {
+        instrument_schema: ReportedVersion::parse(&schema).ok_or("profile schema version")?,
+        catalogue_reference: r.opt(|r| {
+            let c = r.str()?;
+            if ReportedProfile::catalogue_ok(&c) {
+                Ok(c)
+            } else {
+                Err("profile catalogue version".into())
+            }
+        })?,
+    })
+}
+
 fn put_key(w: &mut W, k: &RegisteredKey) {
     w.u32(k.index);
     w.u8(kind_code(k.kind));
@@ -328,6 +350,7 @@ pub fn put_tenancy(w: &mut W, t: &TenancyRecord) {
     w.u64(t.pending_until.0);
     w.u8(if t.nonce_source == NonceSource::Factory { 0 } else { 1 });
     w.str(&t.build);
+    put_profile(w, &t.profile);
     put_auth(w, &t.authentication);
     w.list(&t.reasons, |w, s| w.str(s));
     w.opt(&t.certificate, |w, c| w.bytes(&c.encode()));
@@ -353,6 +376,7 @@ pub fn get_tenancy(r: &mut R<'_>) -> Res<TenancyRecord> {
         pending_until: time(r)?,
         nonce_source: if r.u8()? == 0 { NonceSource::Factory } else { NonceSource::Device },
         build: r.str()?,
+        profile: get_profile(r)?,
         authentication: get_auth(r)?,
         reasons: r.list(R::str)?,
         certificate: r.opt(|r| TenancyCertificate::decode(&r.bytes()?).map_err(|e| e.to_string()))?,

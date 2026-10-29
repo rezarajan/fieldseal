@@ -20,8 +20,9 @@ use fieldseal_kernel::{CryptoRng, ErrorCode, Value, WireError, cbor, text};
 use fieldseal_trust::domain::{AttestationEvidence, DeviceKeyKind, TrustBundle, TrustError, TrustStore};
 
 use super::{
-    CloseReason, CohortAssignment, KeyEvidence, ManagementMode, NonceSource, PostureReport, RegistrationRequest,
-    RegistrationRoute, RegistrationToken, ReportedRestriction, RollProof, TokenSecret, Window,
+    CloseReason, CohortAssignment, KeyEvidence, ManagementMode, NonceSource, PostureReport,
+    RegistrationRequest, RegistrationRoute, RegistrationToken, ReportedProfile,
+    ReportedRestriction, ReportedVersion, RollProof, TokenSecret, Window,
 };
 
 /// The largest registration request (WIRE §6.7).
@@ -228,6 +229,8 @@ pub struct RequestBody {
     pub prev_closing: Option<Digest>,
     /// A nickname for the device.
     pub label: Option<String>,
+    /// The schema version and catalogue version the runtime reports (WIRE-130).
+    pub profile: ReportedProfile,
 }
 
 /// The structure a proof of possession signs: `{nonce, body_sha256}` (WIRE-132).
@@ -277,6 +280,13 @@ impl RequestBody {
             ),
         );
         m.insert("build".into(), text_value(&self.build));
+        m.insert(
+            "schema".into(),
+            text_value(&self.profile.instrument_schema.to_string()),
+        );
+        if let Some(c) = &self.profile.catalogue_reference {
+            m.insert("catalogue".into(), text_value(c));
+        }
         if let Some(p) = &self.prev_closing {
             m.insert("prev_closing".into(), bytes(p.as_bytes()));
         }
@@ -339,14 +349,59 @@ impl RequestBody {
         if build.is_empty() {
             return Err(unknown("build must not be empty"));
         }
-        let prev_closing = f.take_opt("prev_closing").map(expect_bytes_n::<32>).transpose()?.map(Digest::from);
+        let schema = f.text("schema")?;
+        if schema.len() > ReportedVersion::MAX_TEXT {
+            return Err(WireError::new(
+                ErrorCode::Size,
+                ReportedVersion::MAX_TEXT,
+                "schema exceeds 32 bytes",
+            ));
+        }
+        let instrument_schema =
+            ReportedVersion::parse(&schema).ok_or(unknown("schema is not major.minor.patch"))?;
+        let catalogue_reference = match f.take_opt("catalogue") {
+            None => None,
+            Some(Value::Text(t)) if t.len() > ReportedProfile::MAX_CATALOGUE => {
+                return Err(WireError::new(
+                    ErrorCode::Size,
+                    ReportedProfile::MAX_CATALOGUE,
+                    "catalogue exceeds 64 bytes",
+                ));
+            }
+            Some(Value::Text(t)) if ReportedProfile::catalogue_ok(&t) => Some(t),
+            Some(_) => {
+                return Err(unknown(
+                    "catalogue is not a non-empty text without control characters",
+                ));
+            }
+        };
+        let prev_closing = f
+            .take_opt("prev_closing")
+            .map(expect_bytes_n::<32>)
+            .transpose()?
+            .map(Digest::from);
         let label = match f.take_opt("label") {
             None => None,
             Some(Value::Text(t)) => Some(t),
             Some(_) => return Err(unknown("label is not text")),
         };
         f.finish()?;
-        let body = Self { token, nonce, nonce_source, sign_pub, agree_pub, evidence, build, prev_closing, label };
+        let profile = ReportedProfile {
+            instrument_schema,
+            catalogue_reference,
+        };
+        let body = Self {
+            token,
+            nonce,
+            nonce_source,
+            sign_pub,
+            agree_pub,
+            evidence,
+            build,
+            prev_closing,
+            label,
+            profile,
+        };
         if body.tenancy().as_bytes() != &tenancy {
             return Err(WireError::new(ErrorCode::Hash, 0, "tenancy is not SHA-256 of sign_pub"));
         }
@@ -399,6 +454,7 @@ pub fn decode_request(plaintext: &[u8]) -> Result<RegistrationRequest, WireError
         build: body.build,
         prev_closing: body.prev_closing,
         label: body.label,
+        profile: body.profile,
         body_digest,
         proof_of_possession: pop,
         roll,

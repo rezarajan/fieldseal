@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-202 tests prove 111 requirements.
+253 tests prove 121 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -60,9 +60,41 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:103](../../crates/adapters/authoring/tests/translation_report.rs#L103)) | INS-261 | INS-261 (instrument) |
 | `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:134](../../crates/adapters/authoring/tests/translation_report.rs#L134)) | INS-260 | INS-260 (instrument) |
 | `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:144](../../crates/adapters/authoring/tests/translation_report.rs#L144)) | INS-260 | INS-260 (instrument) |
-| `the_new_bytes_replace_the_old` ([atomic.rs:54](../../crates/adapters/file/src/atomic.rs#L54)) | INT-085 | INT-085 (intake) |
-| `a_failed_write_leaves_the_old_file_in_place` ([atomic.rs:65](../../crates/adapters/file/src/atomic.rs#L65)) | INT-085 | INT-085 (intake) |
-| `no_temporary_file_remains` ([atomic.rs:80](../../crates/adapters/file/src/atomic.rs#L80)) | INT-085 | INT-085 (intake) |
+| `reg_002_sign_in_redirects_to_the_provider_with_a_state` ([portal_session.rs:149](../../crates/adapters/factory-http/tests/portal_session.rs#L149)) | REG-002 | REG-002 (registration) |
+| `reg_002_callback_with_an_unknown_state_is_refused` ([portal_session.rs:161](../../crates/adapters/factory-http/tests/portal_session.rs#L161)) | REG-002 | REG-002 (registration) |
+| `reg_092_a_session_cookie_is_httponly_samesite_lax_and_secure_on_https` ([portal_session.rs:171](../../crates/adapters/factory-http/tests/portal_session.rs#L171)) | REG-092 | REG-092 (registration) |
+| `reg_092_a_page_without_a_session_redirects_to_sign_in` ([portal_session.rs:186](../../crates/adapters/factory-http/tests/portal_session.rs#L186)) | REG-092 | REG-092 (registration) |
+| `reg_092_a_post_without_the_csrf_token_is_refused` ([portal_session.rs:199](../../crates/adapters/factory-http/tests/portal_session.rs#L199)) | REG-092 | REG-092 (registration) |
+| `reg_092_a_post_with_another_sessions_token_is_refused` ([portal_session.rs:211](../../crates/adapters/factory-http/tests/portal_session.rs#L211)) | REG-092 | REG-092 (registration) |
+| `reg_092_sign_out_ends_the_session` ([portal_session.rs:225](../../crates/adapters/factory-http/tests/portal_session.rs#L225)) | REG-092 | REG-092 (registration) |
+| `reg_092_the_session_cookie_name_is_fs_session` ([portal_session.rs:241](../../crates/adapters/factory-http/tests/portal_session.rs#L241)) | REG-092 | REG-092 (registration) |
+| `the_new_bytes_replace_the_old` ([atomic.rs:101](../../crates/adapters/file/src/atomic.rs#L101)) | INT-085 | INT-085 (intake) |
+| `a_failed_write_leaves_the_old_file_in_place` ([atomic.rs:112](../../crates/adapters/file/src/atomic.rs#L112)) | INT-085 | INT-085 (intake) |
+| `no_temporary_file_remains` ([atomic.rs:127](../../crates/adapters/file/src/atomic.rs#L127)) | INT-085 | INT-085 (intake) |
+| `the_mode_applies_to_the_file` ([atomic.rs:142](../../crates/adapters/file/src/atomic.rs#L142)) | INT-085 | INT-085 (intake) |
+| `a_new_write_never_replaces` ([atomic.rs:156](../../crates/adapters/file/src/atomic.rs#L156)) | INT-085 | INT-085 (intake) |
+| `a_missing_directory_holds_no_files` ([registry.rs:150](../../crates/adapters/file/src/registry.rs#L150)) | PUB-062 | PUB-062 (publishing) |
+| `a_directory_that_cannot_be_listed_is_a_backend_error` ([registry.rs:161](../../crates/adapters/file/src/registry.rs#L161)) | PUB-062 | PUB-062 (publishing) |
+| `pub_060_the_file_registry_satisfies_the_artefact_registry_contract` ([contracts.rs:126](../../crates/adapters/file/tests/contracts.rs#L126)) | PUB-060 | PUB-060 (publishing) |
+| `dis_080_the_file_roster_source_satisfies_the_roster_source_contract` ([contracts.rs:135](../../crates/adapters/file/tests/contracts.rs#L135)) | DIS-080 | DIS-080 (distribution) |
+| `dis_015_the_file_bundle_store_satisfies_the_bundle_store_contract` ([contracts.rs:165](../../crates/adapters/file/tests/contracts.rs#L165)) | DIS-015 | DIS-015 (distribution) |
+| `dis_012_the_file_runtime_profiles_satisfy_the_runtime_profiles_contract` ([contracts.rs:174](../../crates/adapters/file/tests/contracts.rs#L174)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_a_tenancy_that_reported_an_older_schema_reports_that_schema_back` ([contracts.rs:207](../../crates/adapters/file/tests/contracts.rs#L207)) | DIS-012 | DIS-012 (distribution) |
+| `dis_012_the_profile_survives_a_restart_of_the_journal` ([contracts.rs:249](../../crates/adapters/file/tests/contracts.rs#L249)) | DIS-012 | DIS-012 (distribution) |
+| `dis_080_a_roster_version_once_issued_does_not_change` ([contracts.rs:281](../../crates/adapters/file/tests/contracts.rs#L281)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_lower_version_is_refused` ([contracts.rs:314](../../crates/adapters/file/tests/contracts.rs#L314)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_cohort_name_cannot_escape_the_store_directory` ([contracts.rs:341](../../crates/adapters/file/tests/contracts.rs#L341)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_roster_that_no_longer_matches_its_checksum_is_not_served` ([contracts.rs:356](../../crates/adapters/file/tests/contracts.rs#L356)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_roster_files_are_readable_only_by_their_owner` ([contracts.rs:371](../../crates/adapters/file/tests/contracts.rs#L371)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_source_serves_the_latest_roster_at_the_tenancys_generation` ([contracts.rs:391](../../crates/adapters/file/tests/contracts.rs#L391)) | DIS-080 | DIS-080 (distribution) |
+| `dis_023_bundle_files_carry_the_dated_name` ([contracts.rs:412](../../crates/adapters/file/tests/contracts.rs#L412)) | DIS-023 | DIS-023 (distribution) |
+| `dis_015_a_second_bundle_with_an_old_sequence_is_refused` ([contracts.rs:440](../../crates/adapters/file/tests/contracts.rs#L440)) | DIS-015 | DIS-015 (distribution) |
+| `dis_015_a_bundle_whose_write_was_interrupted_is_not_served` ([contracts.rs:465](../../crates/adapters/file/tests/contracts.rs#L465)) | DIS-015 | DIS-015 (distribution) |
+| `dis_080_two_writers_racing_for_one_version_store_exactly_one` ([contracts.rs:487](../../crates/adapters/file/tests/contracts.rs#L487)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_two_writers_racing_with_identical_content_both_succeed` ([contracts.rs:525](../../crates/adapters/file/tests/contracts.rs#L525)) | DIS-080 | DIS-080 (distribution) |
+| `dis_080_a_store_directory_wider_than_owner_only_is_refused` ([contracts.rs:549](../../crates/adapters/file/tests/contracts.rs#L549)) | DIS-080 | DIS-080 (distribution) |
+| `pub_062_a_withdrawal_is_stored_once_under_a_name_from_its_content` ([contracts.rs:591](../../crates/adapters/file/tests/contracts.rs#L591)) | PUB-062 | PUB-062 (publishing) |
+| `pub_062_a_registry_directory_that_cannot_be_read_is_an_error_not_an_empty_registry` ([contracts.rs:626](../../crates/adapters/file/tests/contracts.rs#L626)) | PUB-062 | PUB-062 (publishing) |
 | `int_013_the_file_submission_store_satisfies_the_contract` ([submissions.rs:10](../../crates/adapters/file/tests/submissions.rs#L10)) | INT-013 | INT-013 (intake) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `int_085_duckdb_converts_jsonl_and_csv_to_parquet_with_the_manifest_row_count` ([duckdb_recipe.rs:12](../../crates/adapters/landing-files/tests/duckdb_recipe.rs#L12)) | INT-085 | INT-085 (intake) |
@@ -96,6 +128,13 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `int_085_the_landing_files_keep_their_bytes` ([snapshot.rs:89](../../crates/adapters/landing-files/tests/snapshot.rs#L89)) | INT-085 | INT-085 (intake) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
+| `reg_092_ids_and_tokens_are_unique_and_unguessable_length` ([sessions.rs:41](../../crates/adapters/portal/tests/sessions.rs#L41)) | REG-092 | REG-092 (registration) |
+| `reg_092_cookie_attributes` ([sessions.rs:55](../../crates/adapters/portal/tests/sessions.rs#L55)) | REG-092 | REG-092 (registration) |
+| `reg_092_csrf_is_per_session` ([sessions.rs:67](../../crates/adapters/portal/tests/sessions.rs#L67)) | REG-092 | REG-092 (registration) |
+| `reg_002_pending_sign_ins_are_single_use` ([sessions.rs:78](../../crates/adapters/portal/tests/sessions.rs#L78)) | REG-002 | REG-002 (registration) |
+| `reg_092_end_removes_the_session` ([sessions.rs:90](../../crates/adapters/portal/tests/sessions.rs#L90)) | REG-092 | REG-092 (registration) |
+| `reg_092_an_expired_session_is_not_returned` ([sessions.rs:99](../../crates/adapters/portal/tests/sessions.rs#L99)) | REG-092 | REG-092 (registration) |
+| `reg_092_a_cookie_name_is_configurable_so_two_portals_do_not_mix` ([sessions.rs:109](../../crates/adapters/portal/tests/sessions.rs#L109)) | REG-092 | REG-092 (registration) |
 | `int_011_the_event_platform_satisfies_the_data_platform_contract` ([server.rs:336](../../crates/adapters/upload-http/src/bin/server.rs#L336)) | INT-011, INT-091 | INT-011 (intake); INT-091 (intake) |
 | `plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands` ([device_flow.rs:53](../../crates/adapters/web/tests/device_flow.rs#L53)) | PLAT-100, PLAT-105, PLAT-106, PLAT-108, PLAT-110, PLAT-111, PLAT-113, PLAT-114, PLAT-115, PLAT-116 | PLAT-100 (platform-profiles); PLAT-105 (platform-profiles); PLAT-106 (platform-profiles) |
 | `pub_072_a_bundle_whose_tree_heads_are_dated_and_recent_verifies` ([dis_release.rs:288](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L288)) | PUB-072 | PUB-072 (publishing) |
@@ -184,6 +223,14 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `reg_070_replayed_and_stolen_pop_tokens_fail` ([registration_attacks.rs:296](../../crates/apps/security-tests/tests/registration_attacks.rs#L296)) | REG-070 | REG-070 (registration) |
 | `reg_010_a_forged_or_foreign_token_is_refused_by_the_device` ([registration_attacks.rs:333](../../crates/apps/security-tests/tests/registration_attacks.rs#L333)) | REG-010 | REG-010 (registration) |
 | `adr_0030_registration_outputs_carry_no_label_or_person_data` ([registration_attacks.rs:354](../../crates/apps/security-tests/tests/registration_attacks.rs#L354)) | ADR-0030 | ADR-0030 (ADR 0030) |
+| `wire_130_a_request_without_schema_is_refused` ([registration_profile.rs:275](../../crates/apps/security-tests/tests/registration_profile.rs#L275)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `wire_130_unknown_keys_are_still_refused` ([registration_profile.rs:286](../../crates/apps/security-tests/tests/registration_profile.rs#L286)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `wire_130_over_long_values_are_refused` ([registration_profile.rs:309](../../crates/apps/security-tests/tests/registration_profile.rs#L309)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `wire_132_changing_the_reported_schema_breaks_the_proof_of_possession` ([registration_profile.rs:345](../../crates/apps/security-tests/tests/registration_profile.rs#L345)) | WIRE-132 | WIRE-132 (wire-formats) |
+| `reg_091_the_recorded_profile_is_the_signed_one` ([registration_profile.rs:391](../../crates/apps/security-tests/tests/registration_profile.rs#L391)) | REG-091 | REG-091 (registration) |
+| `reg_091_a_malformed_semver_is_refused_and_nothing_is_recorded` ([registration_profile.rs:411](../../crates/apps/security-tests/tests/registration_profile.rs#L411)) | REG-091 | REG-091 (registration) |
+| `reg_091_a_key_roll_cannot_raise_the_profile_without_the_new_key` ([registration_profile.rs:465](../../crates/apps/security-tests/tests/registration_profile.rs#L465)) | REG-091 | REG-091 (registration) |
+| `dis_012_an_older_reported_schema_never_widens_what_a_tenancy_may_receive` ([registration_profile.rs:555](../../crates/apps/security-tests/tests/registration_profile.rs#L555)) | DIS-012 | DIS-012 (distribution) |
 | `pub_100_104_the_http_client_passes_the_contract_against_a_running_server` ([end_to_end.rs:31](../../crates/apps/translog/tests/end_to_end.rs#L31)) | PUB-100 | PUB-100 (publishing) |
 | `pub_100_a_client_of_a_stopped_server_reports_unavailable` ([end_to_end.rs:68](../../crates/apps/translog/tests/end_to_end.rs#L68)) | PUB-100 | PUB-100 (publishing) |
 | `web_192_pin_fields_allow_password_managers` ([accessibility.rs:6](../../crates/apps/web/tests/accessibility.rs#L6)) | WEB-192 | WEB-192 (web-app) |
@@ -193,7 +240,11 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:65](../../crates/apps/web/tests/dev_loop.rs#L65)) | WEB-111 | WEB-111 (web-app) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
+| `the_runtime_profile_names_the_schema_the_core_implements` ([lib.rs:39](../../crates/bindings/uniffi/src/lib.rs#L39)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `dis_013_roster_fields_read_through_message_variables_and_roster_items_are_found` ([facts.rs:186](../../crates/contexts/distribution/src/domain/facts.rs#L186)) | DIS-013 | DIS-013 (distribution) |
+| `wire_130_the_request_body_vectors_decode_with_schema_and_catalogue` ([vectors.rs:176](../../crates/contexts/registration/tests/vectors.rs#L176)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `wire_130_a_body_without_schema_is_refused` ([vectors.rs:220](../../crates/contexts/registration/tests/vectors.rs#L220)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `wire_130_the_vectors_are_current` ([vectors.rs:241](../../crates/contexts/registration/tests/vectors.rs#L241)) | WIRE-130, WIRE-151 | WIRE-130 (wire-formats); WIRE-151 (wire-formats) |
 | `wire_209_every_key_of_both_kinds_is_declared_once` ([schema.rs:1119](../../crates/kernel/src/schema.rs#L1119)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_209_the_json_schema_is_generated_from_the_same_table` ([schema.rs:1161](../../crates/kernel/src/schema.rs#L1161)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_211_pointer_segments_escape_tilde_and_slash` ([schema.rs:1185](../../crates/kernel/src/schema.rs#L1185)) | WIRE-211 | WIRE-211 (wire-formats) |

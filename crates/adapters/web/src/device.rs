@@ -12,8 +12,11 @@ use std::rc::Rc;
 
 use fieldseal_adapters_memory::bundle_opener::FileBundleOpener;
 use fieldseal_adapters_memory::delivery::{MemoryPrivateStorage, MemoryRegistrationRecords};
-use fieldseal_adapters_memory::demo::DEMO_SCHEMA;
-use fieldseal_collection::application::{CaptureMode, CollectionError, ConsentInput, Platform, Provisioning, ReviewFilter, Runtime, StatusOutcome};
+use fieldseal_adapters_memory::registration::reported_version;
+use fieldseal_collection::application::{
+    CaptureMode, CollectionError, ConsentInput, Platform, Provisioning, ReviewFilter, Runtime,
+    StatusOutcome,
+};
 use fieldseal_collection::domain::bundle::OpenedBundle;
 use fieldseal_collection::domain::{ReceiptCoverage, RuntimePin, TenancyState, WindowId};
 use fieldseal_collection::ports::{BundleOpenError, BundleOpener};
@@ -22,6 +25,7 @@ use fieldseal_delivery::checks::{TrustReceiptCheck, TrustReceiverCheck, receipts
 use fieldseal_delivery::domain::{AddressHint, AuthorisedDestination, HintSource, POP_HEADER, ReceiverChallenge, ReceiverProof, UploadRequest, UploadRoute};
 use fieldseal_delivery::ports::{UploadError, UploadTransport};
 use fieldseal_distribution::domain::RuntimeProfile;
+use fieldseal_instrument::domain::IMPLEMENTED_SCHEMA;
 use fieldseal_instrument::domain::Instrument;
 use fieldseal_instrument::domain::metadata::ConsentRequirement;
 use fieldseal_kernel::Value;
@@ -33,7 +37,9 @@ use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_policy::domain::{Controls, PublishingPolicy, RuntimeEvaluator};
 use fieldseal_publishing::application::VerifyPublication;
 use fieldseal_registration::domain::wire::{RequestBody, encode_request_file, factory_sealing_key};
-use fieldseal_registration::domain::{FingerprintWords, KeyEvidence, NonceSource, RegistrationToken};
+use fieldseal_registration::domain::{
+    FingerprintWords, KeyEvidence, NonceSource, RegistrationToken, ReportedProfile,
+};
 use fieldseal_trust::domain::{DeviceKeyKind, TrustBundle, TrustStore};
 use fieldseal_trust::ports::{SecureKeyStore, SourceRng};
 
@@ -117,9 +123,22 @@ impl BundleOpener for WebBundleOpener {
         let key = self.keys.agreement_key().ok_or_else(|| BundleOpenError::Rejected("no agreement key yet".into()))?;
         let tenancy = self.tenancy.get().ok_or_else(|| BundleOpenError::Rejected("no tenancy yet".into()))?;
         let wall = self.wall;
-        let now = move || AuthorityTime(fieldseal_collection::ports::WallClock::now_ms(wall).unwrap_or(0));
-        let profile = RuntimeProfile { instrument_schema: DEMO_SCHEMA, localisation_reference: None };
-        FileBundleOpener::new(&self.provisioned.trust, &self.provisioned.publishing, &key, tenancy, profile, &now).open(file)
+        let now = move || {
+            AuthorityTime(fieldseal_collection::ports::WallClock::now_ms(wall).unwrap_or(0))
+        };
+        let profile = RuntimeProfile {
+            instrument_schema: IMPLEMENTED_SCHEMA,
+            localisation_reference: None,
+        };
+        FileBundleOpener::new(
+            &self.provisioned.trust,
+            &self.provisioned.publishing,
+            &key,
+            tenancy,
+            profile,
+            &now,
+        )
+        .open(file)
     }
 }
 
@@ -343,6 +362,11 @@ impl WebDevice {
             build: "fieldseal-web/0.1.0".into(),
             prev_closing: None,
             label: Some(label.to_owned()),
+            // The schema version this device opens bundles with (`WebBundleOpener`, the same constant); no catalogue.
+            profile: ReportedProfile {
+                instrument_schema: reported_version(IMPLEMENTED_SCHEMA),
+                catalogue_reference: None,
+            },
         };
         let handle = self.keys.signing_handle(&sign_pub).ok_or("the signing key is not in the key store")?;
         let pop = self.keys.sign(&handle, &body.pop_message()).map_err(err)?;

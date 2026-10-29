@@ -1,6 +1,6 @@
 [package]
 name = "fieldseal-adapters-file"
-description = "File-backed development adapters: key custody in a key directory and a journaled registry store (non-production)"
+description = "File-backed development adapters: key custody, a journaled registry store, the artefact registry, roster and bundle stores and runtime profiles (non-production)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,9 +13,11 @@ fieldseal-registration.workspace = true
 fieldseal-intake.workspace = true
 fieldseal-instrument.workspace = true
 fieldseal-publishing.workspace = true
+fieldseal-distribution.workspace = true
 fieldseal-policy.workspace = true
 fieldseal-adapters-memory.workspace = true
 zeroize.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 fieldseal-adapters-authoring.workspace = true

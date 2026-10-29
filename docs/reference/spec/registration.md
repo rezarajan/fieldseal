@@ -27,11 +27,11 @@
 |---|---|---|
 | `Account` | Aggregate root | A collector or operator known to the factory, keyed by the identity provider's stable subject identifier. Holds roles and the list of devices. |
 | `RegisteredDevice` | Entity (in `Account`) | A device as the factory knows it: a nickname, fingerprint words, the attested hardware identity if any, its tenancies, its state. |
-| `Tenancy` | Aggregate root | One collector, one device, one window. Holds the registered keys (with history), the window, cohort assignments, state and cutoff. |
+| `Tenancy` | Aggregate root | One collector, one device, one window. Holds the registered keys (with history), the window, cohort assignments, state and cutoff, and the profile its runtime reported at registration (REG-091). |
 | `TenancyId` | Value object | `sha256` of the tenancy's first signing public key (WIRE §identifiers). |
 | `RegisteredKey` | Entity (in `Tenancy`) | A signing or agreement public key, with its attestation evidence, verification result, validity and state (`active`, `rolled`, `revoked`). |
 | `RegistrationToken` | Value object | Single-use, short-lived, bound to an account; carries factory URL, trust-root fingerprint, token secret and factory nonce. |
-| `RegistrationRequest` | Value object | Public keys, attestation evidence, proof of possession, runtime schema versions, previous-tenancy reference; sealed to the factory. |
+| `RegistrationRequest` | Value object | Public keys, attestation evidence, proof of possession, the runtime's reported profile (instrument-schema version and, when it has one, UI reference-catalogue version), previous-tenancy reference; sealed to the factory. |
 | `FingerprintWords` | Value object | Four words from a 2048-word list, derived from the request body. |
 | `TenancyCertificate` | Value object | The factory's signed statement of a registered tenancy: keys, window, cohorts with generations, record-key certificate. |
 | `CloseCertificate` | Value object | The factory's signed instruction to close a tenancy, with `cutoff_seq` and a reason (`absent`, `forgotten-pin`, `returned`, `lost`, `other`). |
@@ -210,6 +210,14 @@
 
 - **REG-090** Every reader of a Registration input (token, request body and sealed plaintext, request file, tenancy certificate, close and reset certificate, posture report, and the token and account records the CLI persists) MUST reject unknown fields, enforce exact types and enumerations, and enforce every declared constraint: required fields, fixed byte lengths, the factory URL form and size (WIRE-121), non-empty evidence with one entry per key kind and a named format, a non-empty build, a tenancy ID equal to the SHA-256 of the signing key (WIRE-131), at least one certified key with unique indices, a window that does not end before it starts, unique cohorts, restriction states from the closed set, and no bytes after the structure. A malformed input is refused with its WIRE code; it is never partly read. Documents whose format a third party owns and defines as open (OpenID Connect discovery and key-set documents, ID-token claims) are the one exception to the unknown-field rule: the adapter reads the members it needs by name, requires each to have its exact type (a malformed `aud`, `iat`, `exp`, `azp`, `acr`, `amr` or role claim, or a non-string `alg` or `kid`, or a `crit` header, is refused rather than skipped), and ignores the rest. The adapter's own pending-sign-in record is closed.
 
+### Reported runtime profile
+
+- **REG-091** (provisional) The factory MUST record the instrument-schema version and the reference-catalogue version (if any) of a registration request with the tenancy, in the tenancy registry journal, and MUST NOT accept them from any other source. A key roll replaces the recorded profile with the one in the roll request, which the new key and the current key have both signed; a roll that carries no valid profile is refused as malformed (WIRE-130). Because the replacement may be lower as well as higher, a runtime that was downgraded narrows what the tenancy receives and never widens it (DIS-012). The request body change is a signed-content change (WIRE-130, WIRE-132) and was reviewed as such (SR-1).
+
+### Portal sessions
+
+- **REG-092** (provisional) Portal sessions and CSRF. A portal session MUST be kept in a cookie that is `HttpOnly`, `SameSite=Lax` and, when the portal's public URL is https, `Secure`. Session identifiers and CSRF tokens MUST come from the operating system's CSPRNG. Each session MUST have its own CSRF token, and every state-changing portal request MUST carry it. Signing out MUST end the session. A pending sign-in MUST be usable once.
+
 ### Development custody and durable state
 
 - **REG-083** A factory MUST NOT lose what it has registered across a restart: tokens (and how many uses of each are spent), accounts, tenancies, devices, nonces and access tokens survive it. A deployment that keeps them in memory is a development deployment. The `RegistryStore` adapter that keeps them in a journal on local disk (`file-dev`, environment `FIELDSEAL_STATE_DIR`) is a development adapter and MUST be refused in an environment marked production (REG-017, DEP-023); replaying the journal MUST give the store it recorded.
@@ -292,6 +300,8 @@ spec:
 | Factory contract table (REG-085) passes through the HTTP and gRPC adapters | REG-085, REG-087 | `fieldseal conformance run --suite service-contracts --service factory` |
 | Identity-provider adapter contract | REG-002 | Adapter contract tests in the port's suite |
 | Closed schemas: unknown field, wrong type, broken constraint, missing field, valid input | REG-090 | `cargo test -p fieldseal-registration --test strict` |
+| Reported profile recorded as signed; a changed profile breaks the proof; unknown keys and over-long values refused | REG-091, WIRE-130 | `cargo test -p fieldseal-security-tests --test registration_profile`, `cargo test -p fieldseal-registration --test vectors` |
+| Portal sessions: cookie attributes, per-session CSRF token, sign-out, single-use pending sign-in | REG-092 | `cargo test -p fieldseal-adapters-factory-http --test portal_session`, `cargo test -p fieldseal-adapters-portal` |
 
 ## 9. Open questions
 

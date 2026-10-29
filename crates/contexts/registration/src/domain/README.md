@@ -18,6 +18,7 @@ Entities and values (`mod.rs`):
 - `AccountId`, `Account`, `Role` (`Collector`, `Operator`; `as_str`, `parse`), `DeviceId`, `RegisteredDevice`.
 - `RegistrationToken` (signed, secret-bearing), `IssuedToken` (stored form: account, `expires_at`, `max_uses`, `AuthRecord`; `is_batch`), `TokenSecret` (16 bytes, `Debug` redacted), `RegistrationRoute` (`Online`, `AirGapped`).
 - `RegistrationRequest` (decoded, structure-checked only), `KeyEvidence`, `RollProof`, `NonceSource` (`Factory`, `Device`), `FingerprintWords` (four indices into the 2048-word list; `from_indices`, `from_body_digest`, `indices`, `words`, `joined`).
+- `ReportedVersion` (`major.minor.patch`, `parse`) and `ReportedProfile` (the instrument-schema version and optional catalogue version a runtime reports at registration, WIRE-130); `RegistrationRequest` and `TenancyRecord` carry it as `profile`.
 - `TenancyRecord`, `TenancyState` (`Pending`, `Held`, `Rejected`, `Registered`, `Flagged`, `Lost`, `Closing`, `Closed`, `Retired`; `is_active`, `may_call_api`), `RegisteredKey`, `KeyState` (`Active`, `Rolled`, `Revoked`), `Window`, `CohortAssignment`, `TenancyTerms`.
 - `CloseReason` (`Absent`, `ForgottenPin`, `Returned`, `Lost`, `Other`; `is_reset`), `ManagementMode`, `ReportedRestriction`, `PostureReport` (`gaps`), `AccessToken`, `policy_address`.
 - `TenancyRecord` methods: `keeps_key_history`, `eligible_for_release`, `active_key`, `keys_attested`.
@@ -31,7 +32,7 @@ Entities and values (`mod.rs`):
 
 - Constants: `MAX_REQUEST` and `MAX_POSTURE_REPORT` (64 KiB), `MAX_FACTORY_URL` (256), `REQUEST_FILE_MAGIC` (`FSRQ`).
 - Token: `RegistrationToken::{signed_structure, to_value, encode, decode, to_text, from_text, verify}`, `TokenRefusal`, `factory_url_ok`, `root_fingerprint`.
-- Request: `RequestBody` (`tenancy`, `encode`, `digest`, `pop_message`, `from_value`, `seal`), `decode_request`, `encode_request_file`, `decode_request_file`, `pop_structure`, `pop_message`, `verify_pop`.
+- Request: `RequestBody` (a closed map with `schema` and optional `catalogue`, both inside `digest`; `tenancy`, `encode`, `digest`, `pop_message`, `from_value`, `seal`), `decode_request`, `encode_request_file`, `decode_request_file`, `pop_structure`, `pop_message`, `verify_pop`.
 - Certificates: `TenancyCertificate` and `CertifiedKey` (`signed_structure`, `encode`, `decode`, `verify`), `CloseCertificate` (`tag`, `encode`, `decode`, `to_text`, `from_text`, `verify`).
 - Posture: `PostureBody` (`digest`, `pop_message`, `encode_report`), `decode_posture`.
 - Helpers: `factory_sealing_key`, `device_key_id`, `value_uint`, and re-exports `base64url_encode`, `base64url_decode`, `PopToken`, `POP_HEADER`, `MAX_POP_TOKEN`.

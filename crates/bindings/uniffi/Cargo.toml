@@ -16,5 +16,6 @@ path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 fieldseal-kernel.workspace = true
+fieldseal-instrument.workspace = true
 thiserror.workspace = true
 uniffi = { version = "0.32.2", features = ["cli"] }

@@ -39,6 +39,7 @@ Contract tests (`contract`): `registry_store_contract`, `identity_provider_contr
 ## Invariants
 
 - A single-use token registers at most one tenancy, even under concurrent requests: `RegistryStore::consume_token` is atomic, and expiry is judged against the factory's clock.
+- A request body carries the profile the runtime reports (`ReportedProfile`: instrument-schema version, optional catalogue version; WIRE-130). Both are inside the digest the proof of possession signs, a body without `schema` is refused as malformed, and the factory records the profile with the tenancy from the signed request only (REG-091). A key roll replaces it with the profile in the roll request, which both keys signed.
 - `submit` verifies in order: token, proof of possession, attestation evidence, then policy. The token is consumed only once the first three pass. Retrying the same request returns the existing result.
 - A registration is `pending` until the account the token was issued to confirms the fingerprint words; policy `deny` is kept as `rejected` with reasons.
 - A policy decision that cannot be logged is a deny (`decision-log-unavailable`); a policy-engine failure yields the decision point's failure verdict.
@@ -56,4 +57,4 @@ Contract tests (`contract`): `registry_store_contract`, `identity_provider_contr
 
 ## Verification
 
-`cargo test -p fieldseal-registration` (repo-wide: `just test`). Adapter crates verify their implementations with the functions in `contract`.
+`cargo test -p fieldseal-registration` (repo-wide: `just test`); `tests/vectors.rs` checks the request vectors in `tests/vectors/registration.json` and regenerates them with `FIELDSEAL_REGENERATE_VECTORS=1`. Adapter crates verify their implementations with the functions in `contract`.

@@ -28,9 +28,7 @@ pub mod client;
 pub mod html;
 pub mod messages;
 
-use std::collections::BTreeMap;
 use std::io::Read as _;
-use std::sync::Mutex;
 
 use fieldseal_kernel::digest::lower_hex;
 use fieldseal_kernel::id::TenancyId;
@@ -38,8 +36,11 @@ use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_registration::application::{Factory, RegistrationError, Submission};
 use fieldseal_registration::domain::wire::{POP_HEADER, base64url_decode, base64url_encode, decode_request_file};
 use fieldseal_registration::domain::{AuthenticatedPerson, DeviceId, RegistrationRoute, Role, TenancyRecord, TenancyState};
-use fieldseal_registration::ports::{IdentityProvider, PendingSignIn};
+use fieldseal_registration::ports::IdentityProvider;
 use serde_json::{Value as Json, json};
+
+pub use fieldseal_adapters_portal::{Request, Response, multipart_field, parse_form};
+use fieldseal_adapters_portal::{PortalSessions, SessionId, SessionView};
 
 use crate::html::{escape, page, qr_svg, words};
 use crate::messages::{format as fmt, t};
@@ -48,6 +49,14 @@ use crate::messages::{format as fmt, t};
 pub const MAX_BODY: usize = 1024 * 1024;
 /// The session cookie's name.
 pub const SESSION_COOKIE: &str = "fs_session";
+
+/// The content-security policy of every portal page: no scripts, nothing from elsewhere.
+const CSP: &str = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
+
+/// An HTML page with the portal's content-security policy.
+fn html(status: u16, body: String) -> Response {
+    Response::html(status, body, CSP)
+}
 
 /// The adapter's settings, from the environment.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -63,115 +72,6 @@ impl HttpConfig {
     fn secure_cookies(&self) -> bool {
         self.public_url.starts_with("https://")
     }
-}
-
-/// An HTTP request, decoupled from the server library.
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
-pub struct Request {
-    /// Upper-case method.
-    pub method: String,
-    /// The path, without the query.
-    pub path: String,
-    /// Decoded query parameters.
-    pub query: BTreeMap<String, String>,
-    /// Headers, names lower-cased.
-    pub headers: BTreeMap<String, String>,
-    /// The body.
-    pub body: Vec<u8>,
-}
-
-impl Request {
-    /// Parses a request target into path and query.
-    pub fn new(method: &str, target: &str, headers: BTreeMap<String, String>, body: Vec<u8>) -> Self {
-        let (path, q) = target.split_once('?').unwrap_or((target, ""));
-        Self { method: method.to_ascii_uppercase(), path: path.to_owned(), query: parse_form(q), headers, body }
-    }
-
-    fn header(&self, name: &str) -> Option<&str> {
-        self.headers.get(name).map(String::as_str)
-    }
-
-    fn cookie(&self, name: &str) -> Option<String> {
-        self.header("cookie")?
-            .split(';')
-            .filter_map(|c| c.trim().split_once('='))
-            .find(|(k, _)| *k == name)
-            .map(|(_, v)| v.to_owned())
-    }
-
-    fn form(&self) -> BTreeMap<String, String> {
-        parse_form(&String::from_utf8_lossy(&self.body))
-    }
-}
-
-/// An HTTP response.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Response {
-    /// Status code.
-    pub status: u16,
-    /// Headers.
-    pub headers: Vec<(String, String)>,
-    /// Body.
-    pub body: Vec<u8>,
-}
-
-impl Response {
-    fn new(status: u16, content_type: &str, body: Vec<u8>) -> Self {
-        Self { status, headers: vec![("Content-Type".into(), content_type.into())], body }
-    }
-
-    fn json(status: u16, value: Json) -> Self {
-        Self::new(status, "application/json", value.to_string().into_bytes())
-    }
-
-    fn html(status: u16, body: String) -> Self {
-        let mut r = Self::new(status, "text/html; charset=utf-8", body.into_bytes());
-        r.headers.push((
-            "Content-Security-Policy".into(),
-            "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'".into(),
-        ));
-        r.headers.push(("Cache-Control".into(), "no-store".into()));
-        r
-    }
-
-    fn redirect(location: &str) -> Self {
-        let mut r = Self::new(303, "text/plain", vec![]);
-        r.headers.push(("Location".into(), location.into()));
-        r
-    }
-
-    fn with(mut self, name: &str, value: String) -> Self {
-        self.headers.push((name.into(), value));
-        self
-    }
-}
-
-/// Decodes `application/x-www-form-urlencoded` (also used for query strings).
-pub fn parse_form(s: &str) -> BTreeMap<String, String> {
-    s.split('&').filter(|kv| !kv.is_empty()).map(|kv| kv.split_once('=').unwrap_or((kv, ""))).map(|(k, v)| (unescape(k), unescape(v))).collect()
-}
-
-fn unescape(s: &str) -> String {
-    let b = s.as_bytes();
-    let mut out = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        match b[i] {
-            b'+' => out.push(b' '),
-            b'%' if i + 2 < b.len() => {
-                match u8::from_str_radix(std::str::from_utf8(&b[i + 1..i + 3]).unwrap_or("zz"), 16) {
-                    Ok(v) => {
-                        out.push(v);
-                        i += 2;
-                    }
-                    Err(_) => out.push(b'%'),
-                }
-            }
-            c => out.push(c),
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Authority time as ISO 8601 UTC, to the second.
@@ -190,18 +90,6 @@ pub fn iso8601(t: AuthorityTime) -> String {
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
     format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
-}
-
-fn random_token() -> String {
-    let mut b = [0u8; 32];
-    getrandom::getrandom(&mut b).expect("the operating system's random source");
-    base64url_encode(&b)
-}
-
-struct Session {
-    person: AuthenticatedPerson,
-    csrf: String,
-    expires_at: AuthorityTime,
 }
 
 /// A stable, machine-readable code for each error, for API clients and support.
@@ -285,14 +173,14 @@ pub struct FactoryHttp<'a> {
     factory: &'a Factory<'a>,
     idp: &'a dyn IdentityProvider,
     config: HttpConfig,
-    sessions: Mutex<BTreeMap<String, Session>>,
-    pending: Mutex<BTreeMap<String, PendingSignIn>>,
+    sessions: PortalSessions,
 }
 
 impl<'a> FactoryHttp<'a> {
     /// The adapter.
     pub fn new(factory: &'a Factory<'a>, idp: &'a dyn IdentityProvider, config: HttpConfig) -> Self {
-        Self { factory, idp, config, sessions: Mutex::default(), pending: Mutex::default() }
+        let sessions = PortalSessions::new(SESSION_COOKIE, config.secure_cookies(), config.session_ttl_ms);
+        Self { factory, idp, config, sessions }
     }
 
     /// Serves requests from `server` until it is closed.
@@ -352,8 +240,8 @@ impl<'a> FactoryHttp<'a> {
             ("GET", ["sign-in"]) => self.sign_in(),
             ("GET", ["sign-in", "callback"]) => self.sign_in_callback(req),
             ("POST", ["sign-out"]) => self.portal_post(req, |_, sid| {
-                self.sessions.lock().expect("lock").remove(sid);
-                Response::redirect("/").with("Set-Cookie", self.cookie("", 0))
+                self.sessions.end(sid);
+                Response::redirect("/").with("Set-Cookie", self.sessions.clear_cookie())
             }),
             ("POST", ["tokens"]) => self.portal_post(req, |person, _| self.portal_token(req, person)),
             ("POST", ["pending", id, "confirm"]) => self.portal_post(req, |person, _| {
@@ -380,7 +268,7 @@ impl<'a> FactoryHttp<'a> {
         if req.path.starts_with("/v1/") {
             Response::json(404, json!({ "error": "not-found" }))
         } else {
-            Response::html(404, page("portal.error.heading", &format!("<p>{}</p>", t("portal.error.notfound")), None))
+            html(404, page("portal.error.heading", &format!("<p>{}</p>", t("portal.error.notfound")), None))
         }
     }
 
@@ -426,60 +314,37 @@ impl<'a> FactoryHttp<'a> {
     // -----------------------------------------------------------------------------------
     // Sessions and sign-in.
 
-    fn cookie(&self, value: &str, max_age_s: u64) -> String {
-        let secure = if self.config.secure_cookies() { "; Secure" } else { "" };
-        format!("{SESSION_COOKIE}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age_s}{secure}")
-    }
-
-    fn session(&self, req: &Request) -> Option<(String, AuthenticatedPerson, String)> {
-        let sid = req.cookie(SESSION_COOKIE)?;
-        let mut sessions = self.sessions.lock().expect("lock");
-        let now = self.factory.now();
-        sessions.retain(|_, s| s.expires_at >= now);
-        sessions.get(&sid).map(|s| (sid.clone(), s.person.clone(), s.csrf.clone()))
+    fn session(&self, req: &Request) -> Option<SessionView> {
+        self.sessions.session(req.header("cookie"), self.factory.now())
     }
 
     fn sign_in(&self) -> Response {
         let callback = format!("{}/sign-in/callback", self.config.public_url.trim_end_matches('/'));
-        match self.idp.start_sign_in(&callback) {
-            Ok(start) => {
-                self.pending.lock().expect("lock").insert(start.pending.state.clone(), start.pending);
-                Response::redirect(&start.redirect_to)
-            }
-            Err(e) => Response::html(503, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &e.to_string())])), None)),
+        match self.sessions.begin(self.idp, &callback) {
+            Ok(redirect_to) => Response::redirect(&redirect_to),
+            Err(e) => html(503, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &e.to_string())])), None)),
         }
     }
 
     fn sign_in_callback(&self, req: &Request) -> Response {
-        let pending = req.query.get("state").and_then(|s| self.pending.lock().expect("lock").remove(s));
-        let result = match pending {
-            Some(p) => self.idp.finish_sign_in(&p, &req.query).map_err(|e| e.to_string()),
-            None => Err("unknown or expired sign-in".to_owned()),
-        };
-        match result {
-            Ok(person) => {
-                let sid = random_token();
-                let ttl = self.config.session_ttl_ms;
-                let expires_at = self.factory.now().checked_add(ttl).unwrap_or(AuthorityTime(u64::MAX));
-                self.sessions.lock().expect("lock").insert(sid.clone(), Session { person, csrf: random_token(), expires_at });
-                Response::redirect("/").with("Set-Cookie", self.cookie(&sid, ttl / 1000))
-            }
-            Err(reason) => Response::html(401, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &reason)])), None)),
+        match self.sessions.finish(self.idp, &req.query, self.factory.now()) {
+            Ok((_, set_cookie)) => Response::redirect("/").with("Set-Cookie", set_cookie),
+            Err(e) => html(401, page("portal.error.heading", &format!("<p>{}</p>", fmt("portal.signin.failed", &[("reason", &e.to_string())])), None)),
         }
     }
 
     /// Runs `f` for a signed-in person after checking the form's CSRF token.
-    fn portal_post(&self, req: &Request, f: impl FnOnce(&AuthenticatedPerson, &str) -> Response) -> Response {
-        let Some((sid, person, csrf)) = self.session(req) else { return Response::redirect("/") };
+    fn portal_post(&self, req: &Request, f: impl FnOnce(&AuthenticatedPerson, &SessionId) -> Response) -> Response {
+        let Some(session) = self.session(req) else { return Response::redirect("/") };
         let form_csrf = if req.header("content-type").is_some_and(|c| c.starts_with("multipart/form-data")) {
             multipart_field(req, "csrf").map(|b| String::from_utf8_lossy(&b).into_owned())
         } else {
             req.form().get("csrf").cloned()
         };
-        if form_csrf.as_deref() != Some(csrf.as_str()) {
-            return Response::html(403, page("portal.error.heading", &format!("<p>{}</p>", t("portal.error.csrf")), None));
+        if !form_csrf.is_some_and(|c| self.sessions.check_csrf(&session, &c)) {
+            return html(403, page("portal.error.heading", &format!("<p>{}</p>", t("portal.error.csrf")), None));
         }
-        f(&person, &sid)
+        f(&session.person, &session.id)
     }
 
     fn portal_error(&self, e: &RegistrationError, _account: Option<&str>) -> Response {
@@ -488,7 +353,7 @@ impl<'a> FactoryHttp<'a> {
             RegistrationError::Authentication(_) => t("portal.signin.weak"),
             other => fmt("portal.error.denied", &[("reason", &other.to_string())]),
         };
-        Response::html(status_of(e), page("portal.error.heading", &format!("<p>{reason}</p><p><a href=\"/\">{}</a></p>", t("portal.token.back")), None))
+        html(status_of(e), page("portal.error.heading", &format!("<p>{reason}</p><p><a href=\"/\">{}</a></p>", t("portal.token.back")), None))
     }
 
     // -----------------------------------------------------------------------------------
@@ -499,13 +364,13 @@ impl<'a> FactoryHttp<'a> {
     }
 
     fn portal_home(&self, req: &Request) -> Response {
-        let Some((_, person, csrf)) = self.session(req) else {
+        let Some(SessionView { person, csrf, .. }) = self.session(req) else {
             let body = format!(
                 "<p>{}</p><p><a href=\"/sign-in\">{}</a></p>",
                 t("portal.signin.intro"),
                 t("portal.signin.button")
             );
-            return Response::html(200, page("portal.signin.heading", &body, None));
+            return html(200, page("portal.signin.heading", &body, None));
         };
         let mut body = format!("<p>{}</p>", fmt("portal.signedin", &[("account", &person.account.0)]));
         let operator = person.has(Role::Operator);
@@ -605,7 +470,7 @@ impl<'a> FactoryHttp<'a> {
             t("portal.upload.file"),
             t("portal.upload.button"),
         ));
-        Response::html(200, page("portal.title", &body, Some(&csrf)))
+        html(200, page("portal.title", &body, Some(&csrf)))
     }
 
     fn portal_token(&self, req: &Request, person: &AuthenticatedPerson) -> Response {
@@ -623,7 +488,7 @@ impl<'a> FactoryHttp<'a> {
             Ok(t) => t,
             Err(e) => return self.portal_error(&RegistrationError::Malformed(e), None),
         };
-        let csrf = self.session(req).map(|s| s.2).unwrap_or_default();
+        let csrf = self.session(req).map(|s| s.csrf).unwrap_or_default();
         let body = format!(
             "<p class=\"warning\" role=\"alert\">{}</p><p>{}</p><h2>{}</h2>{}<h2>{}</h2><p class=\"token\">{}</p><p><a href=\"/\">{}</a></p>",
             t("portal.token.warning"),
@@ -634,7 +499,7 @@ impl<'a> FactoryHttp<'a> {
             escape(&text),
             t("portal.token.back"),
         );
-        Response::html(200, page("portal.token.issued.heading", &body, Some(&csrf)))
+        html(200, page("portal.token.issued.heading", &body, Some(&csrf)))
     }
 
     fn portal_close(&self, cert: &fieldseal_registration::domain::wire::CloseCertificate, _person: &AuthenticatedPerson) -> Response {
@@ -646,7 +511,7 @@ impl<'a> FactoryHttp<'a> {
             escape(&text),
             t("portal.token.back"),
         );
-        Response::html(200, page("portal.close.heading", &body, None))
+        html(200, page("portal.close.heading", &body, None))
     }
 
     fn portal_upload(&self, req: &Request, person: &AuthenticatedPerson) -> Response {
@@ -658,7 +523,7 @@ impl<'a> FactoryHttp<'a> {
             .and_then(|s| self.factory.submit(&s, Submission::Upload(person.account.clone())));
         match result {
             Ok(s) => {
-                let csrf = self.session(req).map(|s| s.2).unwrap_or_default();
+                let csrf = self.session(req).map(|s| s.csrf).unwrap_or_default();
                 let body = format!(
                     "<p>{}</p><p>{}</p><form method=\"post\" action=\"/pending/{}/confirm\">{}<button type=\"submit\">{}</button></form>",
                     t("portal.upload.done"),
@@ -667,14 +532,14 @@ impl<'a> FactoryHttp<'a> {
                     Self::csrf_field(&csrf),
                     t("portal.pending.confirm"),
                 );
-                Response::html(200, page("portal.upload.heading", &body, Some(&csrf)))
+                html(200, page("portal.upload.heading", &body, Some(&csrf)))
             }
             Err(e) => self.portal_error(&e, Some(&person.account.0)),
         }
     }
 
     fn portal_download(&self, req: &Request, id: &str) -> Response {
-        let Some((_, person, _)) = self.session(req) else { return Response::redirect("/") };
+        let Some(SessionView { person, .. }) = self.session(req) else { return Response::redirect("/") };
         let result = parse_tenancy(id).ok_or(RegistrationError::NotFound).and_then(|t| {
             let record = self.factory.status(&t)?;
             if record.account != person.account {
@@ -688,37 +553,4 @@ impl<'a> FactoryHttp<'a> {
             Err(e) => self.portal_error(&e, None),
         }
     }
-}
-
-/// The bytes of form field `name` in a `multipart/form-data` body.
-pub fn multipart_field(req: &Request, name: &str) -> Option<Vec<u8>> {
-    let ct = req.header("content-type")?;
-    let boundary = ct.split(';').find_map(|p| p.trim().strip_prefix("boundary="))?.trim_matches('"');
-    let delimiter = format!("--{boundary}").into_bytes();
-    let body = &req.body;
-    let mut parts = Vec::new();
-    let mut start = 0;
-    while let Some(pos) = find(&body[start..], &delimiter) {
-        parts.push(start + pos);
-        start += pos + delimiter.len();
-    }
-    for w in parts.windows(2) {
-        let part = &body[w[0] + delimiter.len()..w[1]];
-        let part = part.strip_prefix(b"\r\n").unwrap_or(part);
-        let split = find(part, b"\r\n\r\n")?;
-        let head = String::from_utf8_lossy(&part[..split]);
-        let content = &part[split + 4..];
-        let content = content.strip_suffix(b"\r\n").unwrap_or(content);
-        let named = head.lines().any(|l| {
-            l.to_ascii_lowercase().starts_with("content-disposition:") && l.contains(&format!("name=\"{name}\""))
-        });
-        if named {
-            return Some(content.to_vec());
-        }
-    }
-    None
-}
-
-fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack.windows(needle.len()).position(|w| w == needle)
 }

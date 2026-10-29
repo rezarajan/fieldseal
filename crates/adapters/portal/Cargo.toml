@@ -1,0 +1,21 @@
+[package]
+name = "fieldseal-adapters-portal"
+description = "Portal sessions shared by the HTTP apps: session store, pending sign-ins, cookies, CSRF tokens and the HTTP request and response types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fieldseal-kernel.workspace = true
+fieldseal-registration.workspace = true
+# Session identifiers and CSRF tokens come from the operating system's CSPRNG.
+getrandom = "0.2"
+serde_json = "1"
+thiserror.workspace = true
+
+[dev-dependencies]
+fieldseal-adapters-memory.workspace = true
+
+[lints]
+workspace = true

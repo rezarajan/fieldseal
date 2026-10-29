@@ -16,6 +16,7 @@ Implementations of the driven ports declared by [`crates/contexts`](../contexts/
 - oidc: [./oidc/README.md](./oidc/README.md) - OIDC (auth code + PKCE) `IdentityProvider`; verifies RS256/ES256 ID tokens against the issuer's JWKS.
 - opa: [./opa/README.md](./opa/README.md) - Open Policy Agent `PolicyEngine` via `opa eval` or REST, with bundled Rego mirroring the built-in engine. Fails closed.
 - policy: [./policy/README.md](./policy/README.md) - Registry- and bundle-backed `PolicySource`, and a file-backed hash-chained `DecisionLog`.
+- portal: [./portal/README.md](./portal/README.md) - Portal sessions shared by the HTTP apps: session store, pending sign-ins, session cookie, CSRF check, and the framework-free HTTP request and response types.
 - rekor: [./rekor/README.md](./rekor/README.md) - Sigstore Rekor `TransparencyLog` (hashedrekord entries) over HTTP; checks every answer it gets.
 - translog: [./translog/README.md](./translog/README.md) - Self-hosted RFC 9162 Merkle log store, HTTP client and server handler (the binary is [`crates/apps/translog`](../apps/translog/README.md)).
 - upload-http: [./upload-http/README.md](./upload-http/README.md) - Runtime `UploadTransport` client, the Intake upload HTTP server, and the development `fieldseal-upload-server` binary.

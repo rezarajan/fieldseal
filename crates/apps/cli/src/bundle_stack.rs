@@ -91,7 +91,9 @@ pub fn build(args: &Args, parse_roster: impl Fn(&str) -> Result<fieldseal_distri
     let receipt = trust.certificates().iter().find(|c| c.purpose() == Some(Purpose::Receipt)).map(|c| *c.key_id()).ok_or("the trust bundle has no receipt key certificate")?;
     let identity = FactoryIdentity { signer: *factory_cert.key_id(), chain: vec![factory_cert], caller: "fieldseal-cli".into(), unattested: if args.has("--allow-unattested") { UnattestedKeys::AllowNonProduction } else { UnattestedKeys::Refuse } };
 
-    let artefacts = crate::stores::FileRegistry::new(Path::new(required(args, "--state")?).join("registry"));
+    let artefacts = fieldseal_adapters_file::registry::FileRegistry::new(
+        Path::new(required(args, "--state")?).join("registry"),
+    );
     let rosters = MemoryRosterSource::new();
     let issued_all: Vec<fieldseal_distribution::domain::Roster> = parsed
         .into_iter()

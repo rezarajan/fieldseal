@@ -10,13 +10,12 @@ publish.workspace = true
 fieldseal-kernel.workspace = true
 fieldseal-trust.workspace = true
 fieldseal-registration.workspace = true
+fieldseal-adapters-portal.workspace = true
 # A small synchronous HTTP/1.1 server with no async runtime, like the blocking ureq client
 # the other adapters use. TLS is terminated in front of the factory.
 tiny_http = "0.12"
 # QR codes rendered server-side as SVG; default features (raster images) off.
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
-# Session identifiers and CSRF tokens come from the operating system's CSPRNG.
-getrandom = "0.2"
 serde_json = "1"
 thiserror.workspace = true
 # The blocking client for the runtime API (`client`), with TLS through rustls.

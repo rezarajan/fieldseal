@@ -176,7 +176,10 @@ impl FingerprintWords {
     /// Wraps four indices, each below [`Self::LIST_LEN`].
     pub fn from_indices(indices: [u16; 4]) -> Result<Self, KernelError> {
         if indices.iter().any(|i| *i >= Self::LIST_LEN) {
-            return Err(KernelError::Malformed { kind: "FingerprintWords", reason: "index outside the 2048-word list" });
+            return Err(KernelError::Malformed {
+                kind: "FingerprintWords",
+                reason: "index outside the 2048-word list",
+            });
         }
         Ok(Self(indices))
     }
@@ -199,6 +202,78 @@ impl FingerprintWords {
     /// The words joined by ` · ` (WIRE-135).
     pub fn joined(&self) -> String {
         words::join(self.0)
+    }
+}
+
+/// A semantic version the runtime reports as a plain `major.minor.patch` (WIRE-130). It is
+/// defined here because Registration does not depend on the Instrument context that owns
+/// `SchemaVersion`; the adapters that serve Distribution convert it.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub struct ReportedVersion {
+    /// Breaking changes.
+    pub major: u32,
+    /// Additions.
+    pub minor: u32,
+    /// Fixes.
+    pub patch: u32,
+}
+
+impl ReportedVersion {
+    /// The longest text form on the wire, in bytes (WIRE-130).
+    pub const MAX_TEXT: usize = 32;
+
+    /// Parses `major.minor.patch`: three decimal numbers without sign or leading zeros, and no
+    /// pre-release or build part.
+    pub fn parse(text: &str) -> Option<Self> {
+        let number = |t: &str| {
+            if t.is_empty()
+                || !t.bytes().all(|b| b.is_ascii_digit())
+                || (t.len() > 1 && t.starts_with('0'))
+            {
+                None
+            } else {
+                t.parse::<u32>().ok()
+            }
+        };
+        let mut parts = text.split('.');
+        let version = Self {
+            major: number(parts.next()?)?,
+            minor: number(parts.next()?)?,
+            patch: number(parts.next()?)?,
+        };
+        parts.next().is_none().then_some(version)
+    }
+}
+
+impl core::fmt::Display for ReportedVersion {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+/// What a runtime reports about itself at registration (WIRE-130, REG-091): the
+/// instrument-schema version it implements and, when its build has one, the version of the UI
+/// reference catalogue. The factory records it from the signed request and from nowhere else.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ReportedProfile {
+    /// The instrument-schema version the runtime implements.
+    pub instrument_schema: ReportedVersion,
+    /// The UI reference-catalogue version of the build, if it has one.
+    pub catalogue_reference: Option<String>,
+}
+
+impl ReportedProfile {
+    /// The longest catalogue version on the wire, in bytes (WIRE-130).
+    pub const MAX_CATALOGUE: usize = 64;
+
+    /// Whether `text` is acceptable as a catalogue version: not empty, within the limit, and
+    /// printable ASCII only (0x21 to 0x7e). That excludes spaces, control characters and
+    /// direction overrides such as U+202E, which could make a recorded value display as
+    /// something else.
+    pub fn catalogue_ok(text: &str) -> bool {
+        !text.is_empty()
+            && text.len() <= Self::MAX_CATALOGUE
+            && text.bytes().all(|b| (0x21..=0x7e).contains(&b))
     }
 }
 
@@ -266,6 +341,8 @@ pub struct RegistrationRequest {
     pub prev_closing: Option<Digest>,
     /// The collector's nickname for the device, if given.
     pub label: Option<String>,
+    /// What the runtime reports about itself (WIRE-130).
+    pub profile: ReportedProfile,
     /// SHA-256 of the canonical request body.
     pub body_digest: Digest,
     /// Proof of possession: the signing key's signature over `{nonce, body_sha256}`.
@@ -450,6 +527,8 @@ pub struct TenancyRecord {
     pub nonce_source: NonceSource,
     /// The runtime build it registered with.
     pub build: String,
+    /// What the runtime reported at registration, as signed (REG-091).
+    pub profile: ReportedProfile,
     /// How the token's account authenticated (REG-002a: an `asserted` method is recorded).
     pub authentication: AuthRecord,
     /// Policy reasons for its current state (`hold`, `deny`, `flag`), shown on the portal.
@@ -463,7 +542,11 @@ pub struct TenancyRecord {
 impl TenancyRecord {
     /// Whether `next` keeps every key this record has (keys are never deleted).
     pub fn keeps_key_history(&self, next: &TenancyRecord) -> bool {
-        self.keys.iter().all(|k| next.keys.iter().any(|n| n.public_key == k.public_key && n.index == k.index))
+        self.keys.iter().all(|k| {
+            next.keys
+                .iter()
+                .any(|n| n.public_key == k.public_key && n.index == k.index)
+        })
     }
 
     /// Whether the tenancy may receive bundles (REG-072, REG-081).
@@ -473,7 +556,10 @@ impl TenancyRecord {
 
     /// The active key of `kind`.
     pub fn active_key(&self, kind: DeviceKeyKind) -> Option<&RegisteredKey> {
-        self.keys.iter().rev().find(|k| k.kind == kind && k.state == KeyState::Active)
+        self.keys
+            .iter()
+            .rev()
+            .find(|k| k.kind == kind && k.state == KeyState::Active)
     }
 
     /// Whether every active key is hardware-attested (INV-10, for `bundle.release`).
@@ -481,7 +567,11 @@ impl TenancyRecord {
         self.keys
             .iter()
             .filter(|k| k.state == KeyState::Active)
-            .all(|k| k.claims.as_ref().is_some_and(AttestationClaims::is_attested))
+            .all(|k| {
+                k.claims
+                    .as_ref()
+                    .is_some_and(AttestationClaims::is_attested)
+            })
     }
 }
 
@@ -514,7 +604,15 @@ impl CloseReason {
 
     /// Parses the wire name.
     pub fn parse(text: &str) -> Option<Self> {
-        [Self::Absent, Self::ForgottenPin, Self::Returned, Self::Lost, Self::Other].into_iter().find(|r| r.as_str() == text)
+        [
+            Self::Absent,
+            Self::ForgottenPin,
+            Self::Returned,
+            Self::Lost,
+            Self::Other,
+        ]
+        .into_iter()
+        .find(|r| r.as_str() == text)
     }
 
     /// Whether the certificate is a reset certificate (WIRE-141).
@@ -619,7 +717,12 @@ impl PostureReport {
             .map(|(n, _)| n.clone())
             .collect();
         if flag_unknown {
-            out.extend(required.iter().filter(|r| !self.restrictions.contains_key(*r)).cloned());
+            out.extend(
+                required
+                    .iter()
+                    .filter(|r| !self.restrictions.contains_key(*r))
+                    .cloned(),
+            );
         }
         out.sort();
         out.dedup();
@@ -643,5 +746,8 @@ pub struct AccessToken {
 /// A content address of the policy that approved a registration (the effective policy's
 /// innermost layer), recorded in the certificate.
 pub fn policy_address(sources: &[ContentAddress]) -> ContentAddress {
-    sources.last().copied().unwrap_or(ContentAddress::from([0; 32]))
+    sources
+        .last()
+        .copied()
+        .unwrap_or(ContentAddress::from([0; 32]))
 }

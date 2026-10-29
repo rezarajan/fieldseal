@@ -720,11 +720,11 @@ name = "fieldseal-adapters-factory-http"
 version = "0.1.0"
 dependencies = [
  "fieldseal-adapters-memory",
+ "fieldseal-adapters-portal",
  "fieldseal-kernel",
  "fieldseal-policy",
  "fieldseal-registration",
  "fieldseal-trust",
- "getrandom 0.2.17",
  "qrcode",
  "serde_json",
  "thiserror",
@@ -738,6 +738,7 @@ version = "0.1.0"
 dependencies = [
  "fieldseal-adapters-authoring",
  "fieldseal-adapters-memory",
+ "fieldseal-distribution",
  "fieldseal-instrument",
  "fieldseal-intake",
  "fieldseal-kernel",
@@ -745,6 +746,7 @@ dependencies = [
  "fieldseal-publishing",
  "fieldseal-registration",
  "fieldseal-trust",
+ "thiserror",
  "zeroize",
 ]
 
@@ -834,6 +836,18 @@ dependencies = [
  "fieldseal-policy",
  "fieldseal-publishing",
  "fieldseal-trust",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "fieldseal-adapters-portal"
+version = "0.1.0"
+dependencies = [
+ "fieldseal-adapters-memory",
+ "fieldseal-kernel",
+ "fieldseal-registration",
+ "getrandom 0.2.17",
  "serde_json",
  "thiserror",
 ]
@@ -1192,6 +1206,7 @@ dependencies = [
 name = "fieldseal-uniffi"
 version = "0.1.0"
 dependencies = [
+ "fieldseal-instrument",
  "fieldseal-kernel",
  "thiserror",
  "uniffi",

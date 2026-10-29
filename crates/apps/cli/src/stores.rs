@@ -8,18 +8,16 @@
 //!   replaces it with the Rekor adapter, and `FIELDSEAL_TRANSLOG_URL` with a self-hosted
 //!   `fieldseal-translog` server (whose key is its operator's); nothing in this build contacts
 //!   a public log otherwise.
-//! * [`FileRegistry`]: an immutable artefact registry of encoded publications and withdrawals.
+//!
+//! The artefact registry `FileRegistry` is in `fieldseal-adapters-file`.
 
 use std::path::{Path, PathBuf};
 
 use fieldseal_adapters_translog::{FileLogStore, HttpLogTransport, HttpTranslog};
 use fieldseal_kernel::digest::sha256;
-use fieldseal_kernel::id::ContentAddress;
 use fieldseal_kernel::sign::SigningKey;
-use fieldseal_publishing::domain::{ArtefactKind, ConsistencyProof, InclusionProof, LogEntry, Publication, SignedCheckpoint, Withdrawal};
-use fieldseal_publishing::ports::{ArtefactRegistry, LogError, LoggedEntry, RegistryError, TransparencyLog};
-
-use crate::support::hex;
+use fieldseal_publishing::domain::{ConsistencyProof, InclusionProof, LogEntry, SignedCheckpoint};
+use fieldseal_publishing::ports::{LogError, LoggedEntry, TransparencyLog};
 
 /// The origin of the local development log.
 pub const LOCAL_LOG_ORIGIN: &str = "fieldseal-local-log";
@@ -97,70 +95,5 @@ impl TransparencyLog for FileLog {
 
     fn prove_consistency(&self, old_size: u64, checkpoint: &SignedCheckpoint) -> Result<ConsistencyProof, LogError> {
         self.inner.prove_consistency(old_size, checkpoint)
-    }
-}
-
-/// An immutable, file-backed artefact registry.
-pub struct FileRegistry {
-    dir: PathBuf,
-}
-
-fn backend(e: impl std::fmt::Display) -> RegistryError {
-    RegistryError::Backend(e.to_string())
-}
-
-impl FileRegistry {
-    /// The registry in `dir`.
-    pub fn new(dir: impl Into<PathBuf>) -> Self {
-        Self { dir: dir.into() }
-    }
-
-    fn all(&self) -> Result<Vec<Publication>, RegistryError> {
-        let mut paths: Vec<PathBuf> = std::fs::read_dir(&self.dir)
-            .map(|rd| rd.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "publication")).collect())
-            .unwrap_or_default();
-        paths.sort();
-        paths.iter().map(|p| Publication::decode(&std::fs::read(p).map_err(backend)?).map_err(backend)).collect()
-    }
-}
-
-impl ArtefactRegistry for FileRegistry {
-    fn put(&self, publication: &Publication) -> Result<(), RegistryError> {
-        let all = self.all()?;
-        if let Some(existing) = all.iter().find(|p| p.address() == publication.address()) {
-            return if existing == publication { Ok(()) } else { Err(RegistryError::Conflict) };
-        }
-        let a = &publication.artefact;
-        if all.iter().any(|p| p.artefact.kind() == a.kind() && p.artefact.name() == a.name() && p.artefact.version() == a.version()) {
-            return Err(RegistryError::VersionTaken);
-        }
-        std::fs::create_dir_all(&self.dir).map_err(backend)?;
-        std::fs::write(self.dir.join(format!("{}.publication", hex(publication.address().as_bytes()))), publication.encode()).map_err(backend)
-    }
-
-    fn get(&self, address: &ContentAddress) -> Result<Option<Publication>, RegistryError> {
-        Ok(self.all()?.into_iter().find(|p| p.address() == address))
-    }
-
-    fn list(&self, kind: ArtefactKind, name: &str) -> Result<Vec<(String, ContentAddress)>, RegistryError> {
-        Ok(self.all()?.iter().filter(|p| p.artefact.kind() == kind && p.artefact.name() == name).map(|p| (p.artefact.version().to_owned(), *p.address())).collect())
-    }
-
-    fn withdraw(&self, withdrawal: &Withdrawal) -> Result<(), RegistryError> {
-        if self.withdrawals()?.contains(withdrawal) {
-            return Ok(());
-        }
-        let dir = self.dir.join("withdrawals");
-        std::fs::create_dir_all(&dir).map_err(backend)?;
-        let n = std::fs::read_dir(&dir).map(Iterator::count).unwrap_or(0);
-        std::fs::write(dir.join(format!("{n:08}.withdrawal")), withdrawal.encode()).map_err(backend)
-    }
-
-    fn withdrawals(&self) -> Result<Vec<Withdrawal>, RegistryError> {
-        let mut paths: Vec<PathBuf> = std::fs::read_dir(self.dir.join("withdrawals"))
-            .map(|rd| rd.filter_map(Result::ok).map(|e| e.path()).collect())
-            .unwrap_or_default();
-        paths.sort();
-        paths.iter().map(|p| Withdrawal::decode(&std::fs::read(p).map_err(backend)?).map_err(backend)).collect()
     }
 }

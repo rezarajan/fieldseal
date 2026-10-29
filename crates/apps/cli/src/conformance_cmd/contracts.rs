@@ -8,11 +8,13 @@ use fieldseal_publishing::contract::{self as publishing, RecordingTransport};
 use fieldseal_trust::contract as tru;
 use fieldseal_trust::ports::SourceRng;
 
+use fieldseal_adapters_file::registry::FileRegistry;
+
 use super::Unit;
 use super::harness::{Collector, Status};
 use crate::custody::{DirCustody, OsRandom};
 use crate::registration_cmd::TokenFiles;
-use crate::stores::{FileRegistry, LOCAL_LOG_ORIGIN};
+use crate::stores::LOCAL_LOG_ORIGIN;
 use crate::transport::NullTransport;
 
 /// Where a contract runs.
@@ -119,6 +121,9 @@ pub fn entries() -> Vec<Entry> {
         external!("intake", "SubmissionStore", "submission_store_contract", "FileSubmissionStore", ["INT-013"], "cargo test -p fieldseal-adapters-file int_013"),
         external!("intake", "RosterHistory", "roster_history_contract", "FileRosterHistory", ["INT-040"], "cargo test -p fieldseal-adapters-file int_040"),
         external!("intake", "InstrumentSource", "instrument_source_contract", "PublishedInstruments", ["INT-070"], "cargo test -p fieldseal-adapters-file int_070"),
+        external!("distribution", "RosterSource", "roster_source_contract", "FileRosterSource", ["DIS-080"], "cargo test -p fieldseal-adapters-file --test contracts"),
+        external!("distribution", "BundleStore", "bundle_store_contract", "FileBundleStore", ["DIS-015", "DIS-023"], "cargo test -p fieldseal-adapters-file --test contracts"),
+        external!("distribution", "RuntimeProfiles", "runtime_profiles_contract", "FileRuntimeProfiles", ["DIS-012"], "cargo test -p fieldseal-adapters-file --test contracts"),
         local!("intake", "DataPlatform", "data_platform_contract", "FileDataPlatform", ["INT-011"], || {
             let dir = scratch();
             fieldseal_intake::contract::data_platform_contract(|| {

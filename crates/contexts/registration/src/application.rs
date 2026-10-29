@@ -570,6 +570,7 @@ impl<'a> Factory<'a> {
             pending_until: token.expires_at,
             nonce_source: request.nonce_source,
             build: request.build.clone(),
+            profile: request.profile.clone(),
             authentication: token.authentication.clone(),
             reasons: vec![],
             certificate: None,
@@ -845,6 +846,9 @@ impl<'a> Factory<'a> {
             claims: Some(agree_claims),
             state: KeyState::Active,
         });
+        // The roll request is signed by both keys, so the profile in it is the one the runtime
+        // now reports; it replaces the recorded one, whether higher or lower (REG-091).
+        record.profile = request.profile.clone();
         record.words = words;
         record.last_seen = Some(now);
         let serial = record.certificate.as_ref().and_then(|c| c.serial.clone());
