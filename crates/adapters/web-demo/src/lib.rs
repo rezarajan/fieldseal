@@ -120,7 +120,7 @@ pub struct DemoConfig {
     pub factory_bind: String,
     /// The address the upload endpoint binds, for example `127.0.0.1:0`.
     pub upload_bind: String,
-    /// The repository's `examples/` directory: `instruments/`, `layouts/` and `rosters/`.
+    /// The repository's `examples/` directory: `surveys/` (a folder for each survey) and `rosters/`.
     pub examples_dir: PathBuf,
     /// The base URL devices reach the factory at, when it differs from the bound address
     /// (behind a proxy). Defaults to the bound address. PoP tokens are checked against it.

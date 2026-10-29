@@ -56,7 +56,7 @@ spec:
         AttestationVerifier: { adapter: software, config: {} }
         PolicyEngine: { adapter: built-in, config: {} }
         # Tokens, accounts, tenancies and devices are kept in a journal, so a restart keeps them.
-        # Every new tenancy is assigned the cohorts of both sample rosters (food survey, water survey).
+        # Every new tenancy is assigned the cohorts of both sample rosters (school meals survey, water survey).
         TenancyRegistry: { adapter: file-dev, config: { dir: /state/factory, cohorts: "cohort-a:1,village-a:1" } }
       scaling: { replicas: 1 }
     intake:

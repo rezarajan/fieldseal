@@ -12,8 +12,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use fieldseal_adapters_authoring::{Format, decode_path, decode_raw};
-use fieldseal_e2e::{examples, expanded_json, pinned_salt, survey_sources};
+use fieldseal_adapters_authoring::{Format, decode_raw};
+use fieldseal_e2e::{expanded_json, pinned_salt, survey};
 use fieldseal_instrument::application::{LayoutBinding, LayoutOptions, validate_instrument, validate_layout_with};
 use fieldseal_kernel::Value;
 use fieldseal_kernel::cbor;
@@ -37,22 +37,14 @@ struct Recorded {
     instrument_address: ContentAddress,
     fingerprint: Fingerprint,
     /// Window class to (bound layout address, expanded and bound layout text).
-    layouts: BTreeMap<&'static str, (ContentAddress, String)>,
+    layouts: BTreeMap<String, (ContentAddress, String)>,
     instrument_text: String,
-}
-
-fn load(path: &str) -> Value {
-    let full = examples().join(path);
-    decode_path(&full).unwrap_or_else(|e| panic!("{}: {e}", full.display()))
 }
 
 /// Expands, addresses and binds one survey, following `Site::new`.
 fn record(name: &str) -> Recorded {
-    let sources = survey_sources(name);
-    for catalogue in sources.catalogues {
-        assert!(examples().join(catalogue).is_file(), "{name}: catalogue {catalogue} is missing");
-    }
-    let doc = load(sources.instrument);
+    let loaded = survey(name);
+    let doc = loaded.instrument;
     let instrument = validate_instrument(&doc).unwrap_or_else(|f| panic!("{name}: {:?}", f.iter().collect::<Vec<_>>())).instrument;
     let bytes = cbor::encode(&doc).expect("encodes");
     let instrument_address = ContentAddress::of(&bytes);
@@ -60,8 +52,7 @@ fn record(name: &str) -> Recorded {
     let fingerprint = Fingerprint::from(*artefact_address(ArtefactKind::Instrument, &bytes, Some(&salt)).expect("a salted instrument address").as_bytes());
 
     let mut layouts = BTreeMap::new();
-    for (window, path) in sources.layouts {
-        let mut layout = load(path);
+    for (window, mut layout) in loaded.layouts {
         let Value::Map(root) = &mut layout else { panic!("{name}/{window}: a layout is a map") };
         let Some(Value::Map(spec)) = root.get_mut("spec") else { panic!("{name}/{window}: a layout has a spec") };
         spec.insert("instrument".into(), Value::Bytes(fingerprint.as_bytes().to_vec()));
@@ -69,7 +60,7 @@ fn record(name: &str) -> Recorded {
         let resolve = |_: &_| None;
         let options = LayoutOptions { binding: Some(LayoutBinding { expected: fingerprint, resolve: &resolve }) };
         validate_layout_with(&layout, &instrument, options).unwrap_or_else(|f| panic!("{name}/{window}: {:?}", f.iter().collect::<Vec<_>>()));
-        layouts.insert(*window, (address, expanded_json(&layout)));
+        layouts.insert(window, (address, expanded_json(&layout)));
     }
     Recorded { salt: lower_hex(salt.as_bytes()), instrument_address, fingerprint, layouts, instrument_text: expanded_json(&doc) }
 }
@@ -167,7 +158,7 @@ fn ins_200_every_bound_layout_keeps_its_address() {
         let layouts = field(&golden[name], name, "layouts").as_map().expect("a map");
         assert_eq!(layouts.keys().collect::<Vec<_>>(), rec.layouts.keys().collect::<Vec<_>>(), "{name}: the set of layout windows changed");
         for (window, (address, _)) in &rec.layouts {
-            assert_same(&format!("{name}/{window}"), "the bound layout address", layouts[*window].as_text().expect("text"), &address_text(address));
+            assert_same(&format!("{name}/{window}"), "the bound layout address", layouts[window.as_str()].as_text().expect("text"), &address_text(address));
         }
     }
 }
@@ -184,4 +175,24 @@ fn ins_200_expanded_documents_match_the_golden_text() {
             text_diff(&format!("{name}/{window}"), "the expanded and bound layout", &read(&format!("layout-{window}.json")), text);
         }
     }
+}
+
+/// No source file names an example path from before the move to survey folders. The script is
+/// outside the Nix source set, so this skips where it or `python3` is missing; `just test` runs
+/// the script directly.
+#[test]
+fn ins_258_no_hard_coded_loader_names_an_old_example_path() {
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../tools/check-example-paths.py");
+    if !script.is_file() {
+        eprintln!("skipped: {} is missing", script.display());
+        return;
+    }
+    let output = match std::process::Command::new("python3").arg(&script).output() {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("skipped: python3 is not available: {e}");
+            return;
+        }
+    };
+    assert!(output.status.success(), "{}{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
 }

@@ -218,7 +218,7 @@ fn contract_tab(state: &AppState, demo: &fieldseal_adapters_web_demo::Demo) -> S
 
 fn contracts(state: &AppState, demo: &fieldseal_adapters_web_demo::Demo) -> Vec<(String, fieldseal_intake::data_contract::DataContract)> {
     let mut out = Vec::new();
-    for entry in crate::catalogue::load_all(&state.examples_dir) {
+    for entry in crate::catalogue::load_all(&state.examples_dir, &state.survey_cohorts) {
         let Ok(summary) = &entry.status else { continue };
         let Some(fp) = demo.fingerprint_of(&summary.name) else { continue };
         if let Ok(bench) = entry.workbench(&[]) {

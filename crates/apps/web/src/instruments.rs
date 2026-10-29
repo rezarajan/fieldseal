@@ -89,7 +89,7 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
 }
 
 fn with_entry(state: &AppState, id: &str, f: impl FnOnce(&Entry) -> Response) -> Response {
-    match catalogue::load(&state.examples_dir, id) {
+    match catalogue::load(&state.examples_dir, id, &state.survey_cohorts) {
         Some(e) => f(&e),
         None => ui::error_page(404, "There is no such instrument."),
     }
@@ -98,7 +98,7 @@ fn with_entry(state: &AppState, id: &str, f: impl FnOnce(&Entry) -> Response) ->
 /// The list: a short stack of instrument cards, each with one action. The first card is the
 /// recommended one and carries the page's only filled button.
 fn list(state: &AppState) -> Response {
-    let entries = catalogue::load_all(&state.examples_dir);
+    let entries = catalogue::load_all(&state.examples_dir, &state.survey_cohorts);
     let mut cards = String::new();
     for (n, e) in entries.iter().enumerate() {
         let id = escape(&e.id);

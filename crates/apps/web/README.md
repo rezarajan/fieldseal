@@ -16,7 +16,8 @@ The Fieldseal showcase web app (development only): a server-rendered viewer for 
 |---|---|
 | `FIELDSEAL_ENVIRONMENT` | Required: `development`, `staging` or `test`; `production` is refused |
 | `FIELDSEAL_WEB_BIND` | Listen address, default `127.0.0.1:8090` (port `0` picks a free one) |
-| `FIELDSEAL_WEB_EXAMPLES_DIR` | Required: a directory with `instruments/`, `layouts/`, `rosters/` |
+| `FIELDSEAL_WEB_EXAMPLES_DIR` | Required: a directory with `surveys/` (one folder for each survey) and `rosters/` (one file for each cohort and version) |
+| `FIELDSEAL_WEB_SURVEY_COHORTS` | Optional: `survey=cohort,...`, the cohort whose roster each survey's pages use. A survey with no entry has no roster. Not the factory's `cohorts` setting |
 | `FIELDSEAL_WEB_WASM_DIR` | Directory with `fieldseal_wasm.js` and `fieldseal_wasm_bg.wasm`; without both, live evaluation is off |
 | `FIELDSEAL_FACTORY_URL`, `FIELDSEAL_UPLOAD_URL`, `FIELDSEAL_LOG_URL`, `FIELDSEAL_WEB_PUBLIC_URL` | Optional `http(s)://` URLs; the first three are the `/proxy/*` upstreams |
 | `FIELDSEAL_WEB_DEMO_AUTHORITY` | `true` starts the embedded demo authority (practice factory, intake, log over in-memory ports, development keys) |
@@ -81,7 +82,7 @@ Request bodies over `MAX_BODY` (1 MiB; 32 MiB for `POST /intake/ingest`) get 413
 ## Side Effects
 
 - Ports: `FIELDSEAL_WEB_BIND` (default 8090); with the demo authority also 8091 (factory) and 8092 (upload) by default.
-- Files read: `FIELDSEAL_WEB_EXAMPLES_DIR` (`instruments/`, `layouts/`, `rosters/`) per request; WASM files from `FIELDSEAL_WEB_WASM_DIR`; `FIELDSEAL_WEB_PROVISIONING_FILE`. Stack mode reads `/authority/trust-bundle.bundle`, `/published`, `/opt/fieldseal/examples/rosters`.
+- Files read: `FIELDSEAL_WEB_EXAMPLES_DIR` (`surveys/`, `rosters/`) per request, the surveys through the resolver: a survey that does not resolve is listed with the resolver's errors; WASM files from `FIELDSEAL_WEB_WASM_DIR`; `FIELDSEAL_WEB_PROVISIONING_FILE`. Stack mode reads `/authority/trust-bundle.bundle`, `/published`, `/opt/fieldseal/examples/rosters`.
 - Files written (stack mode only): the temporary directory `fieldseal-web-bundle-<tenancy>` in `std::env::temp_dir()`, removed and recreated per bundle build, by the spawned `fieldseal bundle build --stack` process (which uses `/authority/online`, `/factory-state`, `/clistate`).
 - Outbound network (`ureq`): `proxy` to the factory, upload and log upstreams (15 s timeout); `GET {log}/checkpoint` from `/publishing` (10 s timeout).
 - Subprocess: the `FIELDSEAL_WEB_CLI` executable in stack mode.

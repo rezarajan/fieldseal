@@ -1,9 +1,11 @@
-//! Publishing the example content: instruments, their layouts and the rosters that belong
-//! with them.
+//! Publishing the example content: surveys (instruments and their layouts) and the rosters that
+//! belong with them.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
+use fieldseal_adapters_authoring::survey::{RosterSet, SurveyTree};
+use fieldseal_adapters_authoring::LoadedSurvey;
 use fieldseal_adapters_memory::demo::DemoWorld;
 use fieldseal_distribution::domain::{ConsentState, Roster, RosterEntry};
 use fieldseal_instrument::application::validate_instrument;
@@ -17,7 +19,7 @@ use fieldseal_publishing::domain::{ArtefactKind, Publication};
 #[derive(Clone, Debug)]
 pub(crate) struct PublishedInstrument {
     pub(crate) name: String,
-    /// The file stem the instrument was loaded from, which names its roster file.
+    /// The survey folder the instrument was loaded from, which names its roster's cohort.
     pub(crate) stem: String,
     pub(crate) publication: Publication,
     pub(crate) model: Instrument,
@@ -36,18 +38,14 @@ pub(crate) struct PublishedLayout {
 pub(crate) struct Content {
     pub(crate) instruments: Vec<PublishedInstrument>,
     pub(crate) layouts: Vec<PublishedLayout>,
-    /// Rosters by the stem of the instrument they were loaded for.
+    /// Rosters by the survey folder they were loaded for.
     pub(crate) rosters: Vec<(String, Roster)>,
     pub(crate) warnings: Vec<String>,
 }
 
-fn files(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
-    let Ok(read) = std::fs::read_dir(dir) else { return Vec::new() };
-    let mut out: Vec<PathBuf> =
-        read.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().and_then(|e| e.to_str()).is_some_and(|e| extensions.contains(&e))).collect();
-    out.sort();
-    out
-}
+/// The cohort whose roster each example survey uses. This crate is removed with the demo it
+/// serves, so the map is fixed here instead of read from configuration.
+const COHORTS: &[(&str, &str)] = &[("school-meals-baseline", "cohort-a"), ("household-water-access", "village-a")];
 
 fn load(path: &Path) -> Result<Value, String> {
     fieldseal_adapters_authoring::decode_path(path).map_err(|e| format!("{}: {e}", path.display()))
@@ -57,62 +55,75 @@ fn meta(doc: &Value, key: &str) -> Option<String> {
     doc.as_map().and_then(|m| m.get("metadata")).and_then(Value::as_map).and_then(|m| m.get(key)).and_then(Value::as_text).map(str::to_owned)
 }
 
-fn stem(path: &Path) -> String {
-    path.file_stem().and_then(|s| s.to_str()).unwrap_or_default().to_owned()
-}
-
 impl Content {
-    /// Publishes every valid instrument under `dir/instruments`, every layout under
-    /// `dir/layouts` that names one of them, and loads `dir/rosters/<stem>.yaml` for each
-    /// instrument. Anything that fails is skipped with a warning.
+    /// Publishes every valid survey under `dir/surveys` (its instrument and its layouts), and
+    /// loads the roster of each survey's cohort from `dir/rosters`. Anything that fails is
+    /// skipped with a warning.
     pub(crate) fn publish(world: &DemoWorld, dir: &Path) -> Self {
         let mut c = Self::default();
-        for path in files(&dir.join("instruments"), &["yaml", "yml", "json"]) {
-            if let Err(e) = c.instrument(world, &path) {
-                c.warnings.push(format!("instrument {} skipped: {e}", path.display()));
+        let tree = match SurveyTree::open(&dir.join("surveys")) {
+            Ok(tree) => tree,
+            Err(e) => {
+                c.warnings.push(e.to_string());
+                return c;
+            }
+        };
+        for name in tree.names() {
+            match tree.survey(name).map_err(|e| e.to_string()).and_then(|s| s.load().map_err(|errors| errors.iter().map(ToString::to_string).collect::<Vec<_>>().join("; "))) {
+                Ok(loaded) => {
+                    if let Err(e) = c.survey(world, name, loaded) {
+                        c.warnings.push(format!("survey {name} skipped: {e}"));
+                    }
+                }
+                Err(e) => c.warnings.push(format!("survey {name} skipped: {e}")),
             }
         }
-        for path in files(&dir.join("layouts"), &["yaml", "yml", "json"]) {
-            if let Err(e) = c.layout(world, &path) {
-                c.warnings.push(format!("layout {} skipped: {e}", path.display()));
+        let rosters = match RosterSet::open(&dir.join("rosters")) {
+            Ok(rosters) => rosters,
+            Err(errors) => {
+                c.warnings.extend(errors.iter().map(ToString::to_string));
+                return c;
             }
-        }
-        let stems: Vec<String> = c.instruments.iter().map(|i| i.stem.clone()).collect();
-        for s in stems {
-            let path = dir.join("rosters").join(format!("{s}.yaml"));
-            if !path.exists() {
+        };
+        let names: Vec<String> = c.instruments.iter().map(|i| i.stem.clone()).collect();
+        for s in names {
+            let Some(cohort) = COHORTS.iter().find(|(survey, _)| *survey == s).map(|(_, cohort)| *cohort) else {
+                c.warnings.push(format!("no roster cohort for {s}"));
+                continue;
+            };
+            let Some(file) = rosters.latest(cohort) else {
                 c.warnings.push(format!("no roster file for {s}"));
                 continue;
-            }
-            match load(&path).and_then(|doc| roster(&doc)) {
-                Ok(r) if c.rosters.iter().any(|(_, x)| x.cohort == r.cohort) => c.warnings.push(format!("roster {}: the cohort {} is already taken", path.display(), r.cohort.as_str())),
+            };
+            match load(&file.path).and_then(|doc| roster(&doc)) {
+                Ok(r) if c.rosters.iter().any(|(_, x)| x.cohort == r.cohort) => c.warnings.push(format!("roster {}: the cohort {} is already taken", file.path.display(), r.cohort.as_str())),
                 Ok(r) => c.rosters.push((s, r)),
-                Err(e) => c.warnings.push(format!("roster {} skipped: {e}", path.display())),
+                Err(e) => c.warnings.push(format!("roster {} skipped: {e}", file.path.display())),
             }
         }
         c
     }
 
-    fn instrument(&mut self, world: &DemoWorld, path: &Path) -> Result<(), String> {
-        let doc = load(path)?;
+    fn survey(&mut self, world: &DemoWorld, stem: &str, loaded: LoadedSurvey) -> Result<(), String> {
+        let doc = loaded.instrument;
         let valid = validate_instrument(&doc).map_err(|f| format!("the instrument is invalid ({} finding(s))", f.iter().count()))?;
         let name = meta(&doc, "name").ok_or("no metadata.name")?;
         let version = meta(&doc, "version").ok_or("no metadata.version")?;
         let publication = world.publish(ArtefactKind::Instrument, &name, &version, cbor::encode(&doc).map_err(|e| e.to_string())?, Some(DemoWorld::salt_for(&name)))?;
         let fingerprint = Fingerprint::from(*publication.address().as_bytes());
-        self.instruments.push(PublishedInstrument { name, stem: stem(path), publication, model: valid.instrument, fingerprint });
+        let address = *publication.address();
+        self.instruments.push(PublishedInstrument { name, stem: stem.to_owned(), publication, model: valid.instrument, fingerprint });
+        for (window, layout) in loaded.layouts {
+            if let Err(e) = self.layout(world, layout, address) {
+                self.warnings.push(format!("layout {stem}/{window} skipped: {e}"));
+            }
+        }
         Ok(())
     }
 
-    fn layout(&mut self, world: &DemoWorld, path: &Path) -> Result<(), String> {
-        let mut doc = load(path)?;
+    fn layout(&mut self, world: &DemoWorld, mut doc: Value, address: ContentAddress) -> Result<(), String> {
         let name = meta(&doc, "name").ok_or("no metadata.name")?;
         let version = meta(&doc, "version").ok_or("no metadata.version")?;
-        let reference =
-            doc.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|m| m.get("instrument")).and_then(Value::as_text).ok_or("spec.instrument is not a path")?.to_owned();
-        let target = stem(Path::new(&reference));
-        let instrument = self.instruments.iter().find(|i| i.stem == target).ok_or_else(|| format!("it names {reference}, which is not a published instrument"))?;
-        let address = *instrument.publication.address();
         // A layout names its instrument by fingerprint once canonicalised (INS-200).
         if let Value::Map(root) = &mut doc
             && let Some(Value::Map(spec)) = root.get_mut("spec")

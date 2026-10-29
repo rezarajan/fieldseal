@@ -25,23 +25,22 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `wire_211_a_refused_value_is_a_coercion_finding` ([error_positions.rs:89](../../crates/adapters/authoring/tests/error_positions.rs#L89)) | WIRE-211 | WIRE-211 (wire-formats) |
 | `wire_211_spans_give_the_key_and_the_value_of_each_pointer` ([error_positions.rs:102](../../crates/adapters/authoring/tests/error_positions.rs#L102)) | WIRE-211 | WIRE-211 (wire-formats) |
 | `wire_211_an_io_error_keeps_position_zero_and_names_the_file` ([error_positions.rs:115](../../crates/adapters/authoring/tests/error_positions.rs#L115)) | WIRE-211 | WIRE-211 (wire-formats) |
-| `ins_259_parse_po_keeps_msgid_msgstr_and_line` ([po_entries.rs:26](../../crates/adapters/authoring/tests/po_entries.rs#L26)) | INS-259 | INS-259 (instrument) |
-| `ins_260_an_empty_msgstr_is_kept_and_counts_as_missing` ([po_entries.rs:34](../../crates/adapters/authoring/tests/po_entries.rs#L34)) | INS-260 | INS-260 (instrument) |
-| `ins_259_a_repeated_msgctxt_is_rejected_with_the_second_line` ([po_entries.rs:41](../../crates/adapters/authoring/tests/po_entries.rs#L41)) | INS-259 | INS-259 (instrument) |
-| `ins_259_multi_line_strings_and_escapes_round_trip` ([po_entries.rs:48](../../crates/adapters/authoring/tests/po_entries.rs#L48)) | INS-259 | INS-259 (instrument) |
-| `ins_259_parse_po_accepts_a_legacy_context` ([po_entries.rs:56](../../crates/adapters/authoring/tests/po_entries.rs#L56)) | INS-259 | INS-259 (instrument) |
-| `ins_259_check_context_accepts_instrument_and_layout_contexts` ([po_entries.rs:63](../../crates/adapters/authoring/tests/po_entries.rs#L63)) | INS-259 | INS-259 (instrument) |
-| `ins_259_check_context_rejects_other_prefixes` ([po_entries.rs:70](../../crates/adapters/authoring/tests/po_entries.rs#L70)) | INS-259 | INS-259 (instrument) |
-| `ins_259_the_compact_adapter_keeps_the_old_map_and_drops_empty_msgstr` ([po_entries.rs:77](../../crates/adapters/authoring/tests/po_entries.rs#L77)) | INS-259 | INS-259 (instrument) |
-| `wire_210_every_example_is_accepted_by_decoder_and_json_schema` ([schema_differential.rs:132](../../crates/adapters/authoring/tests/schema_differential.rs#L132)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_a_compact_roster_is_judged_alike_by_decoder_and_json_schema` ([schema_differential.rs:166](../../crates/adapters/authoring/tests/schema_differential.rs#L166)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_dropping_a_required_key_is_rejected_by_both` ([schema_differential.rs:181](../../crates/adapters/authoring/tests/schema_differential.rs#L181)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_a_wrong_type_is_rejected_by_both` ([schema_differential.rs:186](../../crates/adapters/authoring/tests/schema_differential.rs#L186)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_a_value_outside_an_enum_is_rejected_by_both` ([schema_differential.rs:191](../../crates/adapters/authoring/tests/schema_differential.rs#L191)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_an_unknown_sibling_key_is_rejected_by_both` ([schema_differential.rs:196](../../crates/adapters/authoring/tests/schema_differential.rs#L196)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_210_the_decoder_refuses_a_mutated_document_with_findings` ([schema_differential.rs:201](../../crates/adapters/authoring/tests/schema_differential.rs#L201)) | WIRE-210 | WIRE-210 (wire-formats) |
-| `wire_209_json_schema_output_is_deterministic` ([schema_differential.rs:214](../../crates/adapters/authoring/tests/schema_differential.rs#L214)) | WIRE-209 | WIRE-209 (wire-formats) |
-| `wire_213_every_document_in_the_schema_corpus_is_rejected_by_both` ([schema_differential.rs:239](../../crates/adapters/authoring/tests/schema_differential.rs#L239)) | WIRE-213 | WIRE-213 (wire-formats) |
+| `ins_259_parse_po_keeps_msgid_msgstr_and_line` ([po_entries.rs:25](../../crates/adapters/authoring/tests/po_entries.rs#L25)) | INS-259 | INS-259 (instrument) |
+| `ins_260_an_empty_msgstr_is_kept_and_counts_as_missing` ([po_entries.rs:33](../../crates/adapters/authoring/tests/po_entries.rs#L33)) | INS-260 | INS-260 (instrument) |
+| `ins_259_a_repeated_msgctxt_is_rejected_with_the_second_line` ([po_entries.rs:40](../../crates/adapters/authoring/tests/po_entries.rs#L40)) | INS-259 | INS-259 (instrument) |
+| `ins_259_multi_line_strings_and_escapes_round_trip` ([po_entries.rs:47](../../crates/adapters/authoring/tests/po_entries.rs#L47)) | INS-259 | INS-259 (instrument) |
+| `ins_259_parse_po_accepts_a_legacy_context` ([po_entries.rs:55](../../crates/adapters/authoring/tests/po_entries.rs#L55)) | INS-259 | INS-259 (instrument) |
+| `ins_259_check_context_accepts_instrument_and_layout_contexts` ([po_entries.rs:62](../../crates/adapters/authoring/tests/po_entries.rs#L62)) | INS-259 | INS-259 (instrument) |
+| `ins_259_check_context_rejects_other_prefixes` ([po_entries.rs:69](../../crates/adapters/authoring/tests/po_entries.rs#L69)) | INS-259 | INS-259 (instrument) |
+| `wire_210_every_example_is_accepted_by_decoder_and_json_schema` ([schema_differential.rs:142](../../crates/adapters/authoring/tests/schema_differential.rs#L142)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_compact_roster_is_judged_alike_by_decoder_and_json_schema` ([schema_differential.rs:176](../../crates/adapters/authoring/tests/schema_differential.rs#L176)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_dropping_a_required_key_is_rejected_by_both` ([schema_differential.rs:191](../../crates/adapters/authoring/tests/schema_differential.rs#L191)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_wrong_type_is_rejected_by_both` ([schema_differential.rs:196](../../crates/adapters/authoring/tests/schema_differential.rs#L196)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_a_value_outside_an_enum_is_rejected_by_both` ([schema_differential.rs:201](../../crates/adapters/authoring/tests/schema_differential.rs#L201)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_an_unknown_sibling_key_is_rejected_by_both` ([schema_differential.rs:206](../../crates/adapters/authoring/tests/schema_differential.rs#L206)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_210_the_decoder_refuses_a_mutated_document_with_findings` ([schema_differential.rs:211](../../crates/adapters/authoring/tests/schema_differential.rs#L211)) | WIRE-210 | WIRE-210 (wire-formats) |
+| `wire_209_json_schema_output_is_deterministic` ([schema_differential.rs:224](../../crates/adapters/authoring/tests/schema_differential.rs#L224)) | WIRE-209 | WIRE-209 (wire-formats) |
+| `wire_213_every_document_in_the_schema_corpus_is_rejected_by_both` ([schema_differential.rs:249](../../crates/adapters/authoring/tests/schema_differential.rs#L249)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `ins_258_a_valid_folder_loads` ([survey_resolver.rs:22](../../crates/adapters/authoring/tests/survey_resolver.rs#L22)) | INS-258 | INS-258 (instrument) |
 | `ins_258_folder_name_must_equal_survey_name` ([survey_resolver.rs:35](../../crates/adapters/authoring/tests/survey_resolver.rs#L35)) | INS-258 | INS-258 (instrument) |
 | `ins_258_layout_stem_must_equal_window` ([survey_resolver.rs:42](../../crates/adapters/authoring/tests/survey_resolver.rs#L42)) | INS-258 | INS-258 (instrument) |
@@ -59,7 +58,7 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_259_one_catalogue_serves_instrument_and_layouts` ([translation_report.rs:81](../../crates/adapters/authoring/tests/translation_report.rs#L81)) | INS-259 | INS-259 (instrument) |
 | `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:90](../../crates/adapters/authoring/tests/translation_report.rs#L90)) | INS-261 | INS-261 (instrument) |
 | `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:121](../../crates/adapters/authoring/tests/translation_report.rs#L121)) | INS-260 | INS-260 (instrument) |
-| `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:148](../../crates/adapters/authoring/tests/translation_report.rs#L148)) | INS-260 | INS-260 (instrument) |
+| `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:131](../../crates/adapters/authoring/tests/translation_report.rs#L131)) | INS-260 | INS-260 (instrument) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
@@ -95,10 +94,11 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `wire_030_036_int_008_reordered_duplicated_and_missing_frames_are_refused_at_the_chain` ([faults_export.rs:220](../../crates/apps/e2e/tests/faults_export.rs#L220)) | INT-008, WIRE-030 | INT-008 (intake); WIRE-030 (wire-formats) |
 | `int_013_sending_the_same_records_twice_changes_nothing_that_landed` ([faults_export.rs:253](../../crates/apps/e2e/tests/faults_export.rs#L253)) | INT-013 | INT-013 (intake) |
 | `del_003_a_replayed_upload_token_is_refused_but_the_records_can_be_sent_again_with_a_fresh_one` ([faults_export.rs:286](../../crates/apps/e2e/tests/faults_export.rs#L286)) | DEL-003 | DEL-003 (delivery) |
-| `wire_011_every_example_instrument_keeps_its_address` ([migration_gate.rs:143](../../crates/apps/e2e/tests/migration_gate.rs#L143)) | WIRE-011 | WIRE-011 (wire-formats) |
-| `wire_185_every_example_keeps_its_salted_fingerprint` ([migration_gate.rs:153](../../crates/apps/e2e/tests/migration_gate.rs#L153)) | WIRE-185 | WIRE-185 (wire-formats) |
-| `ins_200_every_bound_layout_keeps_its_address` ([migration_gate.rs:163](../../crates/apps/e2e/tests/migration_gate.rs#L163)) | INS-200 | INS-200 (instrument) |
-| `ins_200_expanded_documents_match_the_golden_text` ([migration_gate.rs:176](../../crates/apps/e2e/tests/migration_gate.rs#L176)) | INS-200 | INS-200 (instrument) |
+| `wire_011_every_example_instrument_keeps_its_address` ([migration_gate.rs:134](../../crates/apps/e2e/tests/migration_gate.rs#L134)) | WIRE-011 | WIRE-011 (wire-formats) |
+| `wire_185_every_example_keeps_its_salted_fingerprint` ([migration_gate.rs:144](../../crates/apps/e2e/tests/migration_gate.rs#L144)) | WIRE-185 | WIRE-185 (wire-formats) |
+| `ins_200_every_bound_layout_keeps_its_address` ([migration_gate.rs:154](../../crates/apps/e2e/tests/migration_gate.rs#L154)) | INS-200 | INS-200 (instrument) |
+| `ins_200_expanded_documents_match_the_golden_text` ([migration_gate.rs:167](../../crates/apps/e2e/tests/migration_gate.rs#L167)) | INS-200 | INS-200 (instrument) |
+| `ins_258_no_hard_coded_loader_names_an_old_example_path` ([migration_gate.rs:184](../../crates/apps/e2e/tests/migration_gate.rs#L184)) | INS-258 | INS-258 (instrument) |
 | `reg_042_dis_042_int_054_two_devices_are_registered_apart_and_intake_orders_their_records` ([multi_device.rs:33](../../crates/apps/e2e/tests/multi_device.rs#L33)) | DIS-042, INT-054, REG-042 | DIS-042 (distribution); INT-054 (intake); REG-042 (registration) |
 | `reg_042_the_device_limit_is_checked_again_when_the_words_are_confirmed` ([multi_device.rs:144](../../crates/apps/e2e/tests/multi_device.rs#L144)) | REG-042 | REG-042 (registration) |
 | `adr_0007_bundle_is_authenticated_before_it_is_decrypted_or_parsed` ([bundle_attacks.rs:120](../../crates/apps/security-tests/tests/bundle_attacks.rs#L120)) | ADR-0007 | ADR-0007 (ADR 0007) |
@@ -131,7 +131,7 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_192_scrollable_tables_are_keyboard_reachable` ([accessibility.rs:16](../../crates/apps/web/tests/accessibility.rs#L16)) | WEB-192 | WEB-192 (web-app) |
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
 | `web_170_the_whole_path_through_the_routes_and_the_device` ([e2e_web.rs:38](../../crates/apps/web/tests/e2e_web.rs#L38)) | WEB-156, WEB-170 | WEB-156 (web-app); WEB-170 (web-app) |
-| `web_120_instrument_page_matches_preview` ([parity.rs:60](../../crates/apps/web/tests/parity.rs#L60)) | WEB-120 | WEB-120 (web-app) |
+| `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
 | `wire_209_every_key_of_both_kinds_is_declared_once` ([schema.rs:1119](../../crates/kernel/src/schema.rs#L1119)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_209_the_json_schema_is_generated_from_the_same_table` ([schema.rs:1161](../../crates/kernel/src/schema.rs#L1161)) | WIRE-209 | WIRE-209 (wire-formats) |
 | `wire_211_pointer_segments_escape_tilde_and_slash` ([schema.rs:1185](../../crates/kernel/src/schema.rs#L1185)) | WIRE-211 | WIRE-211 (wire-formats) |

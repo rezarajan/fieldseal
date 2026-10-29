@@ -1,6 +1,5 @@
 //! Catalogue entries keep their `msgid` and their line (INS-259, INS-260).
 
-use fieldseal_adapters_authoring::compact;
 use fieldseal_adapters_authoring::po::{ContextKind, check_context, parse_po};
 
 const CATALOGUE: &str = r#"# Spanish.
@@ -71,12 +70,4 @@ fn ins_259_check_context_rejects_other_prefixes() {
     for bad in ["title", "steps.0.contents.1.card", "instrument/", "instrument/a..b", "instrument/a b", "layout/compact", "layout//id", "layout/compact/", "layout/compact/a/b", "layouts/compact/id"] {
         assert!(check_context(bad).is_err(), "{bad}");
     }
-}
-
-#[test]
-fn ins_259_the_compact_adapter_keeps_the_old_map_and_drops_empty_msgstr() {
-    let map = compact::parse_po(CATALOGUE).expect("parses");
-    assert_eq!(map.len(), 2);
-    assert_eq!(map.get("instrument/title").map(String::as_str), Some("Agua en casa"));
-    assert!(!map.contains_key("instrument/water"));
 }

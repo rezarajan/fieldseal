@@ -1,35 +1,44 @@
 # Presentation only (ADR 0033), in the compact dialect (ADR 0040): partitions the survey, never reorders it.
-layout: {name: household-water-access-compact, instrument: ../instruments/household-water-access.yaml, window: compact}
+layout: {name: household-water-access-compact, instrument: ../instrument.yaml, window: compact}
 steps:
-- title: The household
+- id: household
+  title: The household
   contents:
   - {element: welcome}
   - card:
+      id: who-lives-here
       title: Who lives here
       contents:
       - show: [household.members, household.repaired_on]
-- title: Water
+- id: water
+  title: Water
   navigation: free
   contents:
   - card:
+      id: the-source
       title: The source
       contents:
       - show: [water.source, water.minutes_to_source]
   - card:
+      id: use-and-treatment
       title: Use and treatment
       contents:
       - show: [water.litres_per_day, water.treatments]
   - card:
+      id: cost
       title: Cost
       contents:
       - {element: water.monthly_cost}
-- title: Sanitation and hygiene
+- id: sanitation-and-hygiene
+  title: Sanitation and hygiene
   contents:
   - card:
+      id: the-toilet
       title: The toilet
       contents:
       - {group: sanitation}
   - card:
+      id: hygiene
       title: Hygiene
       contents:
       - {group: hygiene}

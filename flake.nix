@@ -506,7 +506,7 @@
 
       checks = forAllSystems (e: e.checks);
 
-      # nix run path:.#fieldseal -- instrument validate examples/instruments/school-meals-baseline.yaml
+      # nix run path:.#fieldseal -- instrument validate examples/surveys/school-meals-baseline/instrument.yaml
       packages = forAllSystems (
         e:
         {

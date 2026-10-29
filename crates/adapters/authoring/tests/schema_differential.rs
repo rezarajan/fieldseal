@@ -59,14 +59,24 @@ impl Validators {
 /// Every compact document under `examples/`, by path.
 fn examples() -> Vec<(PathBuf, Value, DocKind)> {
     let mut out = Vec::new();
-    for dir in ["instruments", "layouts", "rosters"] {
-        let mut files: Vec<_> = std::fs::read_dir(repo().join("examples").join(dir)).expect("examples").filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "yaml")).collect();
+    let yaml_in = |dir: PathBuf| -> Vec<PathBuf> {
+        let mut files: Vec<_> = std::fs::read_dir(dir).expect("examples").filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "yaml")).collect();
         files.sort();
-        for path in files {
-            let doc = decode_raw(&std::fs::read(&path).expect("readable"), Format::Yaml).expect("an example decodes");
-            if let Some(kind) = DocKind::detect(&doc) {
-                out.push((path, doc, kind));
-            }
+        files
+    };
+    let examples = repo().join("examples");
+    let mut files = Vec::new();
+    let mut surveys: Vec<_> = std::fs::read_dir(examples.join("surveys")).expect("examples").filter_map(Result::ok).map(|e| e.path()).collect();
+    surveys.sort();
+    for survey in surveys {
+        files.push(survey.join("instrument.yaml"));
+        files.extend(yaml_in(survey.join("layouts")));
+    }
+    files.extend(yaml_in(examples.join("rosters")));
+    for path in files {
+        let doc = decode_raw(&std::fs::read(&path).expect("readable"), Format::Yaml).expect("an example decodes");
+        if let Some(kind) = DocKind::detect(&doc) {
+            out.push((path, doc, kind));
         }
     }
     out

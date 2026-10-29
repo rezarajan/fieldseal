@@ -97,10 +97,9 @@ spec:
     allowedSources: [ "https://git.example.org/authority/artefacts" ]
     requireTransparencyLog: true
 YAML
-cp "$EX/instruments/household-water-access.yaml" water.yaml
-mkdir -p i18n/water && cp "$EX"/instruments/i18n/household-water-access/*.po i18n/water/   # its translations (ADR 0040)
+mkdir -p water && cp -r "$EX/surveys/household-water-access/instrument.yaml" "$EX/surveys/household-water-access/i18n" water/   # the instrument and its translations (ADR 0041)
 export FIELDSEAL_ADAPTERS=files FIELDSEAL_TRUST_BUNDLE=trust-bundle.bundle FIELDSEAL_POLICY=policy.yaml
-PROV="$(FIELDSEAL_SIGNER=soft:builder capture artefact provenance water.yaml --source abc123 --reviewers reviewer-1:es,reviewer-2 --at 2026-02-01)"
+PROV="$(FIELDSEAL_SIGNER=soft:builder capture artefact provenance water/instrument.yaml --out water.publication --source abc123 --reviewers reviewer-1:es,reviewer-2 --at 2026-02-01)"
 ADDRESS="$(printf '%s' "$PROV" | sed -n 's/.*(\(sha256:[0-9a-f]*\)).*/\1/p' | head -1)"
 FIELDSEAL_SIGNER=soft:pub-alice run artefact sign water.publication
 FIELDSEAL_SIGNER=soft:pub-bob run artefact sign water.publication
@@ -126,7 +125,7 @@ unset FIELDSEAL_TRUST_BUNDLE FIELDSEAL_FACTORY_URL FIELDSEAL_SIGNER
 # -- 4. Build and check a bundle ---------------------------------------------------------------
 stage "4. A bundle sealed to the device, verified the way the device verifies it (DIS-030)"
 mkdir -p out
-BUILD="$(capture bundle build --instrument "$EX/instruments/household-water-access.yaml" --layout "$EX/layouts/household-water-access.compact.yaml" --roster "$EX/rosters/household-water-access.yaml" --out-dir out/bundle --time 1800000000000 --allow-unattested)"
+BUILD="$(capture bundle build --instrument "$EX/surveys/household-water-access/instrument.yaml" --layout "$EX/surveys/household-water-access/layouts/compact.yaml" --roster "$EX/rosters/village-a.yaml" --out-dir out/bundle --time 1800000000000 --allow-unattested)"
 BUNDLE="$(ls out/bundle/*.fsb)"
 run bundle inspect "$BUNDLE" --trust out/bundle/trust-bundle.cbor --now 1800172800000
 VB="$(capture bundle verify "$BUNDLE" --trust out/bundle/trust-bundle.cbor --device-file out/bundle/device.txt --now 1800172800000)"
@@ -160,9 +159,9 @@ note "damage: a flipped byte failed verification (exit $BROKEN); repair from par
 
 # -- 6. The intake gate ------------------------------------------------------------------------
 stage "6. Intake: the gate and the long-format landing (INT)"
-run intake contract "$EX/instruments/household-water-access.yaml" --out out/landing
+run intake contract "$EX/surveys/household-water-access/instrument.yaml" --out out/landing
 PR="$(capture intake practice --out out/practice.fieldseal)"
-GATE="$(capture intake run out/practice.fieldseal --device practice-device --seed 7 --instrument "$EX/instruments/household-water-access.yaml" --out out/landing)"
+GATE="$(capture intake run out/practice.fieldseal --device practice-device --seed 7 --instrument "$EX/surveys/household-water-access/instrument.yaml" --out out/landing)"
 note "intake: $(printf '%s' "$GATE" | head -1); $(printf '%s' "$GATE" | grep 'landed' | sed 's/^ *//')"
 note "landing directory: out/landing ($(find out/landing -type f | wc -l | tr -d ' ') file(s), data contract included)"
 

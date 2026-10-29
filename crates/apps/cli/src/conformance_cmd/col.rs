@@ -34,19 +34,8 @@ const PIN: &str = "246810";
 const WATER: &str = "household-water-access";
 const MEALS: &str = "school-meals-baseline";
 
-fn example(path: &str) -> Value {
-    let bytes: &[u8] = match path {
-        "instruments/household-water-access.yaml" => include_bytes!("../../../../../examples/instruments/household-water-access.yaml"),
-        "layouts/household-water-access.compact.yaml" => include_bytes!("../../../../../examples/layouts/household-water-access.compact.yaml"),
-        other => panic!("example {other} is not embedded"),
-    };
-    // Each embedded example carries its Spanish catalogue (ADR 0040).
-    let po = match path {
-        "instruments/household-water-access.yaml" => include_str!("../../../../../examples/instruments/i18n/household-water-access/es.po"),
-        _ => include_str!("../../../../../examples/layouts/i18n/household-water-access.compact/es.po"),
-    };
-    let catalogues = [("es".to_owned(), fieldseal_adapters_authoring::compact::parse_po(po).expect("catalogue"))].into_iter().collect();
-    fieldseal_adapters_authoring::compact::expand_with(fieldseal_adapters_authoring::decode_raw(bytes, Format::Yaml).expect("example decodes"), &catalogues).expect("example expands")
+fn example(name: &str) -> crate::embedded::Embedded {
+    crate::embedded::survey(name).expect("the example survey expands")
 }
 
 fn pin(d: &str) -> RuntimePin {
@@ -120,8 +109,9 @@ impl World {
 
     /// A registered bundle file for the runtime's tenancy.
     fn bundle(&self, rt: &Runtime<'_>, instrument: &str, layouts: &[&str], rosters: Vec<HeldRoster>, register: bool) -> Vec<u8> {
-        let doc = example(&format!("instruments/{instrument}.yaml"));
-        let layouts: Vec<Value> = layouts.iter().map(|l| example(&format!("layouts/{l}.yaml"))).collect();
+        let survey = example(instrument);
+        let doc = survey.instrument.clone();
+        let layouts: Vec<Value> = layouts.iter().map(|window| survey.layout(window).unwrap_or_else(|| panic!("{instrument} has no {window} layout")).clone()).collect();
         let contents = self
             .authority
             .bundle(rt.tenancy().expect("tenancy"), BundleSpec { instrument: &doc, layouts: &layouts, rosters, register, issued_day: 15, seq: 1 })
@@ -138,7 +128,7 @@ fn water_people() -> Vec<(&'static str, ConsentState)> {
 fn water(w: &World) -> Runtime<'_> {
     let mut rt = w.runtime();
     rt.create_tenancy(&pin(PIN)).expect("create");
-    let file = w.bundle(&rt, WATER, &["household-water-access.compact"], vec![w.roster("village-a", &water_people())], true);
+    let file = w.bundle(&rt, WATER, &["compact"], vec![w.roster("village-a", &water_people())], true);
     rt.import_bundle(&file).expect("import");
     rt
 }
@@ -222,7 +212,7 @@ fn import_with_tree_head(issued_day: u64, edit: impl FnOnce(&mut fieldseal_publi
     let w = World::new();
     let mut rt = w.runtime();
     rt.create_tenancy(&pin(PIN)).unwrap();
-    let doc = example("instruments/household-water-access.yaml");
+    let doc = example(WATER).instrument;
     let mut contents = w
         .authority
         .bundle(rt.tenancy().unwrap(), BundleSpec { instrument: &doc, layouts: &[], rosters: vec![], register: true, issued_day, seq: 1 })

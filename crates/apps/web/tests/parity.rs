@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use fieldseal_adapters_authoring::survey::SurveyTree;
 use fieldseal_adapters_html::{Page, render_html};
 use fieldseal_instrument::application::{
     LayoutBinding, LayoutOptions, PlanLayout, PlanRequest, ValidationOptions, compile_render_plan, select_layout, validate_instrument_with, validate_layout_with,
@@ -61,10 +62,9 @@ fn web_120_instrument_page_matches_preview() {
     let state = AppState { examples_dir: examples(), ..AppState::default() };
     let mut compared = 0;
     for stem in ["school-meals-baseline", "household-water-access"] {
-        let instrument = examples().join(format!("instruments/{stem}.yaml"));
-        let mut layout_files: Vec<PathBuf> =
-            std::fs::read_dir(examples().join("layouts")).unwrap().map(|e| e.unwrap().path()).filter(|p| p.file_name().unwrap().to_str().unwrap().starts_with(&format!("{stem}."))).collect();
-        layout_files.sort();
+        let survey = SurveyTree::open(&examples().join("surveys")).unwrap().survey(stem).unwrap();
+        let instrument = survey.instrument.clone();
+        let layout_files: Vec<PathBuf> = survey.layouts.iter().map(|l| l.path.clone()).collect();
         assert!(!layout_files.is_empty());
         let languages: Vec<String> = {
             let page = dispatch(&state, &Request::get(&format!("/instruments/{stem}"))).body_text();

@@ -44,18 +44,26 @@ log_size() { curl -fsS --max-time 5 "$FIELDSEAL_TRANSLOG_URL/checkpoint" | sed -
 # can prove it; if the proof still holds against the log, nothing is signed or appended.
 # Sets PUBLISHED to "published" or "skipped". The result is kept at /published/<name>.published.
 publish_artefact() {
-  local name="$1" file="$2" mark="/clistate/$1.address" address prov
+  local name="$1" file="$2" mark="/clistate/$1.address" address prov doc="$1.yaml"
   mkdir -p "$W/publish/$name"; cd "$W/publish/$name"
-  cat "$file" > "$name.yaml"
-  # A compact survey's translations travel with it (ADR 0040): i18n/<name>/<lang>.po.
-  local i18n; i18n="$(dirname "$file")/i18n/$(basename "$file" .yaml)"
-  if [ -d "$i18n" ]; then mkdir -p "i18n/$name"; for po in "$i18n"/*.po; do cat "$po" > "i18n/$name/$(basename "$po")"; done; fi
+  if [ "$(basename "$file")" = instrument.yaml ]; then
+    # A survey is published from a folder (ADR 0041): its instrument and catalogues travel together.
+    doc=instrument.yaml
+    cat "$file" > "$doc"
+    local po
+    for po in "$(dirname "$file")"/i18n/*.po; do
+      [ -f "$po" ] || continue
+      mkdir -p i18n; cat "$po" > "i18n/$(basename "$po")"
+    done
+  else
+    cat "$file" > "$doc"
+  fi
   if [ -s "$mark" ] && address="$(cat "$mark")" && [ -s "/clistate/published/$name.published" ] && run log prove "$address"; then
     echo "already published (skipped)"
     PUBLISHED=skipped
   else
     # The custody directories are on a read-only mount: the CLI ignores usage-log write failures.
-    prov="$(FIELDSEAL_SIGNER=soft:/authority/publish/builder capture artefact provenance "$name.yaml" --source abc123 --reviewers reviewer-1:es,reviewer-2 --at "$(date -u +%F)")"
+    prov="$(FIELDSEAL_SIGNER=soft:/authority/publish/builder capture artefact provenance "$doc" --out "$name.publication" --source abc123 --reviewers reviewer-1:es,reviewer-2 --at "$(date -u +%F)")"
     address="$(printf '%s' "$prov" | sed -n 's/.*(\(sha256:[0-9a-f]*\)).*/\1/p' | head -1)"
     [ -n "$address" ] || { echo "no artefact address in the provenance output" >&2; exit 1; }
     FIELDSEAL_SIGNER=soft:/authority/publish/pub-alice run artefact sign "$name.publication"
@@ -91,9 +99,9 @@ spec:
     requireTransparencyLog: true
 YAML
   export FIELDSEAL_TRUST_BUNDLE="$TB" FIELDSEAL_POLICY="$d/deployment-policy.yaml"
-  publish_artefact household-water-access "$EX/instruments/household-water-access.yaml"
+  publish_artefact household-water-access "$EX/surveys/household-water-access/instrument.yaml"
   INSTRUMENT_STATE="$PUBLISHED"; INSTRUMENT_ADDRESS="$ADDRESS"
-  publish_artefact school-meals-baseline "$EX/instruments/school-meals-baseline.yaml"
+  publish_artefact school-meals-baseline "$EX/surveys/school-meals-baseline/instrument.yaml"
   publish_artefact deployment-policy "$d/deployment-policy.yaml"
   POLICY_STATE="$PUBLISHED"
   unset FIELDSEAL_TRUST_BUNDLE FIELDSEAL_POLICY
@@ -143,7 +151,7 @@ bundle() {
   rm -rf "$W/bundle"
   run bundle build --stack --device-dir /device --trust-bundle "$TB" --custody /authority/online \
     --publication "/published/$SURVEY.published" --policy-publication /published/deployment-policy.published \
-    --roster "$EX/rosters/school-meals-baseline.yaml" --roster "$EX/rosters/household-water-access.yaml" --tenancy-dir /factory-state --state /clistate \
+    --roster "$EX/rosters/cohort-a.yaml" --roster "$EX/rosters/village-a.yaml" --tenancy-dir /factory-state --state /clistate \
     --issued-dir /published/rosters --out-dir "$W/bundle" --allow-unattested
   local fsbs=("$W"/bundle/*.fsb) fsb
   fsb="${fsbs[0]}"
@@ -184,7 +192,7 @@ deliver() {
 # 7. What the intake landed for this device.
 landing() {
   stage "7. The intake data contract and what landed for this device"
-  run intake contract "$EX/instruments/$SURVEY.yaml" --out "$W/contract"
+  run intake contract "$EX/surveys/$SURVEY/instrument.yaml" --out "$W/contract"
   echo "-- /landing"; ls -l /landing
   local rows
   rows="$(awk -F, -v t="$TENANCY" 'NR > 1 && $12 == t' /landing/observations.csv | wc -l | tr -d ' ')"
@@ -257,7 +265,7 @@ step_fetch() {
   mv "$OUT/.fetch.published" "$base.published"; mv "$OUT/.fetch.yaml" "$base.yaml"
   echo "fetched $kind $name $version ($(printf '%s' "$json" | jq -r .address)) into deploy/local/.out/$(basename "$base").{published,yaml}"
   [ "$kind" = Instrument ] || return 0
-  layout="$EX/layouts/$name.compact.yaml"
+  layout="$EX/surveys/$name/layouts/compact.yaml"
   if [ -f "$layout" ]; then
     run instrument preview "$base.yaml" --layout "$layout" --window compact -o "$base.html"
   else

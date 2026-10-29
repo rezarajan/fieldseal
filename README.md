@@ -27,7 +27,7 @@ Start at [`docs/index.md`](docs/index.md):
 
 - crates: [crates/README.md](crates/README.md) - The Cargo workspace by layer: kernel, the ten bounded contexts, adapters, bindings and apps.
 - tools: [tools/README.md](tools/README.md) - Build, check, test-budget, local-stack and release scripts, and the [browser and accessibility tests](tools/browser-tests/README.md).
-- examples: [examples/README.md](examples/README.md) - Sample instruments, layouts, rosters, scenarios and deployment manifests used by the tests, the demo and the tutorial (data, no code).
+- examples: [examples/README.md](examples/README.md) - Sample surveys (instrument, layouts and translations in one folder each), rosters, scenarios and deployment manifests used by the tests, the demo and the tutorial (data, no code).
 - deploy: `deploy/local` - The compose file, container-engine configuration and Keycloak realm for the local stack (configuration, no code).
 - docs: [docs/index.md](docs/index.md) - Explanations, how-tos, the reference (specs, glossary) and the tutorial.
 - CI and build environment: `.github/workflows` (`ci.yml`, `build.yml`), `.config/nextest.toml` (the nextest profile behind the 20 s test budget), `Containerfile` (runs `tools/build.sh` and `tools/check-portable.sh`), and `flake.nix` (the dev shell, flake checks and the wasm bundle).

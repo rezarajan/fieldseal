@@ -7,6 +7,11 @@
 #                                kept apart from any other Podman or Docker data
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCAL="$ROOT/deploy/local"
+# The example survey folders and rosters: the only place a script names these roots.
+# shellcheck disable=SC2034
+SURVEYS="$ROOT/examples/surveys"
+# shellcheck disable=SC2034
+ROSTERS="$ROOT/examples/rosters"
 ENGINE="${FIELDSEAL_CONTAINER_ENGINE:-docker}"
 
 say() { printf '%s\n' "$*"; }

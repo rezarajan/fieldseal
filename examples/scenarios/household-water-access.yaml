@@ -10,8 +10,8 @@
 # memory; the output never shows them (CLI-008).
 pin: "246810"
 seed: 3
-instrument: ../instruments/household-water-access.yaml
-layouts: [../layouts/household-water-access.compact.yaml]
+survey: ../surveys/household-water-access
+layouts: [compact]
 languages: [es]
 window: compact
 rosters:

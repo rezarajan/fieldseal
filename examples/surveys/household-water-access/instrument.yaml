@@ -1,5 +1,5 @@
 # Household water, sanitation and hygiene, in the compact dialect (ADR 0040). English is
-# written here; Spanish is in i18n/household-water-access/es.po. Nothing is derived (ADR 0037):
+# written here; Spanish is in i18n/es.po. Nothing is derived (ADR 0037):
 # the usual-use check divides the litres by the members inside its condition.
 survey: {name: household-water-access, version: 0.1.0}
 language: en

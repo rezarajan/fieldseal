@@ -35,5 +35,8 @@ fieldseal-adapters-file.workspace = true
 fieldseal-adapters-factory-http = { path = "../../adapters/factory-http" }
 fieldseal-adapters-upload-http.workspace = true
 
+[build-dependencies]
+fieldseal-adapters-authoring.workspace = true
+
 [dev-dependencies]
 tiny_http = "0.12"

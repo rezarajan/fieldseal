@@ -21,7 +21,7 @@ FIELDSEAL_WEB_WASM_DIR=target/web FIELDSEAL_WEB_DEMO_AUTHORITY=true \
   cargo run -p fieldseal-web
 ```
 
-Open `http://127.0.0.1:8090`. All settings are environment variables, listed at the top of `crates/apps/web/src/main.rs`. Without `FIELDSEAL_WEB_DEMO_AUTHORITY` the Instruments page works from `examples/` alone and the other pages say what they need.
+Open `http://127.0.0.1:8090`. All settings are environment variables, listed at the top of `crates/apps/web/src/main.rs`. Without `FIELDSEAL_WEB_DEMO_AUTHORITY` the Instruments page works from `examples/` alone (a `surveys/<name>/` folder for each survey, `rosters/<cohort>.yaml` for each roster; `FIELDSEAL_WEB_SURVEY_COHORTS` says which cohort's roster a survey uses) and the other pages say what they need.
 
 ## What each page does
 

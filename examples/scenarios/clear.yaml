@@ -8,7 +8,7 @@
 # high-water mark (COL-080); locking and unlocking; and closing the tenancy (COL-006).
 pin: "246810"
 seed: 9
-instrument: ../instruments/household-water-access.yaml
+survey: ../surveys/household-water-access
 layouts: []
 rosters:
   - cohort: village-b

@@ -16,6 +16,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 
+use fieldseal_adapters_authoring::{LoadedSurvey, SurveyTree};
 use fieldseal_adapters_memory::bundle_opener::FileBundleOpener;
 use fieldseal_adapters_memory::collection::{SIMULATION_T0, SimulatedDevice};
 use fieldseal_adapters_memory::delivery::{MemoryFileAccess, MemoryPopLedger, MemoryPrivateStorage, MemoryRegistrationRecords, MemoryShareTarget};
@@ -62,52 +63,27 @@ use fieldseal_trust::ports::{SecureKeyStore, SourceRng};
 /// The collector's PIN in every scenario.
 pub const PIN: &str = "246810";
 
-/// The root of the repository's `examples/` directory.
+/// The root of the repository's survey folders, `examples/surveys/`.
 pub fn examples() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../examples")
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../examples/surveys")
 }
 
-/// Decodes a YAML example, for example `instruments/household-water-access.yaml`.
-pub fn example(path: &str) -> Value {
-    let full = examples().join(path);
-    fieldseal_adapters_authoring::decode_path(&full).unwrap_or_else(|e| panic!("{}: {e}", full.display()))
+/// Loads the example survey `name` through the resolver: its expanded instrument and layouts.
+pub fn survey(name: &str) -> LoadedSurvey {
+    let tree = SurveyTree::open(&examples()).unwrap_or_else(|e| panic!("{e}"));
+    let found = tree.survey(name).unwrap_or_else(|e| panic!("{e}"));
+    found.load().unwrap_or_else(|errors| panic!("{name}: {}", errors.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n")))
+}
+
+/// The expanded layout of the example survey `name` for the window class `window`.
+pub fn survey_layout(name: &str, window: &str) -> Value {
+    survey(name).layouts.into_iter().find(|(w, _)| w == window).unwrap_or_else(|| panic!("{name} has no {window} layout")).1
 }
 
 /// The salt a survey is published with in the migration gate and the demo: a fixed function of
 /// its name, so the salted fingerprint of an example is the same on every run.
 pub fn pinned_salt(name: &str) -> Salt {
     DemoWorld::salt_for(name)
-}
-
-/// Where one example survey's sources live, relative to [`examples`].
-pub struct SurveySources {
-    /// The instrument source.
-    pub instrument: &'static str,
-    /// Each layout as (window class, source).
-    pub layouts: &'static [(&'static str, &'static str)],
-    /// The translation catalogues the sources are expanded with.
-    pub catalogues: &'static [&'static str],
-}
-
-/// The sources of the example survey `name`, at the paths they have today.
-pub fn survey_sources(name: &str) -> SurveySources {
-    match name {
-        "household-water-access" => SurveySources {
-            instrument: "instruments/household-water-access.yaml",
-            layouts: &[("compact", "layouts/household-water-access.compact.yaml")],
-            catalogues: &["instruments/i18n/household-water-access/es.po", "layouts/i18n/household-water-access.compact/es.po"],
-        },
-        "school-meals-baseline" => SurveySources {
-            instrument: "instruments/school-meals-baseline.yaml",
-            layouts: &[("compact", "layouts/school-meals-baseline.compact.yaml"), ("expanded", "layouts/school-meals-baseline.expanded.yaml")],
-            catalogues: &[
-                "instruments/i18n/school-meals-baseline/es.po",
-                "layouts/i18n/school-meals-baseline.compact/es.po",
-                "layouts/i18n/school-meals-baseline.expanded/es.po",
-            ],
-        },
-        other => panic!("no example survey called {other}"),
-    }
 }
 
 /// An expanded document as pretty-printed canonical JSON: keys sorted, two-space indent, a
@@ -176,8 +152,8 @@ pub fn profile() -> RuntimeProfile {
 /// The sample instrument: the household water-access example with consent required (so the
 /// flow can exercise attestation), published once per [`Site`]. Languages are `en` and `es`.
 pub fn sample_instrument_document() -> Value {
-    let mut doc = example("instruments/household-water-access.yaml");
-    let meals = example("instruments/school-meals-baseline.yaml");
+    let mut doc = survey("household-water-access").instrument;
+    let meals = survey("school-meals-baseline").instrument;
     let consent = meals.as_map().and_then(|m| m.get("spec")).and_then(Value::as_map).and_then(|m| m.get("consent")).cloned().expect("school meals consent block");
     // The statement is shown in both languages the instrument is complete in.
     let consent = match consent {
@@ -254,7 +230,7 @@ impl Site {
             .publish(ArtefactKind::Instrument, &meta(&doc, "name"), &meta(&doc, "version"), cbor::encode(&doc).expect("encodes"), Some(DemoWorld::salt_for(&meta(&doc, "name"))))
             .expect("the instrument publishes with both publishers' signatures");
         // A layout names its instrument by fingerprint once canonicalised (INS-200).
-        let mut layout_doc = example("layouts/household-water-access.compact.yaml");
+        let mut layout_doc = survey_layout("household-water-access", "compact");
         if let Value::Map(root) = &mut layout_doc
             && let Some(Value::Map(spec)) = root.get_mut("spec")
         {

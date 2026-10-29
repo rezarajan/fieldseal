@@ -114,9 +114,10 @@ check:
 migration-gate:
     cargo nextest run -p fieldseal-e2e --test migration_gate
 
-# Workspace tests (in parallel, within the 20 s budget), clippy, the architecture check and the example licence check.
+# Workspace tests (in parallel, within the 20 s budget), clippy, the architecture check, the example path check and the example licence check.
 test:
     python3 tools/test-inventory.py --check
+    python3 tools/check-example-paths.py
     tools/test-budget.sh
     cargo clippy --workspace --all-targets --locked -- -D warnings
     python3 tools/check-architecture.py

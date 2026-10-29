@@ -313,6 +313,32 @@ impl SurveyTree {
     }
 }
 
+/// The catalogues of the survey folder that `path` is in: its `instrument.yaml` or a file of its
+/// `layouts/`. A file anywhere else has none. Contexts are not checked here; [`SurveyRef::load`]
+/// does that.
+pub(crate) fn catalogues_of(path: &Path) -> Result<EntryCatalogues, AuthoringError> {
+    let parent = path.parent().unwrap_or(Path::new(""));
+    let dir = if path.file_name().is_some_and(|n| n == "instrument.yaml") {
+        parent
+    } else if parent.file_name().is_some_and(|n| n == "layouts") && parent.parent().is_some_and(|d| d.join("instrument.yaml").is_file()) {
+        parent.parent().unwrap_or(parent)
+    } else {
+        return Ok(EntryCatalogues::new());
+    };
+    let i18n = dir.join("i18n");
+    let mut catalogues = EntryCatalogues::new();
+    let Ok(files) = list(&i18n, &i18n.display().to_string()) else { return Ok(catalogues) };
+    for (file, is_dir) in files {
+        let Some(language) = file.strip_suffix(".po").filter(|l| !is_dir && !l.is_empty()) else { continue };
+        let po_path = i18n.join(&file);
+        let at = |e: String| AuthoringError::new(ErrorKind::Encoding, 0, 0, format!("{}: {e}", po_path.display()));
+        let text = std::fs::read_to_string(&po_path).map_err(|e| at(e.to_string()))?;
+        let entries = po::parse_po(&text).map_err(|e| AuthoringError::new(e.kind, e.line, e.column, format!("{}: {}", po_path.display(), e.message)))?;
+        catalogues.insert(language.to_owned(), entries.into_iter().map(|e| (e.msgctxt.clone(), e)).collect());
+    }
+    Ok(catalogues)
+}
+
 /// Where a source text is, for the report.
 struct Source {
     key: String,
@@ -548,21 +574,6 @@ fn report(sources: &[Source], declared: &BTreeSet<String>, entries: &EntryCatalo
         out.extend(orphans.into_iter().map(|e| finding(FindingKind::Orphaned, &file, e.line, &e.msgctxt, None, None)));
     }
     out
-}
-
-/// The translation report of a compact document whose catalogues are still in the legacy form
-/// (`msgctxt` is the text's path, as in the `examples/` tree before the move to survey folders).
-/// The positions of missing texts are 0. Removed with the legacy catalogues in Phase 4.
-///
-/// # Errors
-///
-/// The [`AuthoringError`] of a document that does not expand.
-pub fn legacy_translation_report(doc: Value, catalogues: &EntryCatalogues) -> Result<Vec<Finding>, AuthoringError> {
-    let declared = declared_languages(&doc);
-    let texts = Texts::legacy_entries(catalogues);
-    let (_, seen) = compact::expand_seen(doc, &texts, None, None)?;
-    let sources: Vec<Source> = seen.into_iter().map(|s| Source { key: s.key, text: s.text, file: String::new(), line: 0 }).collect();
-    Ok(report(&sources, &declared, catalogues))
 }
 
 /// One roster file, read for its cohort and version and never for its file name.

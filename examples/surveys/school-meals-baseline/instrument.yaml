@@ -1,6 +1,6 @@
 # A school meals baseline survey, in the compact dialect (ADR 0040). It was written for this
 # project and is not derived from any other questionnaire. English is written here; Spanish is in
-# i18n/school-meals-baseline/es.po.
+# i18n/es.po.
 survey: {name: school-meals-baseline, version: 1.0.0}
 language: en
 title: School meals baseline survey

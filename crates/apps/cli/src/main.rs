@@ -21,6 +21,7 @@ mod conformance_cmd;
 mod composition;
 mod deployment_cmd;
 mod device;
+mod embedded;
 mod device_dir;
 mod device_export;
 mod device_delivery;

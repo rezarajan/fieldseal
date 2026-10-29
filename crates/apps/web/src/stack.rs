@@ -86,8 +86,11 @@ pub fn bundle(cli: &str, tenancy: &str, survey: &str) -> Result<Vec<u8>, String>
         .args(["--tenancy-dir", FACTORY_STATE, "--state", CLI_STATE, "--issued-dir", &format!("{PUBLISHED}/rosters")])
         .args(["--allow-unattested", "--out-dir"])
         .arg(&out);
-    for roster in std::fs::read_dir(ROSTERS).map_err(|e| format!("{ROSTERS}: {e}"))?.flatten() {
-        cmd.arg("--roster").arg(roster.path());
+    // Only files are rosters: a directory such as `rosters/next/` is not one.
+    for roster in std::fs::read_dir(ROSTERS).map_err(|e| format!("{ROSTERS}: {e}"))?.flatten().map(|e| e.path()) {
+        if roster.is_file() && roster.extension().is_some_and(|x| x == "yaml" || x == "yml" || x == "json") {
+            cmd.arg("--roster").arg(roster);
+        }
     }
     let run = cmd.output().map_err(|e| format!("{cli}: {e}"))?;
     if !run.status.success() {

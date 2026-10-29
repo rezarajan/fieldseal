@@ -42,7 +42,7 @@ pub fn spec_layout() -> Value {
 "#)
 }
 
-/// A reduced school-meals instrument with the structure of `examples/instruments/school-meals-baseline.yaml`:
+/// A reduced school-meals instrument with the structure of `examples/surveys/school-meals-baseline/instrument.yaml`:
 /// a demographics group, a diet group of two displays and repeat categories, and a top-level
 /// end display.
 pub fn school_meals() -> Value {
@@ -116,7 +116,7 @@ pub fn school_meals() -> Value {
 "#)
 }
 
-/// The equivalent of `examples/layouts/school-meals-baseline.expanded.yaml` for [`school_meals`].
+/// The equivalent of `examples/surveys/school-meals-baseline/layouts/expanded.yaml` for [`school_meals`].
 pub fn school_meals_expanded() -> Value {
     doc(r#"
 {

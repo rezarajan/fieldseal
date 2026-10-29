@@ -3,8 +3,8 @@
 use std::path::{Path, PathBuf};
 
 use fieldseal_adapters_authoring::compact::{self, expand_with_entries};
-use fieldseal_adapters_authoring::po::{EntryCatalogues, parse_po};
-use fieldseal_adapters_authoring::survey::{Finding, FindingKind, ResolveKind, legacy_translation_report};
+use fieldseal_adapters_authoring::po::EntryCatalogues;
+use fieldseal_adapters_authoring::survey::{Finding, FindingKind, ResolveKind};
 use fieldseal_adapters_authoring::{Format, SurveyTree, Value, decode_raw};
 
 fn fixtures() -> PathBuf {
@@ -115,33 +115,16 @@ fn strip_ids(v: &mut Value) {
     }
 }
 
-/// The current examples are still in the legacy tree; their catalogues must have no stale or
-/// orphaned entry, so treating a stale entry as missing cannot change a signed address.
+/// The example catalogues must have no stale, orphaned or missing entry, so treating a stale entry
+/// as missing cannot change a signed address.
 #[test]
 fn ins_260_the_example_catalogues_have_no_stale_entries() {
-    let examples = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../examples");
-    let catalogues = |dir: &Path| -> EntryCatalogues {
-        let mut c = EntryCatalogues::new();
-        let Ok(read) = std::fs::read_dir(dir) else { return c };
-        for entry in read.map(|e| e.expect("entry").path()).filter(|p| p.extension().is_some_and(|e| e == "po")) {
-            let lang = entry.file_stem().and_then(|s| s.to_str()).expect("stem").to_owned();
-            let entries = parse_po(&std::fs::read_to_string(&entry).expect("po")).expect("parses");
-            c.insert(lang, entries.into_iter().map(|e| (e.msgctxt.clone(), e)).collect());
-        }
-        c
-    };
-    let mut checked = 0;
-    for (dir, i18n) in [("instruments", "instruments/i18n"), ("layouts", "layouts/i18n")] {
-        for file in std::fs::read_dir(examples.join(dir)).expect("dir").map(|e| e.expect("entry").path()).filter(|p| p.extension().is_some_and(|e| e == "yaml")) {
-            let stem = file.file_stem().and_then(|s| s.to_str()).expect("stem");
-            let doc = decode_raw(&std::fs::read(&file).expect("file"), Format::Yaml).expect("decodes");
-            let findings = legacy_translation_report(doc, &catalogues(&examples.join(i18n).join(stem))).expect("expands");
-            let bad: Vec<_> = findings.iter().filter(|f| matches!(f.kind, FindingKind::Stale | FindingKind::Orphaned | FindingKind::NoCatalogue)).collect();
-            assert!(bad.is_empty(), "{}: {bad:?}", file.display());
-            checked += 1;
-        }
+    let tree = SurveyTree::open(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../examples/surveys")).expect("open");
+    assert_eq!(tree.names().len(), 2, "two example surveys");
+    for name in tree.names() {
+        let loaded = tree.survey(name).expect("folder").load().unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        assert!(loaded.translation_report.is_empty(), "{name}: {:?}", loaded.translation_report);
     }
-    assert_eq!(checked, 5, "two instruments and three layouts");
 }
 
 #[test]

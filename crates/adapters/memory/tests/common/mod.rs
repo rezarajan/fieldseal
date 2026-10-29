@@ -79,8 +79,9 @@ pub fn nr(code: &str) -> Value {
 }
 
 pub fn load(name: &str) -> Instrument {
-    let v = fieldseal_adapters_authoring::decode_path(std::path::Path::new(&format!("{}/../../../examples/instruments/{name}.yaml", env!("CARGO_MANIFEST_DIR")))).expect("decodes");
-    validate_instrument(&v).expect("valid").instrument
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../examples/surveys");
+    let loaded = fieldseal_adapters_authoring::SurveyTree::open(&root).and_then(|tree| tree.survey(name)).expect("the survey folder").load().expect("resolves");
+    validate_instrument(&loaded.instrument).expect("valid").instrument
 }
 
 pub fn fingerprint_of(i: &Instrument) -> Fingerprint {

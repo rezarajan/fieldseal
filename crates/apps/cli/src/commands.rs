@@ -107,11 +107,13 @@ type Result<T = ()> = std::result::Result<T, UsageError>;
 /// Reads and decodes an authoring document. On failure the outcome records why (not found:
 /// 4; not decodable: a finding, 1).
 fn load(ctx: &Ctx, path: &str, out: &mut Outcome) -> Result<Option<Value>> {
-    let ext = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("");
+    // A survey folder stands for its instrument.
+    let file = if Path::new(path).is_dir() { Path::new(path).join("instrument.yaml") } else { PathBuf::from(path) };
+    let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
     let Some(format) = Format::from_extension(ext) else {
         return Err(UsageError(msg("bad-extension", &[("file", path)])));
     };
-    let bytes = match std::fs::read(path) {
+    let bytes = match std::fs::read(&file) {
         Ok(b) => b,
         Err(e) => {
             out.error(exit::NOT_FOUND, msg("not-found", &[("file", path), ("reason", &e.to_string())]));
@@ -119,8 +121,8 @@ fn load(ctx: &Ctx, path: &str, out: &mut Outcome) -> Result<Option<Value>> {
         }
     };
     let _ = (&bytes, format);
-    // decode_path: a compact survey (ADR 0040) also reads its i18n/<lang>.po catalogues.
-    match ctx.tools.decode_path(Path::new(path)) {
+    // decode_path: a file in a survey folder (ADR 0041) also reads the folder's i18n/<lang>.po catalogues.
+    match ctx.tools.decode_path(&file) {
         Ok(v) => Ok(Some(v)),
         Err(e) => {
             // Decoding is the first step of canonicalisation (INS-002); text that isn't NFC

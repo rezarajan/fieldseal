@@ -13,8 +13,8 @@
 # The export step writes `export.fieldseal` into the current directory.
 pin: "246810"
 seed: 5
-instrument: ../instruments/household-water-access.yaml
-layouts: [../layouts/household-water-access.compact.yaml]
+survey: ../surveys/household-water-access
+layouts: [compact]
 languages: [es]
 window: compact
 rosters:

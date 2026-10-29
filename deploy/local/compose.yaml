@@ -180,6 +180,8 @@ services:
     environment:
       FIELDSEAL_ENVIRONMENT: development
       FIELDSEAL_WEB_STACK: "true"
+      # Which cohort's roster each survey's pages use, until assignments replace this map.
+      FIELDSEAL_WEB_SURVEY_COHORTS: "school-meals-baseline=cohort-a,household-water-access=village-a"
       FIELDSEAL_FACTORY_URL: http://localhost:8080
       FIELDSEAL_UPLOAD_URL: http://upload:8480
       FIELDSEAL_LOG_URL: http://translog:8080

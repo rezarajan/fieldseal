@@ -122,7 +122,7 @@ pub fn decode(bytes: &[u8], format: Format) -> Result<Value, AuthoringError> {
         }
     })?;
     let (doc, spans) = decode_with_spans(text, format)?;
-    compact::expand_in(doc, &compact::Catalogues::new(), Some(&spans), None)
+    compact::expand_in(doc, &EntryCatalogues::new(), Some(&spans), None)
 }
 
 /// Decodes an authoring document without expanding a compact one (ADR 0040): what the file says.
@@ -140,32 +140,24 @@ pub fn decode_raw(bytes: &[u8], format: Format) -> Result<Value, AuthoringError>
 }
 
 /// Decodes the authoring document at `path` (format from its extension), expanding a compact
-/// document (ADR 0040) with the translations in the `i18n/<lang>.po` catalogues beside it.
+/// document (ADR 0040). A file in a survey folder (its `instrument.yaml` or a file of `layouts/`)
+/// is expanded with the folder's `i18n/<lang>.po` catalogues; a file anywhere else has no
+/// catalogue. A survey folder stands for its `instrument.yaml`.
 ///
 /// # Errors
 ///
 /// An [`AuthoringError`]; an unreadable file or catalogue is reported as [`ErrorKind::Encoding`].
 pub fn decode_path(path: &std::path::Path) -> Result<Value, AuthoringError> {
     let io = |p: &std::path::Path, e: std::io::Error| AuthoringError::new(ErrorKind::Encoding, 0, 0, format!("{}: {e}", p.display()));
+    let path = if path.is_dir() { path.join("instrument.yaml") } else { path.to_owned() };
     let format = path.extension().and_then(|e| e.to_str()).and_then(Format::from_extension).ok_or_else(|| AuthoringError::new(ErrorKind::Encoding, 0, 0, format!("{}: use a .yaml, .yml or .json file", path.display())))?;
-    let bytes = std::fs::read(path).map_err(|e| io(path, e))?;
+    let bytes = std::fs::read(&path).map_err(|e| io(&path, e))?;
     let text = std::str::from_utf8(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).map_err(|_| AuthoringError::new(ErrorKind::Encoding, 1, 1, "the file is not valid UTF-8"))?;
     let (doc, spans) = decode_with_spans(text, format)?;
     if !compact::is_compact(&doc) {
         return Ok(doc);
     }
-    let mut catalogues = compact::Catalogues::new();
-    let dir = path.parent().unwrap_or(std::path::Path::new(".")).join("i18n").join(path.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
-    if let Ok(entries) = std::fs::read_dir(&dir) {
-        let mut files: Vec<_> = entries.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "po")).collect();
-        files.sort();
-        for po in files {
-            let lang = po.file_stem().and_then(|s| s.to_str()).unwrap_or_default().to_owned();
-            let text = std::fs::read_to_string(&po).map_err(|e| io(&po, e))?;
-            let cat = compact::parse_po(&text).map_err(|e| AuthoringError::new(e.kind, e.line, e.column, format!("{}: {}", po.display(), e.message)))?;
-            catalogues.insert(lang, cat);
-        }
-    }
+    let catalogues = survey::catalogues_of(&path)?;
     compact::expand_in(doc, &catalogues, Some(&spans), Some(&path.display().to_string()))
 }
 

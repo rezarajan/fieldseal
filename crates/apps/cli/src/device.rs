@@ -16,8 +16,8 @@
 //!
 //! ```yaml
 //! pin: "246810"
-//! instrument: ../instruments/household-water-access.yaml
-//! layouts: [../layouts/household-water-access.compact.yaml]
+//! survey: ../surveys/household-water-access
+//! layouts: [compact]            # window classes, from the survey's layouts/
 //! languages: [es]               # optional, most preferred first
 //! window: compact               # optional: compact, medium, expanded
 //! rosters:
@@ -50,7 +50,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fieldseal_adapters_authoring::{Format, decode};
+use fieldseal_adapters_authoring::survey::SurveyTree;
+use fieldseal_adapters_authoring::{Format, decode_raw};
 use fieldseal_adapters_memory::collection::roster_address;
 use fieldseal_adapters_memory::delivery_world::{Bench, Enrolled, Enrolment};
 use fieldseal_collection::application::{
@@ -68,19 +69,8 @@ use fieldseal_kernel::id::{CohortId, Digest, ItemPath, Seq, SubjectId};
 use fieldseal_kernel::payload::{Layout, Tick};
 use fieldseal_kernel::record::read_journal;
 
-const SCENARIOS: &[(&str, &str, &str)] = &[
-    ("household-water-access", "capture", include_str!("../../../../examples/scenarios/household-water-access.yaml")),
-    ("school-meals-baseline", "consent", include_str!("../../../../examples/scenarios/school-meals-baseline.yaml")),
-    ("clear", "lifecycle", include_str!("../../../../examples/scenarios/clear.yaml")),
-];
-
-const EMBEDDED: &[(&str, &str)] = &[
-    ("household-water-access.yaml", include_str!("../../../../examples/instruments/household-water-access.yaml")),
-    ("school-meals-baseline.yaml", include_str!("../../../../examples/instruments/school-meals-baseline.yaml")),
-    ("household-water-access.compact.yaml", include_str!("../../../../examples/layouts/household-water-access.compact.yaml")),
-    ("school-meals-baseline.compact.yaml", include_str!("../../../../examples/layouts/school-meals-baseline.compact.yaml")),
-    ("school-meals-baseline.expanded.yaml", include_str!("../../../../examples/layouts/school-meals-baseline.expanded.yaml")),
-];
+/// The built-in scenarios, each with its alias; the text is embedded from `examples/scenarios/`.
+const SCENARIOS: &[(&str, &str)] = &[("household-water-access", "capture"), ("school-meals-baseline", "consent"), ("clear", "lifecycle")];
 
 /// Checks `device` arguments strictly (CLI-022): the words `device simulate`, the valued flags
 /// `--script`, `--scenario` and `--export` once each with a value that is not itself a flag,
@@ -149,10 +139,10 @@ pub fn run(args: &[String], json: bool) -> ExitCode {
                 return ExitCode::from(4);
             }
         },
-        (None, Some(name)) => match SCENARIOS.iter().find(|(n, alias, _)| *n == name || *alias == name) {
-            Some((_, _, text)) => Source { text: text.as_bytes().to_vec(), base: None },
+        (None, Some(name)) => match SCENARIOS.iter().find(|(n, alias)| *n == name || *alias == name) {
+            Some((scenario, _)) => Source { text: crate::embedded::scenario(scenario).expect("a built-in scenario is embedded").as_bytes().to_vec(), base: None },
             None => {
-                let names: Vec<&str> = SCENARIOS.iter().flat_map(|(n, a, _)| [*n, *a]).collect();
+                let names: Vec<&str> = SCENARIOS.iter().flat_map(|(n, a)| [*n, *a]).collect();
                 eprintln!("fieldseal: unknown scenario {name} (available: {})", names.join(", "));
                 return ExitCode::from(4);
             }
@@ -193,35 +183,29 @@ struct Source {
 }
 
 impl Source {
-    fn load(&self, reference: &str) -> Result<Value, String> {
-        let bytes = match &self.base {
-            Some(base) => return fieldseal_adapters_authoring::decode_path(&base.join(reference)).map_err(|e| format!("{reference}: {e}")),
+    /// The survey folder named by `survey` (relative to the scenario file) with the layouts for
+    /// `windows`, all expanded with the survey's catalogues. A built-in scenario reads the
+    /// embedded copy.
+    fn load(&self, survey: &str, windows: &[&str]) -> Result<(Value, Vec<Value>), String> {
+        let name = Path::new(survey).file_name().and_then(|n| n.to_str()).ok_or_else(|| format!("{survey}: not a survey folder"))?;
+        let (instrument, mut available) = match &self.base {
+            Some(base) => {
+                let dir = base.join(survey);
+                let found = SurveyTree::open(dir.parent().unwrap_or(Path::new("."))).and_then(|tree| tree.survey(name)).map_err(|e| format!("{survey}: {e}"))?;
+                let loaded = found.load().map_err(|errors| format!("{survey}: {}", errors.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ")))?;
+                (loaded.instrument, loaded.layouts)
+            }
             None => {
-                let name = Path::new(reference).file_name().and_then(|n| n.to_str()).unwrap_or(reference);
-                EMBEDDED.iter().find(|(n, _)| *n == name).map(|(_, t)| t.as_bytes().to_vec()).ok_or_else(|| format!("{reference}: not embedded"))?
+                let embedded = crate::embedded::survey(name)?;
+                (embedded.instrument, embedded.layouts)
             }
         };
-        // The embedded surveys carry their Spanish catalogues too (ADR 0040).
-        let mut catalogues = fieldseal_adapters_authoring::compact::Catalogues::new();
-        let po = if reference.ends_with("household-water-access.yaml") {
-            Some(include_str!("../../../../examples/instruments/i18n/household-water-access/es.po"))
-        } else if reference.ends_with("household-water-access.compact.yaml") {
-            Some(include_str!("../../../../examples/layouts/i18n/household-water-access.compact/es.po"))
-        } else if reference.ends_with("school-meals-baseline.yaml") {
-            Some(include_str!("../../../../examples/instruments/i18n/school-meals-baseline/es.po"))
-        } else if reference.ends_with("school-meals-baseline.compact.yaml") {
-            Some(include_str!("../../../../examples/layouts/i18n/school-meals-baseline.compact/es.po"))
-        } else if reference.ends_with("school-meals-baseline.expanded.yaml") {
-            Some(include_str!("../../../../examples/layouts/i18n/school-meals-baseline.expanded/es.po"))
-        } else {
-            None
-        };
-        if let Some(po) = po {
-            let es = fieldseal_adapters_authoring::compact::parse_po(po).map_err(|e| e.to_string())?;
-            catalogues.insert("es".into(), es);
+        let mut layouts = Vec::new();
+        for window in windows {
+            let at = available.iter().position(|(w, _)| w == window).ok_or_else(|| format!("{survey}: no `{window}` layout"))?;
+            layouts.push(available.remove(at).1);
         }
-        let raw = fieldseal_adapters_authoring::decode_raw(&bytes, Format::Yaml).map_err(|e| format!("{reference}: {e}"))?;
-        fieldseal_adapters_authoring::compact::expand_with(raw, &catalogues).map_err(|e| format!("{reference}: {e}"))
+        Ok((instrument, layouts))
     }
 }
 
@@ -550,9 +534,9 @@ fn want_map<'a>(m: &'a Obj, key: &str, what: &str) -> Result<Option<&'a Obj>, St
 /// Checks a scenario against its closed schema before anything runs: unknown fields,
 /// wrong types, bad enum values and missing required fields are errors, never defaults.
 fn validate_scenario(scenario: &Value, extra_steps: &[Value]) -> Result<(), String> {
-    let m = obj(scenario, "scenario", &["pin", "instrument", "layouts", "languages", "window", "rosters", "steps", "seed"])?;
+    let m = obj(scenario, "scenario", &["pin", "survey", "layouts", "languages", "window", "rosters", "steps", "seed"])?;
     want_text(m, "pin", "scenario", true)?;
-    want_text(m, "instrument", "scenario", true)?;
+    want_text(m, "survey", "scenario", true)?;
     want_texts(m, "layouts", "scenario")?;
     want_texts(m, "languages", "scenario")?;
     want_enum(m, "window", "scenario", &["compact", "medium", "expanded"])?;
@@ -684,11 +668,12 @@ fn validate_step(step: &Value, n: usize) -> Result<(), String> {
 }
 
 fn simulate(source: &Source, show_review: bool, extra_steps: &[Value]) -> Result<Outcome, String> {
-    let scenario = decode(&source.text, Format::Yaml).map_err(|e| format!("scenario: {e}"))?;
+    // Raw: a scenario's `survey:` key names a folder, and is not a compact survey to expand.
+    let scenario = decode_raw(&source.text, Format::Yaml).map_err(|e| format!("scenario: {e}"))?;
     validate_scenario(&scenario, extra_steps)?;
     let pin_text = text(&scenario, "pin").ok_or("scenario needs `pin`")?.to_owned();
-    let instrument = source.load(text(&scenario, "instrument").ok_or("scenario needs `instrument`")?)?;
-    let layouts = list(&scenario, "layouts").iter().filter_map(Value::as_text).map(|l| source.load(l)).collect::<Result<Vec<_>, _>>()?;
+    let windows: Vec<&str> = list(&scenario, "layouts").iter().filter_map(Value::as_text).collect();
+    let (instrument, layouts) = source.load(text(&scenario, "survey").ok_or("scenario needs `survey`")?, &windows)?;
     let rosters = rosters(&scenario)?;
     let seed = int(&scenario, "seed").unwrap_or(1);
 

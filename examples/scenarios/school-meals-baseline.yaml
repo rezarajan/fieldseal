@@ -10,8 +10,8 @@
 # (ADR 0029). The pupils and their details are invented.
 pin: "135790"
 seed: 5
-instrument: ../instruments/school-meals-baseline.yaml
-layouts: [../layouts/school-meals-baseline.compact.yaml, ../layouts/school-meals-baseline.expanded.yaml]
+survey: ../surveys/school-meals-baseline
+layouts: [compact, expanded]
 window: expanded
 rosters:
   - cohort: class-2b
