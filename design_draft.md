@@ -166,8 +166,8 @@ A developer who also writes surveys tried Fieldseal and hit these problems.
 
 ## Open Questions
 
-*   **Question 1**: Targets. How many minutes for a first survey, what target for `just up`, and what target for CI on a warm cache? Who is the test newcomer, and on what machine?
-*   **Question 2**: CI cache. Is `FIELDSEAL_CACHIX` set in CI today? It is a repository variable (`vars.FIELDSEAL_CACHIX` in `.github/workflows/ci.yml`), so it is answered from the GitHub repository settings (Actions variables), not from the repository.
+*   **Question 1** (answered 2026-10-29): Targets. A first survey, from `new survey` to a published address, in 15 minutes; warm `just up` in 3 minutes; warm CI in 20 minutes. The test newcomer is a developer who has never seen the repository, on a typical laptop (about 8 cores, 16 GB). Recorded in `docs/explanation/build-system.md`.
+*   **Question 2** (answered 2026-10-29): CI cache. `FIELDSEAL_CACHIX` is not set (the repository has no Actions variables), and it stays unset: CI uses only the GitHub Actions cache (`FIELDSEAL_CACHE_GHA`, on by default). Recorded in `docs/explanation/build-system.md`.
 
 ## Critical User Journeys (CUJs)
 

@@ -172,7 +172,17 @@ Recorded on 2026-10-28 on an AMD Ryzen 9 7950X (16 cores, 32 threads), 62 GB of 
 
 **First `just web` (Phase 5b).** On the machine above, with the services built. Starting from an empty `deploy/local/.state/dev-web/` (the authority is created and the examples are published), `just web` is ready, with the log, factory and collector stand-in answering, in 2.7 s. The one cost that is not a start-up cost is building the CLI with Nix (`tools/stack-cli.sh`): 71 s after a change to the workspace sources, and instant when nothing changed. The publish time above is the target's baseline for Open Question 1; the test newcomer's time is still to be measured.
 
-Targets for `just up`, for CI and for a first survey are added here when Open Question 1 is answered.
+**Targets (Open Question 1, decided 2026-10-29).** Phase 18 checks these against its timed runs.
+
+| Measure | Target |
+|---|---|
+| A test newcomer, from `fieldseal new survey` to a published address, following [the tutorial](../tutorials/write-and-publish-your-first-survey.md) | 15 minutes |
+| `just up` with nothing changed (warm) | 3 minutes |
+| A `ci` run on a warm cache | 20 minutes |
+
+The test newcomer is a developer who has never seen the repository, on a typical laptop (about 8 cores and 16 GB of memory), not the machine above.
+
+**CI cache (Open Question 2, decided 2026-10-29).** `FIELDSEAL_CACHIX` is not set: the repository has no Actions variables, so CI uses only the GitHub Actions cache (`FIELDSEAL_CACHE_GHA`, on by default). That cache holds at most 10 GB per repository and drops entries unused for 7 days, so a release after a quiet week starts cold; Phase 18 times warm CI with this cache.
 
 ## Emulating and testing the app
 
