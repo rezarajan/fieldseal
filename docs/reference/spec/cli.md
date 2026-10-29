@@ -36,7 +36,7 @@ The CLI uses whichever adapters its configuration selects, for every port of the
 - **CLI-005** Exit codes MUST be: `0` success; `1` verification or validation failed; `2` usage error; `3` configuration or adapter error; `4` a resource was not found; `5` a policy denied the operation; `6` internal error.
 - **CLI-006** Commands MUST be stateless between invocations except through the adapters they are configured with, and MUST be idempotent where the operation allows (repeating a publish of the same content address MUST succeed without a second log entry).
 - **CLI-007** Keys generated or used through the software `KeyStore` adapter MUST be marked unattested in any request, evidence or output they appear in. The CLI MUST NOT produce evidence that claims hardware protection for a software key.
-- **CLI-008** The CLI MUST NOT print secret values, private keys, decrypted subject data or roster contents to stdout or stderr, except `bundle open` and `intake replay`, which MUST require `--reveal` and print a warning to stderr.
+- **CLI-008** The CLI MUST NOT print secret values, private keys, decrypted subject data or roster contents to stdout or stderr, except `bundle open`, `intake replay` and `roster diff`, which MUST require `--reveal` and print a warning to stderr.
 - **CLI-009** The CLI MUST run as a one-off admin process against a release (factor XII): pointed at a deployment's environment, it uses that release's adapters and policies.
 
 ### Environment variables
@@ -87,6 +87,14 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 | `new survey <name> [--lang <tag>,...] [--root <dir>]` | Write a working survey folder (instrument, layout, catalogue stubs, README, editor schemas) and a roster stub outside it; refuses to overwrite | name → files | — | CLI-044 |
 | `survey check <dir> [--roster <file>] [--strict]` | Resolve the folder, decode and validate the instrument and layouts, lint, report translation gaps and, with `--roster`, compare the roster with the fields the instrument reads | folder → findings with file, line and column | — | CLI-045 |
 | `survey list [--root <dir>]` | List each survey's name, version, languages and layout windows | folder → rows | — | CLI-046 |
+
+#### `roster`
+
+| Command | Purpose | Inputs → outputs | Ports | Implements |
+|---|---|---|---|---|
+| `roster check <file> --instrument <survey dir>...` | Check the roster against the closed schema (DIS-063) and against the fields each instrument reads (DIS-013); writes nothing. `--instrument` takes a survey folder only | roster file, survey folders → findings and consent counts | — | CLI-050 |
+| `roster diff <a> <b> [--store <dir>] [--reveal]` | Compare two roster versions, each a file or `<cohort>@<version>` read from `--store` (a read-only copy of the factory's roster store): counts of added, removed and kept subjects, consent changes by from/to state, `prior_status` changes and the names of the changed fields. Subject ids and values only with `--reveal` | two rosters → counts | — | CLI-052, DIS-081 |
+| `roster list --store <dir> [--cohort <id>]` | List the stored versions as `<cohort>@<version>` with digest, subject count and consent counts; no subject ids | store → rows | — | CLI-053 |
 
 #### `schema`, `extension` and `unit` 
 
@@ -257,6 +265,9 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 - **CLI-044** `new survey` MUST write a survey that passes `survey check` with no error before it is edited, MUST give every list item an explicit `code:` so that changing a label does not change the answer code, MUST write `msgid`s with empty `msgstr`s in a catalogue for each requested language, MUST put the roster stub outside the survey folder, and MUST refuse to overwrite an existing survey folder or roster. The editor schemas it writes MUST be the bytes `schema export --out` writes.
 - **CLI-045** `survey check` MUST report, in one pass and one findings list, the folder's resolver errors, the decoding and schema errors with the file, line and column, the findings of `instrument validate` and `instrument lint`, the findings of `layout validate` and `layout lint` for every layout, and the translation report (INS-260). It MUST exit `1` on any error (CLI-005). `--strict` MUST turn every warning of the resolver, the translation report and validation into an error; lint findings keep their severity, because their limits are set by policy (INS-210). With `--roster`, a field the instrument reads that a subject lacks MUST be an error that names the field and the subject's ordinal and not its ID, and a roster field the instrument never reads MUST be a note (DIS-013).
 - **CLI-046** `survey list` MUST name every survey folder under the root with its version, its languages and its layout windows.
+- **CLI-050** `roster check` MUST fail on any field an instrument reads that a subject lacks, naming the field and the subject's ordinal and not its ID, MUST report every finding of the closed-schema check (DIS-063), and MUST NOT write anything. A roster field no instrument reads MUST be a note (DIS-013).
+- **CLI-052** `roster diff` MUST NOT print subject ids or values without `--reveal`. With `--reveal` it MUST print a warning to stderr (CLI-008).
+- **CLI-053** `roster list` MUST NOT print subject ids.
 - **CLI-048** `intake results` MUST read the landing directory through the landing-files `DataPlatform` adapter as one snapshot and the instruments and layouts from `--published`, verified against `--trust-bundle`; it MUST require `--published`, `--export-key` and `--trust-bundle`, MUST refuse an export key file that is absent, not 32 bytes long or wider than mode 0600 and MUST NOT create or derive a key, MUST refuse an instrument that has landed rows and no verified publication, MUST NOT print subject data, and MUST print the file list, the SHA-256 of `manifest.json` and the statement that the files are outside Fieldseal's protection. There is no mode that reads a device export file and no practice-authority form.
 
 ## 6. Resources and formats

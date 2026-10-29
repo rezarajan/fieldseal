@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-253 tests prove 121 requirements.
+269 tests prove 126 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -98,13 +98,13 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `int_013_the_file_submission_store_satisfies_the_contract` ([submissions.rs:10](../../crates/adapters/file/tests/submissions.rs#L10)) | INT-013 | INT-013 (intake) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
 | `int_085_duckdb_converts_jsonl_and_csv_to_parquet_with_the_manifest_row_count` ([duckdb_recipe.rs:12](../../crates/adapters/landing-files/tests/duckdb_recipe.rs#L12)) | INT-085 | INT-085 (intake) |
-| `int_086_excluded_rows_appear_in_no_file_and_are_counted` ([export_privacy.rs:49](../../crates/adapters/landing-files/tests/export_privacy.rs#L49)) | INT-086 | INT-086 (intake) |
-| `int_087_no_roster_subject_id_appears_in_any_file_in_readable_or_hex_form` ([export_privacy.rs:68](../../crates/adapters/landing-files/tests/export_privacy.rs#L68)) | INT-087 | INT-087 (intake) |
-| `int_087_the_same_key_gives_the_same_pseudonym` ([export_privacy.rs:96](../../crates/adapters/landing-files/tests/export_privacy.rs#L96)) | INT-087 | INT-087 (intake) |
-| `int_087_another_key_gives_different_pseudonyms` ([export_privacy.rs:115](../../crates/adapters/landing-files/tests/export_privacy.rs#L115)) | INT-087 | INT-087 (intake) |
-| `int_087_the_pseudonym_is_the_hmac_of_the_subject_text` ([export_privacy.rs:125](../../crates/adapters/landing-files/tests/export_privacy.rs#L125)) | INT-087 | INT-087 (intake) |
-| `int_087_the_manifest_records_the_key_id_not_the_key` ([export_privacy.rs:135](../../crates/adapters/landing-files/tests/export_privacy.rs#L135)) | INT-087 | INT-087 (intake) |
-| `int_087_an_absent_or_wrong_key_file_is_refused_and_never_created` ([export_privacy.rs:154](../../crates/adapters/landing-files/tests/export_privacy.rs#L154)) | INT-087 | INT-087 (intake) |
+| `int_086_excluded_rows_appear_in_no_file_and_are_counted` ([export_privacy.rs:54](../../crates/adapters/landing-files/tests/export_privacy.rs#L54)) | INT-086 | INT-086 (intake) |
+| `int_087_no_roster_subject_id_appears_in_any_file_in_readable_or_hex_form` ([export_privacy.rs:73](../../crates/adapters/landing-files/tests/export_privacy.rs#L73)) | INT-087 | INT-087 (intake) |
+| `int_087_the_same_key_gives_the_same_pseudonym` ([export_privacy.rs:101](../../crates/adapters/landing-files/tests/export_privacy.rs#L101)) | INT-087 | INT-087 (intake) |
+| `int_087_another_key_gives_different_pseudonyms` ([export_privacy.rs:120](../../crates/adapters/landing-files/tests/export_privacy.rs#L120)) | INT-087 | INT-087 (intake) |
+| `int_087_the_pseudonym_is_the_hmac_of_the_subject_text` ([export_privacy.rs:130](../../crates/adapters/landing-files/tests/export_privacy.rs#L130)) | INT-087 | INT-087 (intake) |
+| `int_087_the_manifest_records_the_key_id_not_the_key` ([export_privacy.rs:140](../../crates/adapters/landing-files/tests/export_privacy.rs#L140)) | INT-087 | INT-087 (intake) |
+| `int_087_an_absent_or_wrong_key_file_is_refused_and_never_created` ([export_privacy.rs:159](../../crates/adapters/landing-files/tests/export_privacy.rs#L159)) | INT-087 | INT-087 (intake) |
 | `int_085_jsonl_and_csv_read_back_to_the_same_rows` ([export_readback.rs:47](../../crates/adapters/landing-files/tests/export_readback.rs#L47)) | INT-085 | INT-085 (intake) |
 | `int_085_decimal_text_is_exact_and_money_keeps_currency_scale` ([export_readback.rs:67](../../crates/adapters/landing-files/tests/export_readback.rs#L67)) | INT-085 | INT-085 (intake) |
 | `int_085_nonresponse_and_retraction_rows_have_null_typed_columns` ([export_readback.rs:82](../../crates/adapters/landing-files/tests/export_readback.rs#L82)) | INT-085 | INT-085 (intake) |
@@ -159,6 +159,15 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `cli_048_a_key_file_of_the_wrong_length_or_mode_is_refused` ([intake_results.rs:235](../../crates/apps/cli/tests/intake_results.rs#L235)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_contract_files_are_named_by_fingerprint_hex` ([intake_results.rs:256](../../crates/apps/cli/tests/intake_results.rs#L256)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_an_instrument_with_no_verified_publication_is_refused` ([intake_results.rs:270](../../crates/apps/cli/tests/intake_results.rs#L270)) | CLI-048 | CLI-048 (cli) |
+| `cli_050_check_fails_on_a_field_the_instrument_reads_and_a_subject_lacks` ([roster_cli.rs:90](../../crates/apps/cli/tests/roster_cli.rs#L90)) | CLI-050 | CLI-050 (cli) |
+| `cli_050_check_requires_a_survey_folder` ([roster_cli.rs:110](../../crates/apps/cli/tests/roster_cli.rs#L110)) | CLI-050 | CLI-050 (cli) |
+| `cli_050_check_writes_nothing` ([roster_cli.rs:122](../../crates/apps/cli/tests/roster_cli.rs#L122)) | CLI-050 | CLI-050 (cli) |
+| `cli_050_check_notes_a_field_no_instrument_reads` ([roster_cli.rs:136](../../crates/apps/cli/tests/roster_cli.rs#L136)) | CLI-050 | CLI-050 (cli) |
+| `cli_052_diff_reads_a_stored_version_named_cohort_at_version` ([roster_cli.rs:149](../../crates/apps/cli/tests/roster_cli.rs#L149)) | CLI-052 | CLI-052 (cli) |
+| `cli_052_diff_prints_counts_only` ([roster_cli.rs:175](../../crates/apps/cli/tests/roster_cli.rs#L175)) | CLI-052 | CLI-052 (cli) |
+| `cli_052_diff_with_reveal_warns_on_stderr` ([roster_cli.rs:189](../../crates/apps/cli/tests/roster_cli.rs#L189)) | CLI-052 | CLI-052 (cli) |
+| `cli_053_list_prints_no_subject_ids` ([roster_cli.rs:200](../../crates/apps/cli/tests/roster_cli.rs#L200)) | CLI-053 | CLI-053 (cli) |
+| `dis_081_a_diff_is_computable_without_exposing_a_subject` ([roster_cli.rs:223](../../crates/apps/cli/tests/roster_cli.rs#L223)) | DIS-081 | DIS-081 (distribution) |
 | `wire_213_the_embedded_corpus_lists_every_file` ([strict_schema_corpus.rs:29](../../crates/apps/cli/tests/strict_schema_corpus.rs#L29)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `cli_043_conformance_list_names_strict_schema` ([strict_schema_corpus.rs:49](../../crates/apps/cli/tests/strict_schema_corpus.rs#L49)) | CLI-043 | CLI-043 (cli) |
 | `cli_043_the_strict_schema_suite_rejects_every_corpus_document` ([strict_schema_corpus.rs:56](../../crates/apps/cli/tests/strict_schema_corpus.rs#L56)) | CLI-043 | CLI-043 (cli) |
@@ -242,6 +251,13 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
 | `the_runtime_profile_names_the_schema_the_core_implements` ([lib.rs:39](../../crates/bindings/uniffi/src/lib.rs#L39)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `dis_013_roster_fields_read_through_message_variables_and_roster_items_are_found` ([facts.rs:186](../../crates/contexts/distribution/src/domain/facts.rs#L186)) | DIS-013 | DIS-013 (distribution) |
+| `dis_063_a_well_formed_form_passes_and_has_a_stable_digest` ([roster_form.rs:31](../../crates/contexts/distribution/tests/roster_form.rs#L31)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_a_repeated_subject_is_a_finding` ([roster_form.rs:47](../../crates/contexts/distribution/tests/roster_form.rs#L47)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_ordinals_must_strictly_increase` ([roster_form.rs:52](../../crates/contexts/distribution/tests/roster_form.rs#L52)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_an_unknown_key_is_a_finding` ([roster_form.rs:65](../../crates/contexts/distribution/tests/roster_form.rs#L65)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_a_generation_key_is_refused_in_the_issue_form` ([roster_form.rs:71](../../crates/contexts/distribution/tests/roster_form.rs#L71)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_a_consent_state_outside_the_declared_set_is_a_finding` ([roster_form.rs:78](../../crates/contexts/distribution/tests/roster_form.rs#L78)) | DIS-063 | DIS-063 (distribution) |
+| `dis_063_every_finding_is_reported_not_only_the_first` ([roster_form.rs:87](../../crates/contexts/distribution/tests/roster_form.rs#L87)) | DIS-063 | DIS-063 (distribution) |
 | `wire_130_the_request_body_vectors_decode_with_schema_and_catalogue` ([vectors.rs:176](../../crates/contexts/registration/tests/vectors.rs#L176)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `wire_130_a_body_without_schema_is_refused` ([vectors.rs:220](../../crates/contexts/registration/tests/vectors.rs#L220)) | WIRE-130 | WIRE-130 (wire-formats) |
 | `wire_130_the_vectors_are_current` ([vectors.rs:241](../../crates/contexts/registration/tests/vectors.rs#L241)) | WIRE-130, WIRE-151 | WIRE-130 (wire-formats); WIRE-151 (wire-formats) |

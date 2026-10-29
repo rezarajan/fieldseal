@@ -7,7 +7,7 @@
 //!
 //! Built so far: `instrument validate|lint|compile|hash|preview|i18n`, `layout
 //! validate|lint|compile`, `localisation validate`, `policy`, `trust`, `keys generate`,
-//! `artefact`, `log prove|key`, `registration`, `bundle`, `export`, `deployment`, `docs`, `device simulate`, `intake`, `new survey`, `survey check|list`, `schema export|check` and `adapters`. The rest
+//! `artefact`, `log prove|key`, `registration`, `bundle`, `export`, `deployment`, `docs`, `device simulate`, `intake`, `new survey`, `survey check|list`, `roster check|diff|list`, `schema export|check` and `adapters`. The rest
 //! of the tree is built by the buildout issues.
 
 mod args;
@@ -42,6 +42,7 @@ mod registration_cmd;
 mod registration_remote;
 mod registry_cmd;
 mod roster_check;
+mod roster_cmd;
 mod schema_cmd;
 mod stores;
 mod survey_cmd;
@@ -135,6 +136,10 @@ fn main() -> ExitCode {
         ["survey", verb] => match survey_cmd::run(verb, &rest) {
             Some(code) => code,
             None => usage_error(&msg("unknown-command", &[("command", &format!("survey {verb}"))]), json),
+        },
+        ["roster", verb] => match roster_cmd::run(verb, &rest) {
+            Some(code) => code,
+            None => usage_error(&msg("unknown-command", &[("command", &format!("roster {verb}"))]), json),
         },
         ["schema", verb] => match schema_cmd::run(verb, &rest) {
             Some(code) => code,

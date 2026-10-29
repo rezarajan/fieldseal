@@ -135,6 +135,7 @@ On the runtime:
 - **DIS-062** Bundles MUST name instruments by fingerprint ([ADR 0027](../../explanation/adr/0027-salted-instrument-fingerprints.md)).
 - **DIS-063** Every reader of a bundle file, bundle content, roster or time token MUST reject unknown fields, enforce exact types, require every required field, and enforce every declared constraint: sizes before parsing, no trailing bytes, strictly increasing roster ordinals, unique subjects within a roster, one roster per cohort, no publication listed twice in a list, and a consent state from the declared set. A reader that projects an already validated artefact (the schema range of an instrument, the instrument of a layout) reads only the fields composition needs and fails closed on anything it cannot read.
 - **DIS-080** (provisional) A roster version, once issued, MUST NOT change, and a `RosterSource` MUST return, for a cohort, the highest version issued. Issuing the same content at the same version again leaves the store unchanged; different content at an issued version, or a version lower than the highest issued, is refused. A development roster store holds them as files that only its owner can read (the contract `FileRosterSource` and the file roster store satisfy).
+- **DIS-081** (provisional) The difference between two roster versions MUST be computable without exposing a subject: the counts of subjects added, removed and kept, of consent changes by state and of `prior_status` changes, and the names of the changed fields, without a subject id or a value.
 
 ### 5.7 Extensions in bundles ([ADR 0037](../../explanation/adr/0037-extensions-and-strict-schema-enforcement.md))
 
@@ -178,6 +179,7 @@ spec:
 | Release refused before registration and for flagged tenancies | DIS-001–DIS-004 | `fieldseal policy evaluate`, `fieldseal conformance run --suite dis-release` |
 | Contents and published-only rule | DIS-010–DIS-015, DIS-063 | `fieldseal bundle build`, `fieldseal bundle inspect` |
 | File roster store and source, bundle store and runtime profiles satisfy their port contracts | DIS-012, DIS-015, DIS-023, DIS-080 | `cargo test -p fieldseal-adapters-file --test contracts` |
+| Roster issue form, and a roster diff that shows no subject | DIS-063, DIS-081 | `cargo test -p fieldseal-distribution --test roster_form`, `cargo test -p fieldseal-cli --test roster_cli` |
 | Sealing, signing, outer fields, naming | DIS-020–DIS-023 | `fieldseal bundle verify`, golden vectors |
 | Verification order and fail-closed with tampered bundles | DIS-030, DIS-031 | `fieldseal bundle open`, `fieldseal conformance run --suite dis-verify` |
 | Wrong-device bundle unusable | DIS-042 | `fieldseal device simulate --import <other device's bundle>` |

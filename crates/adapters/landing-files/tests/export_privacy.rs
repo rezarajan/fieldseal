@@ -34,7 +34,12 @@ fn files(dir: &std::path::Path) -> Vec<(String, String)> {
 fn roster_subjects() -> BTreeSet<String> {
     let mut ids = BTreeSet::new();
     for e in std::fs::read_dir(repo().join("examples/rosters")).expect("rosters") {
-        let doc = fieldseal_adapters_authoring::decode_path(&e.expect("entry").path()).expect("roster decodes");
+        // `next/` holds the next versions of the same rosters; it is not a current roster.
+        let path = e.expect("entry").path();
+        if path.is_dir() {
+            continue;
+        }
+        let doc = fieldseal_adapters_authoring::decode_path(&path).expect("roster decodes");
         let Some(Value::Array(subjects)) = doc.as_map().and_then(|m| m.get("subjects")) else { panic!("a roster lists subjects") };
         for s in subjects {
             ids.insert(s.as_map().and_then(|m| m.get("subject")).and_then(Value::as_text).expect("subject id").to_owned());

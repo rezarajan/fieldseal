@@ -3,8 +3,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use fieldseal_kernel::cbor;
+use fieldseal_kernel::digest::sha256;
 use fieldseal_kernel::error::{ErrorCode, WireError};
-use fieldseal_kernel::id::{CohortId, Generation, SubjectId};
+use fieldseal_kernel::id::{CohortId, Digest, Generation, SubjectId};
 use fieldseal_kernel::structure::Fields;
 use fieldseal_kernel::value::Value;
 
@@ -191,4 +192,215 @@ impl Roster {
         f.finish()?;
         Ok(Self { cohort, version, generation, entries })
     }
+}
+
+/// One thing wrong with a roster issue form (DIS-063).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RosterFinding {
+    /// Where, as a path such as `subjects[2].consent`. A subject is named by its position, never
+    /// by its ID.
+    pub path: String,
+    /// What is wrong.
+    pub message: String,
+}
+
+/// A roster as an operator submits it: the closed form that `roster check` reads from a file and
+/// that the factory stores (DIS-063). It carries no generation, because a generation belongs to
+/// a cohort on one tenancy (WIRE-198).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RosterIssueForm {
+    /// The cohort.
+    pub cohort: CohortId,
+    /// The roster version, at least 1.
+    pub version: u64,
+    /// The subjects, ordinals strictly increasing.
+    pub entries: Vec<RosterEntry>,
+}
+
+impl RosterIssueForm {
+    /// The wire form: `cohort`, `version` and `subjects`, each with `ordinal`, `subject`,
+    /// `display`, `consent`, optional `prior_status` and `fields`.
+    pub fn to_value(&self) -> Value {
+        let subjects = self
+            .entries
+            .iter()
+            .map(|e| {
+                let mut fields = vec![
+                    ("ordinal", Value::Int(i128::from(e.ordinal))),
+                    ("subject", Value::Text(e.subject.as_str().to_owned())),
+                    ("display", Value::Text(e.display.clone())),
+                    ("consent", Value::Text(e.consent.as_str().to_owned())),
+                    ("fields", Value::Map(e.attributes.clone())),
+                ];
+                if let Some(p) = &e.prior_status {
+                    fields.push(("prior_status", Value::Text(p.clone())));
+                }
+                cbor::map(fields)
+            })
+            .collect();
+        cbor::map([
+            ("cohort", Value::Text(self.cohort.as_str().to_owned())),
+            ("version", Value::Int(i128::from(self.version))),
+            ("subjects", Value::Array(subjects)),
+        ])
+    }
+
+    /// Canonical CBOR of the form.
+    pub fn encode(&self) -> Vec<u8> {
+        cbor::encode(&self.to_value()).expect("a checked form is encodable")
+    }
+
+    /// SHA-256 of [`Self::encode`].
+    pub fn digest(&self) -> Digest {
+        sha256(&self.encode())
+    }
+
+    /// The form as a roster for `generation`.
+    pub fn into_roster(self, generation: Generation) -> Roster {
+        Roster { cohort: self.cohort, version: self.version, generation, entries: self.entries }
+    }
+}
+
+fn finding(path: impl Into<String>, message: impl Into<String>) -> RosterFinding {
+    RosterFinding { path: path.into(), message: message.into() }
+}
+
+/// The closed-schema check of a roster issue form (DIS-063), as a pure function.
+///
+/// `value` is a map with `cohort` (non-empty text), `version` (a whole number, at least 1) and
+/// `subjects`. A subject has `subject` and `display` (text), and optionally `ordinal` (its
+/// position, counting from 1, when left out), `consent` (`granted`, `refused` or `unknown`, the
+/// default), `prior_status` (text) and `fields` (a map). Anything else, including `generation`,
+/// is a finding. Every finding is reported, not only the first.
+pub fn check_issue_form(value: Value) -> Result<RosterIssueForm, Vec<RosterFinding>> {
+    let mut findings = Vec::new();
+    let Value::Map(mut m) = value else {
+        return Err(vec![finding("", "the roster must be a map")]);
+    };
+    let cohort = match m.remove("cohort") {
+        Some(Value::Text(t)) => match CohortId::new(t) {
+            Ok(c) => Some(c),
+            Err(_) => {
+                findings.push(finding("cohort", "cohort is empty"));
+                None
+            }
+        },
+        Some(_) => {
+            findings.push(finding("cohort", "cohort must be one text value"));
+            None
+        }
+        None => {
+            findings.push(finding("cohort", "cohort is missing"));
+            None
+        }
+    };
+    let version = match m.remove("version") {
+        Some(Value::Int(v)) if v >= 1 && u64::try_from(v).is_ok() => v as u64,
+        Some(_) => {
+            findings.push(finding("version", "version must be a whole number, at least 1"));
+            0
+        }
+        None => {
+            findings.push(finding("version", "version is missing"));
+            0
+        }
+    };
+    let subjects = match m.remove("subjects") {
+        Some(Value::Array(a)) => a,
+        Some(_) => {
+            findings.push(finding("subjects", "subjects must be a list"));
+            Vec::new()
+        }
+        None => {
+            findings.push(finding("subjects", "subjects is missing"));
+            Vec::new()
+        }
+    };
+    for key in m.keys() {
+        let note = if key == "generation" { "; a generation belongs to a cohort on one tenancy and is not part of the roster" } else { "" };
+        findings.push(finding(key.as_str(), format!("unknown field `{key}`{note}")));
+    }
+    let mut entries: Vec<RosterEntry> = Vec::new();
+    let mut seen = BTreeSet::new();
+    for (i, s) in subjects.into_iter().enumerate() {
+        let n = i + 1;
+        let at = |field: &str| format!("subjects[{n}].{field}");
+        let Value::Map(mut s) = s else {
+            findings.push(finding(format!("subjects[{n}]"), format!("subject {n} must be a map")));
+            continue;
+        };
+        let subject = match s.remove("subject") {
+            Some(Value::Text(t)) => match SubjectId::new(t) {
+                Ok(id) => Some(id),
+                Err(_) => {
+                    findings.push(finding(at("subject"), format!("subject {n} has an empty ID")));
+                    None
+                }
+            },
+            _ => {
+                findings.push(finding(at("subject"), format!("subject {n} needs a `subject` ID")));
+                None
+            }
+        };
+        let display = match s.remove("display") {
+            Some(Value::Text(t)) => t,
+            _ => {
+                findings.push(finding(at("display"), format!("subject {n} needs `display` text")));
+                String::new()
+            }
+        };
+        let consent = match s.remove("consent") {
+            None => ConsentState::Unknown,
+            Some(Value::Text(t)) => ConsentState::parse(&t).unwrap_or_else(|| {
+                findings.push(finding(at("consent"), format!("subject {n} has a consent state outside granted, refused and unknown")));
+                ConsentState::Unknown
+            }),
+            Some(_) => {
+                findings.push(finding(at("consent"), format!("subject {n} has a bad `consent`")));
+                ConsentState::Unknown
+            }
+        };
+        let prior_status = match s.remove("prior_status") {
+            None => None,
+            Some(Value::Text(t)) => Some(t),
+            Some(_) => {
+                findings.push(finding(at("prior_status"), format!("subject {n} has a bad `prior_status`")));
+                None
+            }
+        };
+        let attributes = match s.remove("fields") {
+            None => BTreeMap::new(),
+            Some(Value::Map(f)) => f,
+            Some(_) => {
+                findings.push(finding(at("fields"), format!("subject {n} has bad `fields`")));
+                BTreeMap::new()
+            }
+        };
+        let ordinal = match s.remove("ordinal") {
+            None => n as u32,
+            Some(Value::Int(o)) if (1..=i128::from(u32::MAX)).contains(&o) => o as u32,
+            Some(_) => {
+                findings.push(finding(at("ordinal"), format!("subject {n} has an ordinal that is not a whole number from 1")));
+                n as u32
+            }
+        };
+        for key in s.keys() {
+            findings.push(finding(at(key), format!("subject {n} has an unknown field `{key}`")));
+        }
+        if entries.last().is_some_and(|l| l.ordinal >= ordinal) {
+            findings.push(finding(at("ordinal"), format!("subject {n} does not have a higher ordinal than the one before")));
+        }
+        if let Some(subject) = subject {
+            if !seen.insert(subject.clone()) {
+                findings.push(finding(at("subject"), format!("subject {n} repeats an earlier subject ID")));
+            }
+            entries.push(RosterEntry { ordinal, subject, display, attributes, consent, prior_status });
+        }
+    }
+    let Some(cohort) = cohort else { return Err(findings) };
+    let form = RosterIssueForm { cohort, version: version.max(1), entries };
+    if cbor::encode(&form.to_value()).is_err() {
+        findings.push(finding("", "the roster has a value that can't be encoded (text must be NFC, integers within range)"));
+    }
+    if findings.is_empty() { Ok(form) } else { Err(findings) }
 }

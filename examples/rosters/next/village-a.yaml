@@ -1,0 +1,28 @@
+# The next version of `examples/rosters/village-a.yaml` (version 3): two new households, one
+# consent state changed (hh-0001 granted consent) and one field value changed (the head of
+# hh-0002). The store refuses a version that is not higher, so this is version 4.
+#
+# `RosterSet::open` does not recurse, so this directory is not read as a current roster.
+cohort: village-a
+version: 4
+subjects:
+  - subject: hh-0001
+    display: Household 1
+    consent: granted
+    fields: { head_name: Amina, village_code: V-17 }
+  - subject: hh-0002
+    display: Household 2
+    consent: granted
+    fields: { head_name: Tomasz, village_code: V-17 }
+  - subject: hh-0003
+    display: Household 3
+    consent: refused
+    fields: { head_name: Lucia, village_code: V-18 }
+  - subject: hh-0004
+    display: Household 4
+    consent: unknown
+    fields: { head_name: Nadia, village_code: V-17 }
+  - subject: hh-0005
+    display: Household 5
+    consent: unknown
+    fields: { head_name: Omar, village_code: V-19 }

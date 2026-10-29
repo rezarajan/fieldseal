@@ -1,9 +1,10 @@
 //! Compares a roster with the instrument that reads it (DIS-013): shared by `survey check
-//! --roster` and `roster check`.
+//! --roster` and `roster check`, and the closed-schema check of the roster file itself.
 
 use std::collections::BTreeSet;
 
-use fieldseal_distribution::domain::{Roster, collect_roster_fields};
+use fieldseal_distribution::domain::{Roster, RosterFinding, check_issue_form, collect_roster_fields};
+use fieldseal_kernel::id::Generation;
 use fieldseal_instrument::domain::{Finding, FindingKind, Severity};
 use fieldseal_kernel::Value;
 
@@ -37,4 +38,11 @@ pub fn compare_roster(roster: &Roster, instrument: &Value) -> Vec<Finding> {
         });
     }
     findings
+}
+
+/// The closed-schema check of a roster file (DIS-063), which lives in the Distribution context so
+/// that the factory runs the same code. The roster comes back with generation 1: a file has none
+/// (WIRE-198), and the comparison with an instrument does not read it.
+pub fn check_roster_form(value: Value) -> Result<Roster, Vec<RosterFinding>> {
+    check_issue_form(value).map(|form| form.into_roster(Generation(1)))
 }

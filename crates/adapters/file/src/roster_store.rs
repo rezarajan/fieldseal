@@ -139,7 +139,7 @@ impl RosterStore {
     }
 
     /// The versions stored for a cohort, lowest first.
-    fn versions(&self, cohort: &CohortId) -> Result<Vec<u64>, RosterStoreError> {
+    pub fn versions(&self, cohort: &CohortId) -> Result<Vec<u64>, RosterStoreError> {
         let dir = self.cohort_dir(cohort)?;
         let mut out: Vec<u64> = match std::fs::read_dir(&dir) {
             Ok(rd) => rd

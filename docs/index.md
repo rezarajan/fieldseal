@@ -22,6 +22,7 @@ Fieldseal collects structured data about people in the field, on shared and offl
 
 - [Build and check the project](how-to/build-and-check.md)
 - [Reuse the CI images](how-to/reuse-ci-images.md)
+- [Manage rosters](how-to/manage-rosters.md): check a roster against its survey, compare two versions and list the stored versions
 - [Export results to Parquet](how-to/export-results-to-parquet.md): write the results export from a landing directory with `fieldseal intake results` and convert it with DuckDB
 - [Run the whole factory stack locally](how-to/run-the-local-stack.md): compose stack with a passkey-only Keycloak, the factory, the intake endpoint and the transparency log
 - [Set up an authority's trust hierarchy](how-to/set-up-the-trust-hierarchy.md): root ceremony, purpose keys, trust bundle

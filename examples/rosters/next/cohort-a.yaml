@@ -1,0 +1,19 @@
+# The next version of `examples/rosters/cohort-a.yaml` (version 1): one new participant, one
+# consent state changed (p-0002 granted consent) and one field value changed (p-0001 moved to
+# class 3A). The names and ids are invented.
+cohort: cohort-a
+version: 2
+subjects:
+  - subject: p-0001
+    display: Participant 1
+    consent: granted
+    fields: { name: Participant 1, school: Hill School, class: 3A, age: 12, guardian_phone: "000" }
+  - subject: p-0002
+    display: Participant 2
+    consent: granted
+    prior_status: enrolled
+    fields: { name: Participant 2, school: Hill School, class: 2B, age: 13, guardian_phone: "000" }
+  - subject: p-0003
+    display: Participant 3
+    consent: unknown
+    fields: { name: Participant 3, school: Hill School, class: 2B, age: 12, guardian_phone: "000" }
