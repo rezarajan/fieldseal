@@ -228,7 +228,9 @@
                 pkgs.cacert
               ];
               # The mount points are owned by the service user, so a fresh named volume mounted
-              # there is writable (both Docker and Podman copy the ownership up).
+              # there is writable (both Docker and Podman copy the ownership up). Every image that
+              # mounts a shared volume (`/authority` among them) must agree, because compose
+              # creates the containers together and the first to mount a fresh volume sets it.
               fakeRootCommands = ''
                 for d in ${pkgs.lib.concatStringsSep " " mounts}; do
                   mkdir -p ".$d"
@@ -258,7 +260,9 @@
             fakeRootCommands = ''
               mkdir -p tmp authority published rosters
               chmod 1777 tmp
-              chown 10001:10001 published
+              # Owned by the service user as in every image that mounts these volumes: a fresh
+              # named volume takes the ownership of the first image that mounts it.
+              chown 10001:10001 authority published
               # The roster store's directory, as in the factory image: owner-only, read here.
               chmod 0700 rosters
               chown 10001:10001 rosters
@@ -324,6 +328,7 @@
             web-image = webImage;
             factory-image = serviceImage "fieldseal-factory" factoryBin [ 8080 ]
                 [
+                  "/authority"
                   "/state/factory"
                   "/rosters"
                   "/bundles"
@@ -332,12 +337,16 @@
             intake-image =
               serviceImage "fieldseal-intake" intakeBin [ 8480 8481 ]
                 [
+                  "/authority"
                   "/landing"
                   "/submissions"
                   "/published"
                   "/issued"
                 ];
-            translog-image = serviceImage "fieldseal-translog" translogBin [ 8080 ] [ "/data/log" ];
+            translog-image = serviceImage "fieldseal-translog" translogBin [ 8080 ] [
+              "/authority"
+              "/data/log"
+            ];
             cli-image = stackToolImage "fieldseal-cli" [ ] [ ] [ "/opt/fieldseal/tools/stack-init.sh" ];
             demo-image =
               stackToolImage "fieldseal-demo"
