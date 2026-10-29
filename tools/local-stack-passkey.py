@@ -216,12 +216,11 @@ async def run(chromium, show_token, on_token, emit_json, open_url=None):
             await register_passkey()
 
             # --open <url>: the CLI's operator sign-in (tools/stack-browser.sh). The authenticator
-            # is new on every run, so a passkey is registered first (through the portal, whose
-            # session the CLI never sees), then the cookies are dropped and the authorisation
+            # is new on every run, so step 1 has just registered a passkey (through the portal,
+            # whose session the CLI never sees); now the cookies are dropped and the authorisation
             # URL is opened: the passkey signs in, and Keycloak redirects to the CLI's loopback
             # listener, which this browser reaches because both share one network namespace.
             if open_url:
-                await register_passkey()
                 step("sign in with the passkey at the CLI's authorisation URL")
                 await c("Network.enable")
                 await c("Network.clearBrowserCookies")
