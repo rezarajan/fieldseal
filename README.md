@@ -21,6 +21,8 @@ Start at [`docs/index.md`](docs/index.md):
 
 **Code:** the format core, the bounded contexts, their adapters, the `fieldseal` CLI, the factory, the transparency log, the intake upload endpoint and the web app with its browser device, built against the specs. `just up` runs them as a local compose stack; [the hands-on tutorial](docs/tutorials/hands-on.md) walks every step.
 
+**Progress:** planned work and known problems are GitHub issues, grouped by [milestone](https://github.com/rezarajan/fieldseal/milestones): M1 native working demo (`just web`, done), M2 container stack parity, M3 the rest of the [developer-experience plan](docs/designs/developer-experience-first.md), M4 the first release, M5 stateless-ready services. Measured numbers and targets stay in [the build system explanation](docs/explanation/build-system.md#measured-baselines).
+
 > This repository contains design intent for handling personal data, including data about minors. Keep it private.
 
 ## Subdirectories & System Boundaries
