@@ -125,6 +125,10 @@ impl DataPlatform for EventPlatform {
         self.0.reinstate(sources)
     }
 
+    fn instruments(&self) -> Result<Vec<fieldseal_kernel::id::Fingerprint>, fieldseal_intake::ports::DataPlatformError> {
+        self.0.instruments()
+    }
+
     fn observations(&self, i: &fieldseal_kernel::id::Fingerprint) -> Result<Vec<fieldseal_intake::domain::LandedObservation>, fieldseal_intake::ports::DataPlatformError> {
         self.0.observations(i)
     }
@@ -321,4 +325,15 @@ fn main() -> ExitCode {
     eprintln!("{{\"event\":\"listening\",\"listen\":{:?},\"authority\":{:?},\"devices\":{}}}", listen, if stack { "stack" } else { "practice" }, devices.len());
     http.run(&server);
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // covers: INT-091
+    #[test]
+    fn int_011_the_event_platform_satisfies_the_data_platform_contract() {
+        fieldseal_intake::contract::data_platform_contract(|| EventPlatform(Box::new(MemoryDataPlatform::new())));
+    }
 }

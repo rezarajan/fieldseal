@@ -7,6 +7,8 @@
 
 use std::process::ExitCode;
 
+use fieldseal_adapters_landing_files::export::reader::{Published, export_table};
+use fieldseal_adapters_landing_files::export::{ExportKey, ExportOptions, Format, KeyedSubject, write_export};
 use fieldseal_adapters_landing_files::{FileDataPlatform, json};
 use fieldseal_adapters_memory::intake::practice::{PracticeAuthority, PracticeDevice, at, manifest_for, tick};
 use fieldseal_adapters_memory::intake::{MemoryDataPlatform, MemoryInstrumentSource, MemoryRosterHistory, MemorySubmissionStore, MemoryTenancyRegistry};
@@ -23,6 +25,8 @@ use fieldseal_kernel::id::Salt;
 use fieldseal_kernel::time::AuthorityTime;
 use fieldseal_kernel::{Value, cbor};
 
+use crate::messages::msg;
+
 struct Opts {
     positional: Vec<String>,
     json: bool,
@@ -35,16 +39,26 @@ struct Opts {
     now: AuthorityTime,
     /// `practice --no-parity`: the form the upload endpoint takes (parity is for storage and transfer by file).
     no_parity: bool,
+    /// `results`: the intake app's landing directory.
+    landing: Option<String>,
+    /// `results`: the directory of `*.published` files.
+    published: Option<String>,
+    /// `results`: the export pseudonymisation key file.
+    export_key: Option<String>,
+    /// `results`: the trust bundle that the publications are verified against.
+    trust_bundle: Option<String>,
+    /// `results --format`: `jsonl`, `csv` or both.
+    format: Option<String>,
 }
 
 fn parse(args: &[String]) -> Result<Opts, String> {
-    let mut o = Opts { positional: vec![], json: false, seed: 7, salt: [0; 32], instruments: vec![], devices: vec![], out: None, reveal: false, now: at(20), no_parity: false };
+    let mut o = Opts { positional: vec![], json: false, seed: 7, salt: [0; 32], instruments: vec![], devices: vec![], out: None, reveal: false, now: at(20), no_parity: false, landing: None, published: None, export_key: None, trust_bundle: None, format: None };
     let mut seen = std::collections::BTreeSet::new();
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut value = |name: &str| it.next().filter(|v| !v.starts_with("--")).cloned().ok_or_else(|| format!("{name} needs a value"));
         let flag = a.as_str();
-        if matches!(flag, "--seed" | "--now" | "--salt" | "--out" | "-o") && !seen.insert(if flag == "-o" { "--out" } else { flag }) {
+        if matches!(flag, "--seed" | "--now" | "--salt" | "--out" | "-o" | "--landing" | "--published" | "--export-key" | "--trust-bundle" | "--format") && !seen.insert(if flag == "-o" { "--out" } else { flag }) {
             return Err(format!("{flag} was given more than once"));
         }
         match flag {
@@ -60,6 +74,11 @@ fn parse(args: &[String]) -> Result<Opts, String> {
             "--instrument" => o.instruments.push(value("--instrument")?),
             "--device" => o.devices.push(value("--device")?),
             "--out" | "-o" => o.out = Some(value("--out")?),
+            "--landing" => o.landing = Some(value("--landing")?),
+            "--published" => o.published = Some(value("--published")?),
+            "--export-key" => o.export_key = Some(value("--export-key")?),
+            "--trust-bundle" => o.trust_bundle = Some(value("--trust-bundle")?),
+            "--format" => o.format = Some(value("--format")?),
             s if s.starts_with("--") => return Err(format!("unknown option {s}")),
             s => o.positional.push(s.to_owned()),
         }
@@ -82,7 +101,8 @@ fn usage() -> ExitCode {
         "usage: fieldseal intake contract <instrument> [--salt <64 hex>] [--out <dir>] [--json]\n\
          \x20      fieldseal intake run <export>... [--instrument <file>]... [--device <label>]... [--seed <n>] [--now <ms>] [--out <dir>] [--json]\n\
          \x20      fieldseal intake replay <export> [same options as run]\n\
-         \x20      fieldseal intake practice --out <file> [--device <label>] [--seed <n>] [--no-parity]"
+         \x20      fieldseal intake practice --out <file> [--device <label>] [--seed <n>] [--no-parity]\n\
+         \x20      fieldseal intake results --landing <dir> --published <dir> --export-key <file> --trust-bundle <file> --out <dir> [--format jsonl,csv] [--json]"
     );
     ExitCode::from(2)
 }
@@ -102,6 +122,7 @@ pub fn run(args: &[String]) -> ExitCode {
         "run" => gate(&opts, false),
         "replay" => gate(&opts, true),
         "practice" => practice(&opts),
+        "results" => results(&opts),
         _ => return usage(),
     };
     match result {
@@ -281,6 +302,69 @@ fn gate(o: &Opts, dry: bool) -> Result<ExitCode, String> {
         println!("{}", json(&Value::Array(all)));
     }
     Ok(if failed { ExitCode::from(1) } else { ExitCode::SUCCESS })
+}
+
+/// `intake results`: the results export of a landing directory (INT-085 to INT-088).
+///
+/// The landing is read through the landing-files adapter as one snapshot, and the instruments
+/// and layouts come from the published directory, verified against the trust bundle. The key
+/// is the file the intake app uses; this command never creates or derives one.
+fn results(o: &Opts) -> Result<ExitCode, String> {
+    let need = |v: &Option<String>, flag: &str| v.clone().ok_or_else(|| format!("intake results needs {flag}"));
+    let (landing, published, key_file) = (need(&o.landing, "--landing <dir>")?, need(&o.published, "--published <dir>")?, need(&o.export_key, "--export-key <file>")?);
+    let (trust_file, out) = (need(&o.trust_bundle, "--trust-bundle <file>")?, need(&o.out, "--out <dir>")?);
+    let mut formats = std::collections::BTreeSet::new();
+    for f in o.format.as_deref().unwrap_or("jsonl,csv").split(',') {
+        formats.insert(match f {
+            "jsonl" => Format::Jsonl,
+            "csv" => Format::Csv,
+            other => return Err(format!("--format is jsonl, csv or both, not `{other}`")),
+        });
+    }
+    let key = ExportKey::load_file(std::path::Path::new(&key_file)).map_err(|e| e.to_string())?;
+    let bundle_bytes = std::fs::read(&trust_file).map_err(|e| format!("{trust_file}: {e}"))?;
+    let bundle = fieldseal_trust::domain::TrustBundle::decode(&bundle_bytes).map_err(|e| format!("{trust_file}: {e}"))?;
+    let published = Published::read(std::path::Path::new(&published), &bundle, &crate::bundle_stack::publishing_policy()).map_err(|e| e.to_string())?;
+    let snapshot = FileDataPlatform::open_read_only(&landing).map_err(|e| e.to_string())?;
+    let mapper = KeyedSubject::new(key);
+    let table = export_table(&snapshot, &published, &mapper).map_err(|e| e.to_string())?;
+    let result = write_export(&table, &ExportOptions { formats, subject: Box::new(mapper) }, std::path::Path::new(&out)).map_err(|e| e.to_string())?;
+    if o.json {
+        let files = result
+            .files
+            .iter()
+            .map(|f| {
+                let mut e = vec![("name", Value::Text(f.name.clone())), ("sha256", Value::Text(f.sha256.clone())), ("bytes", Value::Int(i128::from(f.bytes)))];
+                if let Some(rows) = f.rows {
+                    e.push(("rows", Value::Int(i128::from(rows))));
+                }
+                cbor::map(e)
+            })
+            .collect();
+        println!(
+            "{}",
+            json(&cbor::map([
+                ("files", Value::Array(files)),
+                ("landing_mark", Value::Int(i128::from(table.landing_mark()))),
+                ("manifest_sha256", Value::Text(result.manifest_sha256.clone())),
+            ]))
+        );
+    } else {
+        println!("{}", msg("results-written", &[("dir", &out), ("count", &result.files.len().to_string()), ("mark", &table.landing_mark().to_string())]));
+        for f in &result.files {
+            let bytes = f.bytes.to_string();
+            println!("{}", match f.rows {
+                Some(rows) => msg("results-file", &[("name", &f.name), ("bytes", &bytes), ("rows", &rows.to_string())]),
+                None => msg("results-file-plain", &[("name", &f.name), ("bytes", &bytes)]),
+            });
+        }
+        println!("{}", msg("results-manifest", &[("digest", &result.manifest_sha256)]));
+        println!("{}", msg("results-unprotected", &[]));
+    }
+    if o.json {
+        eprintln!("{}", msg("results-unprotected", &[]));
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 fn practice(o: &Opts) -> Result<ExitCode, String> {

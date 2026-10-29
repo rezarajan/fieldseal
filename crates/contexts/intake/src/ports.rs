@@ -132,7 +132,8 @@ pub struct LandingBatch {
 /// Contract: [`DataPlatform::land`] is atomic and append-only; exclusion is a flag on
 /// existing observations, never a deletion; observations are keyed by instrument
 /// fingerprint; a consent case is replaced by key (tenancy, subject, instrument) so the
-/// latest decision is current; envelopes are found by tenancy and by evidence `blob_id`.
+/// latest decision is current; envelopes are found by tenancy and by evidence `blob_id`;
+/// an instrument is listed once, after a landing that has an observation for it.
 pub trait DataPlatform {
     /// Appends a submission's landing.
     fn land(&self, batch: &LandingBatch) -> Result<(), DataPlatformError>;
@@ -141,6 +142,9 @@ pub trait DataPlatform {
     /// Removes the exclusion from every observation from `sources` (a custodian reversing a
     /// rejection); the observations were never deleted.
     fn reinstate(&self, sources: &[RecordId]) -> Result<(), DataPlatformError>;
+    /// The fingerprint of every instrument that has at least one landed observation, once
+    /// each, ascending.
+    fn instruments(&self) -> Result<Vec<Fingerprint>, DataPlatformError>;
     /// Every observation for an instrument, with exclusions.
     fn observations(&self, instrument: &Fingerprint) -> Result<Vec<LandedObservation>, DataPlatformError>;
     /// The landed envelopes of a tenancy, by ascending `seq`.

@@ -19,7 +19,7 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 EXTENSIONS = {".rs", ".sh", ".py", ".yaml", ".yml", ".nix", ".toml", ".json"}
-SKIP_DIRS = {".git", ".jj", "target", "docs", ".local-only", "node_modules", "result"}
+SKIP_DIRS = {".git", ".jj", "target", "docs", ".local-only", ".claude", "node_modules", "result"}
 
 
 def patterns(root: pathlib.Path) -> list[tuple[re.Pattern[str], str]]:

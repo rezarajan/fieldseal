@@ -186,6 +186,11 @@ impl DataPlatform for MemoryDataPlatform {
         Ok(())
     }
 
+    fn instruments(&self) -> Result<Vec<Fingerprint>, DataPlatformError> {
+        let s = self.state.lock().expect("lock");
+        Ok(s.observations.iter().map(|o| o.observation.instrument).collect::<std::collections::BTreeSet<_>>().into_iter().collect())
+    }
+
     fn observations(&self, instrument: &Fingerprint) -> Result<Vec<LandedObservation>, DataPlatformError> {
         Ok(self.state.lock().expect("lock").observations.iter().filter(|o| o.observation.instrument == *instrument).cloned().collect())
     }

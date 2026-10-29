@@ -111,6 +111,11 @@ pub fn data_platform_contract<D: DataPlatform>(make: impl Fn() -> D) {
     };
     platform.land(&batch).expect("land");
 
+    assert_eq!(
+        platform.instruments().expect("instruments"),
+        vec![Fingerprint::from([1; 32]), Fingerprint::from([2; 32])],
+        "an instrument is listed once, ascending, after a landing that has an observation for it"
+    );
     let first = platform.observations(&Fingerprint::from([1; 32])).expect("read");
     assert_eq!(first.len(), 1, "observations are keyed by instrument fingerprint");
     assert_eq!(first[0].excluded, None);
@@ -132,6 +137,7 @@ pub fn data_platform_contract<D: DataPlatform>(make: impl Fn() -> D) {
     assert_eq!(platform.evidence(&[4; 16]).expect("evidence"), None);
 
     platform.land(&LandingBatch { consent: vec![case(ConsentDecision::Accepted)], ..LandingBatch::default() }).expect("land");
+    assert_eq!(platform.instruments().expect("instruments").len(), 2, "a landing with no observation lists no instrument");
     let key = (TenancyId::from([7; 32]), SubjectId::new("s-1").expect("id"), Fingerprint::from([1; 32]));
     assert_eq!(platform.consent_case(&key.0, &key.1, &key.2).expect("case").map(|c| c.decision), Some(ConsentDecision::Accepted), "the latest decision replaces the earlier one");
     assert_eq!(platform.consent_cases().expect("cases").len(), 1);

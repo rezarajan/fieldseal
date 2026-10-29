@@ -761,9 +761,20 @@ dependencies = [
 name = "fieldseal-adapters-landing-files"
 version = "0.1.0"
 dependencies = [
+ "fieldseal-adapters-authoring",
+ "fieldseal-adapters-file",
  "fieldseal-adapters-memory",
+ "fieldseal-distribution",
+ "fieldseal-instrument",
  "fieldseal-intake",
  "fieldseal-kernel",
+ "fieldseal-policy",
+ "fieldseal-publishing",
+ "fieldseal-trust",
+ "hmac",
+ "sha2",
+ "thiserror",
+ "zeroize",
 ]
 
 [[package]]

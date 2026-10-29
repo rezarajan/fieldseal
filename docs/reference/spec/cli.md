@@ -201,6 +201,7 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 |---|---|---|---|---|
 | `intake run <file>…` | Run submissions through the gate and land them | exports or upload bodies → gate states, findings, receipts | all intake ports | INT-001–061 |
 | `intake replay <submission> [--reveal]` | Re-run a stored submission against given instrument and policy versions | submission ID → findings | all intake ports | INT-012, INT-053 |
+| `intake results --landing <dir> --published <dir> --export-key <file> --trust-bundle <file> --out <dir> [--format jsonl,csv]` | Write the results export of a landing directory: one long table, free text apart, data contracts, a codebook and a manifest, with keyed subject pseudonyms | landing directory, published directory, trust bundle, export key file → export directory, file list, manifest digest | `DataPlatform` (a landing snapshot) | INT-085–INT-088, CLI-048 |
 
 #### `deployment`
 
@@ -256,6 +257,7 @@ Each row gives the command, what it does, its main inputs and outputs, ports use
 - **CLI-044** `new survey` MUST write a survey that passes `survey check` with no error before it is edited, MUST give every list item an explicit `code:` so that changing a label does not change the answer code, MUST write `msgid`s with empty `msgstr`s in a catalogue for each requested language, MUST put the roster stub outside the survey folder, and MUST refuse to overwrite an existing survey folder or roster. The editor schemas it writes MUST be the bytes `schema export --out` writes.
 - **CLI-045** `survey check` MUST report, in one pass and one findings list, the folder's resolver errors, the decoding and schema errors with the file, line and column, the findings of `instrument validate` and `instrument lint`, the findings of `layout validate` and `layout lint` for every layout, and the translation report (INS-260). It MUST exit `1` on any error (CLI-005). `--strict` MUST turn every warning of the resolver, the translation report and validation into an error; lint findings keep their severity, because their limits are set by policy (INS-210). With `--roster`, a field the instrument reads that a subject lacks MUST be an error that names the field and the subject's ordinal and not its ID, and a roster field the instrument never reads MUST be a note (DIS-013).
 - **CLI-046** `survey list` MUST name every survey folder under the root with its version, its languages and its layout windows.
+- **CLI-048** `intake results` MUST read the landing directory through the landing-files `DataPlatform` adapter as one snapshot and the instruments and layouts from `--published`, verified against `--trust-bundle`; it MUST require `--published`, `--export-key` and `--trust-bundle`, MUST refuse an export key file that is absent, not 32 bytes long or wider than mode 0600 and MUST NOT create or derive a key, MUST refuse an instrument that has landed rows and no verified publication, MUST NOT print subject data, and MUST print the file list, the SHA-256 of `manifest.json` and the statement that the files are outside Fieldseal's protection. There is no mode that reads a device export file and no practice-authority form.
 
 ## 6. Resources and formats
 
@@ -302,6 +304,7 @@ The CLI reads and writes resources defined in other specs. Its `--json` output d
 | Coverage report lists every requirement ID | CLI-017 | `conformance run --json` |
 | Transport by URL scheme; unbuilt transports refused | CLI-021, CLI-023, CLI-028, CLI-029 | Unit tests of the client connect functions; `export upload --to grpc://…` exits `3` |
 | Authoring commands: a scaffold passes `survey check`; findings carry file, line and column; the schema export is deterministic | CLI-041, CLI-044–046 | `cargo test -p fieldseal-cli --test survey_cli` |
+| `intake results` writes the export, refuses a bad key file, guards CSV text and never creates a key | CLI-048 | `cargo test -p fieldseal-cli --test intake_results` |
 | Register over HTTP, upload, receipts verify | CLI-025, CLI-026, CLI-027, DEL-071 | `just demo` (compose stack), and the end-to-end flow of `docs/how-to/run-the-local-stack.md` |
 | Deterministic documentation | CLI-018 | Two builds compared byte for byte |
 | Flags and environment are closed and exact | CLI-030, CLI-031 | Unit tests of the argument parser, `support` parsers, `conformance` and `device` flags, and `Config::from_lookup` |

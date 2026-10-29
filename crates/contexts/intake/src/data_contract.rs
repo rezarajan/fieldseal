@@ -55,6 +55,15 @@ pub const LONG_COLUMNS: [LongColumn; 20] = [
     LongColumn { name: "exclusion_reason", logical_type: "string", description: "why it is excluded" },
 ];
 
+/// The typed value columns of the results export, which replace `value` in its JSON Lines
+/// form: an answered row fills the one that matches its `value_type`, and a free-text,
+/// nonresponse or retracted row fills none (INT-085).
+pub const TYPED_VALUE_COLUMNS: [&str; 5] = ["value_number", "value_text", "value_date", "value_bool", "value_codes"];
+
+/// The version of the results export's columns and files (semver): a minor version only adds
+/// columns (INT-085).
+pub const EXPORT_SCHEMA_VERSION: &str = "1.0.0";
+
 /// A code of a coded item (INS-131, INS-132).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ContractCode {
@@ -138,6 +147,9 @@ pub struct ContractItem {
     pub repeat: Option<(String, String)>,
     /// For a synthesised `other` text item, the item it describes.
     pub other_text_of: Option<String>,
+    /// Whether the answer is free text: true when the data type is `string`, which includes
+    /// an `other` text item (INT-088).
+    pub free_text: bool,
 }
 
 /// A group and the items it requires.
@@ -388,6 +400,7 @@ pub fn generate_data_contract(fingerprint: Fingerprint, instrument: &Instrument)
                     landed: q.is_editable() || q.record,
                     repeat,
                     other_text_of,
+                    free_text: q.data.data_type.name() == "string",
                 });
             }
             NodeKind::Display(_) => {}
@@ -415,6 +428,7 @@ pub fn generate_data_contract(fingerprint: Fingerprint, instrument: &Instrument)
             landed: d.record,
             repeat: None,
             other_text_of: None,
+            free_text: d.data.data_type.name() == "string",
         });
     }
 
@@ -541,6 +555,7 @@ impl DataContract {
                     ("required", Value::Bool(i.required)),
                     ("conditional", Value::Bool(i.conditional)),
                     ("derived", Value::Bool(i.derived)),
+                    ("free_text", Value::Bool(i.free_text)),
                     ("landed", Value::Bool(i.landed)),
                     ("nonresponse", texts(&i.nonresponse)),
                     ("concepts", Value::Array(i.concepts.iter().map(concept_value).collect())),
@@ -623,6 +638,7 @@ impl DataContract {
             .collect();
         cbor::map([
             ("instrument", text(&fieldseal_kernel::digest::lower_hex(self.instrument.as_bytes()))),
+            ("exportSchemaVersion", text(EXPORT_SCHEMA_VERSION)),
             ("languages", texts(&self.languages)),
             ("default_language", text(&self.default_language)),
             ("long_format", Value::Array(columns)),

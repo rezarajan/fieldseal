@@ -96,7 +96,7 @@ stateDiagram-v2
 | `ArtefactRegistry` | Fetches published instruments and policies by content address, with publishing evidence (PUB). |
 | `RosterHistory` | Returns every roster version issued to a tenancy, with consent states and issue times (DIS). |
 | `PolicyEngine` | Evaluates intake policy (POL); every result carries the policy content address. |
-| `DataPlatform` | Appends raw envelopes, observations, findings, consent decisions and losses; supports retrospective exclusion by flag. A lakehouse is one adapter. |
+| `DataPlatform` | Appends raw envelopes, observations, findings, consent decisions and losses; supports retrospective exclusion by flag; lists the instruments that have landed observations (INT-091). A lakehouse is one adapter. |
 | `ReceiptSigner` | Signs receipts with the receipt key (TRU). |
 | `RandomSource` | Uniform randomness for consent sampling, auditable by seed. |
 
@@ -167,6 +167,14 @@ stateDiagram-v2
 - **INT-083** Intake MUST validate every document it receives (an export or upload body, a roster, a manifest, any file an operator supplies) against its closed schema before using any of it (WIRE-208–WIRE-211), and MUST NOT offer a lenient mode. Intake MUST NOT convert units or derive any value (INS-226): each landed observation carries the value as entered, its unit or code, and its nonresponse state.
 - **INT-084** Before replaying rules for a record, intake MUST resolve every extension named by the record's instrument by content address, verify its publication as for the instrument (PUB-074), and handle a withdrawn extension as PUB-083 handles a withdrawn instrument.
 
+### Results export
+
+- **INT-085** The results export MUST write one long table, `results.jsonl` and `results.csv`, whose columns are the long format's with a version, `EXPORT_SCHEMA_VERSION` (semver, `1.0.0` first; a minor version only adds columns). JSON Lines replaces `value` with the typed columns `value_number`, `value_text`, `value_date`, `value_bool` and `value_codes`, of which an answered row fills the one that matches its `value_type`; decimals and money are canonical text, never a float. A CSV cell that is text and starts with `=`, `+`, `-` or `@` MUST be written with a `'` prefix, a numeric value (`integer`, `decimal`, `money`) MUST never be, and the rule has no switch. The manifest MUST record the landing mark, the number of rows in the landing snapshot, and every file of one export MUST come from that one snapshot. The CLI and the results reader MUST write identical bytes for the same snapshot, published directory and key.
+- **INT-086** Rows excluded by consent or custodian decision (INT-055) MUST be omitted from every file of the results export, and the manifest MUST count them in `rows_omitted_excluded`.
+- **INT-087** The `subject` of the results export MUST be `lower_hex(HMAC-SHA-256(export_key, subject))`, where `subject` is the UTF-8 text of the landed column. The export key is 32 random bytes in a file of mode no wider than 0600; the export MUST be refused when the file is absent, is not 32 bytes long or has a wider mode, and nothing in the export path MUST create or derive the key. The manifest MUST record a key id and never the key, and no roster subject identifier, readable or in hex, MUST appear in any file of the export.
+- **INT-088** The text of a free-text item (`value_type` `string`, including the `other` text of a coded item) MUST go to `free_text.jsonl` and `free_text.csv`, never to the results files: its row in the results table stays, with `value` and every typed column null. `codebook.csv` MUST be rendered from the data contract and not stored separately.
+- **INT-091** `DataPlatform::instruments` MUST return the fingerprint of every instrument that has at least one landed observation, once each, in ascending order.
+
 ## 6. Resources and formats
 
 Intake defines no resource kinds of its own; it consumes WIRE §export, WIRE §record and WIRE §receipt, and is configured by intake policy (POL):
@@ -230,6 +238,7 @@ Generic observation layout (logical; the data platform adapter maps it):
 | Merge across generations and conflicting unrelated tenancies | INT-053–054 | `fieldseal intake replay` |
 | Data contract generated from an instrument and expectations evaluated | INT-056–057 | `fieldseal intake run` with the example instrument |
 | Closed schemas on every Intake reader | INT-072 | `wire_005_*`, `wire_054_*`, `int_072_*` unit tests |
+| Results export: read-back equivalence, the CSV guard, excluded rows, subject pseudonyms, free text apart, the manifest | INT-085–INT-088, INT-091 | `cargo test -p fieldseal-adapters-landing-files`, `cargo test -p fieldseal-cli --test intake_results` |
 | Port contract tests for every adapter | §4 | Per-port suites with in-memory adapters |
 
 ## 9. Open questions

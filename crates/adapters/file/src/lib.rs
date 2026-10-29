@@ -6,6 +6,7 @@
 //! factory's registered tenancies from that journal, read-only. Production uses an HSM or
 //! KMS custody and a database; the ports are the same (ADR 0028).
 
+pub mod atomic;
 pub mod codec;
 pub mod rosters;
 pub mod submissions;

@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-157 tests prove 103 requirements.
+202 tests prove 111 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -60,9 +60,43 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `ins_261_layout_ids_never_reach_the_expanded_document` ([translation_report.rs:103](../../crates/adapters/authoring/tests/translation_report.rs#L103)) | INS-261 | INS-261 (instrument) |
 | `ins_260_the_example_catalogues_have_no_stale_entries` ([translation_report.rs:134](../../crates/adapters/authoring/tests/translation_report.rs#L134)) | INS-260 | INS-260 (instrument) |
 | `ins_260_strict_turns_warnings_into_errors` ([translation_report.rs:144](../../crates/adapters/authoring/tests/translation_report.rs#L144)) | INS-260 | INS-260 (instrument) |
+| `the_new_bytes_replace_the_old` ([atomic.rs:54](../../crates/adapters/file/src/atomic.rs#L54)) | INT-085 | INT-085 (intake) |
+| `a_failed_write_leaves_the_old_file_in_place` ([atomic.rs:65](../../crates/adapters/file/src/atomic.rs#L65)) | INT-085 | INT-085 (intake) |
+| `no_temporary_file_remains` ([atomic.rs:80](../../crates/adapters/file/src/atomic.rs#L80)) | INT-085 | INT-085 (intake) |
+| `int_013_the_file_submission_store_satisfies_the_contract` ([submissions.rs:10](../../crates/adapters/file/tests/submissions.rs#L10)) | INT-013 | INT-013 (intake) |
 | `the_checker_refuses_broken_markup` ([mod.rs:125](../../crates/adapters/html/tests/wellformed/mod.rs#L125)) | INS-208 | INS-208 (instrument) |
+| `int_085_duckdb_converts_jsonl_and_csv_to_parquet_with_the_manifest_row_count` ([duckdb_recipe.rs:12](../../crates/adapters/landing-files/tests/duckdb_recipe.rs#L12)) | INT-085 | INT-085 (intake) |
+| `int_086_excluded_rows_appear_in_no_file_and_are_counted` ([export_privacy.rs:49](../../crates/adapters/landing-files/tests/export_privacy.rs#L49)) | INT-086 | INT-086 (intake) |
+| `int_087_no_roster_subject_id_appears_in_any_file_in_readable_or_hex_form` ([export_privacy.rs:68](../../crates/adapters/landing-files/tests/export_privacy.rs#L68)) | INT-087 | INT-087 (intake) |
+| `int_087_the_same_key_gives_the_same_pseudonym` ([export_privacy.rs:96](../../crates/adapters/landing-files/tests/export_privacy.rs#L96)) | INT-087 | INT-087 (intake) |
+| `int_087_another_key_gives_different_pseudonyms` ([export_privacy.rs:115](../../crates/adapters/landing-files/tests/export_privacy.rs#L115)) | INT-087 | INT-087 (intake) |
+| `int_087_the_pseudonym_is_the_hmac_of_the_subject_text` ([export_privacy.rs:125](../../crates/adapters/landing-files/tests/export_privacy.rs#L125)) | INT-087 | INT-087 (intake) |
+| `int_087_the_manifest_records_the_key_id_not_the_key` ([export_privacy.rs:135](../../crates/adapters/landing-files/tests/export_privacy.rs#L135)) | INT-087 | INT-087 (intake) |
+| `int_087_an_absent_or_wrong_key_file_is_refused_and_never_created` ([export_privacy.rs:154](../../crates/adapters/landing-files/tests/export_privacy.rs#L154)) | INT-087 | INT-087 (intake) |
+| `int_085_jsonl_and_csv_read_back_to_the_same_rows` ([export_readback.rs:47](../../crates/adapters/landing-files/tests/export_readback.rs#L47)) | INT-085 | INT-085 (intake) |
+| `int_085_decimal_text_is_exact_and_money_keeps_currency_scale` ([export_readback.rs:67](../../crates/adapters/landing-files/tests/export_readback.rs#L67)) | INT-085 | INT-085 (intake) |
+| `int_085_nonresponse_and_retraction_rows_have_null_typed_columns` ([export_readback.rs:82](../../crates/adapters/landing-files/tests/export_readback.rs#L82)) | INT-085 | INT-085 (intake) |
+| `int_085_an_empty_csv_cell_equals_a_json_null` ([export_readback.rs:101](../../crates/adapters/landing-files/tests/export_readback.rs#L101)) | INT-085 | INT-085 (intake) |
+| `int_088_free_text_is_joined_back_by_record_and_item` ([export_readback.rs:117](../../crates/adapters/landing-files/tests/export_readback.rs#L117)) | INT-088 | INT-088 (intake) |
+| `int_085_numbers_are_never_prefixed_and_text_starting_with_a_formula_character_is` ([export_readback.rs:136](../../crates/adapters/landing-files/tests/export_readback.rs#L136)) | INT-085 | INT-085 (intake) |
+| `int_085_the_guard_covers_free_text_csv_and_the_codebook` ([export_readback.rs:160](../../crates/adapters/landing-files/tests/export_readback.rs#L160)) | INT-085 | INT-085 (intake) |
+| `int_085_rows_have_a_total_order_even_when_the_listed_keys_are_equal` ([export_readback.rs:182](../../crates/adapters/landing-files/tests/export_readback.rs#L182)) | INT-085 | INT-085 (intake) |
+| `int_085_the_manifest_records_the_landing_mark` ([export_readback.rs:199](../../crates/adapters/landing-files/tests/export_readback.rs#L199)) | INT-085 | INT-085 (intake) |
+| `int_085_codebook_is_rendered_from_the_contract` ([export_readback.rs:208](../../crates/adapters/landing-files/tests/export_readback.rs#L208)) | INT-085 | INT-085 (intake) |
+| `int_085_manifest_digests_match_the_files` ([export_readback.rs:228](../../crates/adapters/landing-files/tests/export_readback.rs#L228)) | INT-085 | INT-085 (intake) |
+| `int_085_export_schema_version_is_in_manifest_and_contract` ([export_readback.rs:253](../../crates/adapters/landing-files/tests/export_readback.rs#L253)) | INT-085 | INT-085 (intake) |
+| `int_085_rows_are_sorted_by_instrument_tenancy_seq_record_and_item` ([export_readback.rs:267](../../crates/adapters/landing-files/tests/export_readback.rs#L267)) | INT-085 | INT-085 (intake) |
+| `int_085_json_lines_are_compact_with_column_order_keys` ([export_readback.rs:290](../../crates/adapters/landing-files/tests/export_readback.rs#L290)) | INT-085 | INT-085 (intake) |
+| `int_085_manifest_and_contract_keys_are_sorted` ([export_readback.rs:308](../../crates/adapters/landing-files/tests/export_readback.rs#L308)) | INT-085 | INT-085 (intake) |
+| `int_088_a_free_text_item_has_a_null_value_and_null_typed_columns_in_both_formats` ([export_readback.rs:336](../../crates/adapters/landing-files/tests/export_readback.rs#L336)) | INT-088 | INT-088 (intake) |
+| `int_085_a_snapshot_reads_back_what_was_landed` ([snapshot.rs:24](../../crates/adapters/landing-files/tests/snapshot.rs#L24)) | INT-085 | INT-085 (intake) |
+| `int_085_a_snapshot_never_writes` ([snapshot.rs:41](../../crates/adapters/landing-files/tests/snapshot.rs#L41)) | INT-085 | INT-085 (intake) |
+| `int_072_a_snapshot_refuses_a_row_that_does_not_fit_its_column` ([snapshot.rs:58](../../crates/adapters/landing-files/tests/snapshot.rs#L58)) | INT-072 | INT-072 (intake) |
+| `int_011_the_file_platform_satisfies_the_data_platform_contract` ([snapshot.rs:80](../../crates/adapters/landing-files/tests/snapshot.rs#L80)) | INT-011 | INT-011 (intake) |
+| `int_085_the_landing_files_keep_their_bytes` ([snapshot.rs:89](../../crates/adapters/landing-files/tests/snapshot.rs#L89)) | INT-085 | INT-085 (intake) |
 | `pol_035_invalid_facts_are_refused_identically_by_both_engines` ([policy_parity.rs:43](../../crates/adapters/opa/tests/policy_parity.rs#L43)) | POL-035 | POL-035 (policy) |
 | `pol_032_valid_facts_are_accepted_identically_by_both_engines` ([policy_parity.rs:76](../../crates/adapters/opa/tests/policy_parity.rs#L76)) | POL-032 | POL-032 (policy) |
+| `int_011_the_event_platform_satisfies_the_data_platform_contract` ([server.rs:336](../../crates/adapters/upload-http/src/bin/server.rs#L336)) | INT-011, INT-091 | INT-011 (intake); INT-091 (intake) |
 | `plat_110_web_device_registers_verifies_captures_exports_uploads_and_lands` ([device_flow.rs:53](../../crates/adapters/web/tests/device_flow.rs#L53)) | PLAT-100, PLAT-105, PLAT-106, PLAT-108, PLAT-110, PLAT-111, PLAT-113, PLAT-114, PLAT-115, PLAT-116 | PLAT-100 (platform-profiles); PLAT-105 (platform-profiles); PLAT-106 (platform-profiles) |
 | `pub_072_a_bundle_whose_tree_heads_are_dated_and_recent_verifies` ([dis_release.rs:288](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L288)) | PUB-072 | PUB-072 (publishing) |
 | `pub_072_a_tree_head_with_no_time_token_is_too_old` ([dis_release.rs:295](../../crates/apps/cli/src/conformance_cmd/dis_release.rs#L295)) | PUB-072 | PUB-072 (publishing) |
@@ -75,6 +109,17 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `the_conformance_document_is_generated_from_the_matrix` ([conformance.rs:110](../../crates/apps/cli/tests/conformance.rs#L110)) | CLI-017, PLAT-033 | CLI-017 (cli); PLAT-033 (platform-profiles) |
 | `cli_017_the_context_suites_list_run_and_pass` ([conformance.rs:118](../../crates/apps/cli/tests/conformance.rs#L118)) | CLI-017 | CLI-017 (cli) |
 | `cli_006_demo_pipeline_runs_end_to_end_and_exits_zero` ([demo_pipeline.rs:10](../../crates/apps/cli/tests/demo_pipeline.rs#L10)) | CLI-006 | CLI-006 (cli) |
+| `cli_048_results_from_a_landing_directory_writes_every_file_and_prints_the_manifest_digest` ([intake_results.rs:106](../../crates/apps/cli/tests/intake_results.rs#L106)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_the_unprotected_data_statement_is_printed` ([intake_results.rs:131](../../crates/apps/cli/tests/intake_results.rs#L131)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_the_csv_guard_prefixes_text_and_never_numbers` ([intake_results.rs:147](../../crates/apps/cli/tests/intake_results.rs#L147)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_the_manifest_records_the_landing_mark_of_the_snapshot` ([intake_results.rs:165](../../crates/apps/cli/tests/intake_results.rs#L165)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_a_second_export_key_changes_pseudonyms` ([intake_results.rs:178](../../crates/apps/cli/tests/intake_results.rs#L178)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_the_export_key_is_required` ([intake_results.rs:194](../../crates/apps/cli/tests/intake_results.rs#L194)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_published_is_required` ([intake_results.rs:206](../../crates/apps/cli/tests/intake_results.rs#L206)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_trust_bundle_is_required` ([intake_results.rs:220](../../crates/apps/cli/tests/intake_results.rs#L220)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_a_key_file_of_the_wrong_length_or_mode_is_refused` ([intake_results.rs:235](../../crates/apps/cli/tests/intake_results.rs#L235)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_contract_files_are_named_by_fingerprint_hex` ([intake_results.rs:256](../../crates/apps/cli/tests/intake_results.rs#L256)) | CLI-048 | CLI-048 (cli) |
+| `cli_048_an_instrument_with_no_verified_publication_is_refused` ([intake_results.rs:270](../../crates/apps/cli/tests/intake_results.rs#L270)) | CLI-048 | CLI-048 (cli) |
 | `wire_213_the_embedded_corpus_lists_every_file` ([strict_schema_corpus.rs:29](../../crates/apps/cli/tests/strict_schema_corpus.rs#L29)) | WIRE-213 | WIRE-213 (wire-formats) |
 | `cli_043_conformance_list_names_strict_schema` ([strict_schema_corpus.rs:49](../../crates/apps/cli/tests/strict_schema_corpus.rs#L49)) | CLI-043 | CLI-043 (cli) |
 | `cli_043_the_strict_schema_suite_rejects_every_corpus_document` ([strict_schema_corpus.rs:56](../../crates/apps/cli/tests/strict_schema_corpus.rs#L56)) | CLI-043 | CLI-043 (cli) |

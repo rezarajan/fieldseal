@@ -57,9 +57,7 @@ impl SubmissionStore for FileSubmissionStore {
         let _guard = self.lock.lock().expect("lock");
         let path = self.path(&id);
         if !path.exists() {
-            let tmp = self.dir.join(format!("{}.tmp", lower_hex(id.0.as_bytes())));
-            std::fs::write(&tmp, bytes).map_err(backend)?;
-            std::fs::rename(&tmp, &path).map_err(backend)?;
+            crate::atomic::write_atomic(&path, bytes).map_err(backend)?;
             let mut index = std::fs::OpenOptions::new().create(true).append(true).open(self.dir.join("index")).map_err(backend)?;
             writeln!(index, "{} {}", lower_hex(id.0.as_bytes()), (self.now)()).map_err(backend)?;
         }
