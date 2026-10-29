@@ -5,7 +5,7 @@
 Every test and the requirement that justifies it. A test exists only to prove a requirement of
 the specs (or an ADR); the requirement is in its name or in a `// covers:` comment above it.
 
-579 tests prove 168 requirements.
+598 tests prove 179 requirements.
 
 | Test | Requirements | What they require |
 |---|---|---|
@@ -300,6 +300,8 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `the_conformance_document_is_generated_from_the_matrix` ([conformance.rs:110](../../crates/apps/cli/tests/conformance.rs#L110)) | CLI-017, PLAT-033 | CLI-017 (cli); PLAT-033 (platform-profiles) |
 | `cli_017_the_context_suites_list_run_and_pass` ([conformance.rs:118](../../crates/apps/cli/tests/conformance.rs#L118)) | CLI-017 | CLI-017 (cli) |
 | `cli_006_demo_pipeline_runs_end_to_end_and_exits_zero` ([demo_pipeline.rs:10](../../crates/apps/cli/tests/demo_pipeline.rs#L10)) | CLI-006 | CLI-006 (cli) |
+| `dep_012_dev_web_and_local_stack_differ_only_in_directories` ([deployment_manifests.rs:24](../../crates/apps/cli/tests/deployment_manifests.rs#L24)) | DEP-012 | DEP-012 (deployment) |
+| `dep_076_deployment_validate_prints_the_development_adapters_per_component` ([deployment_manifests.rs:45](../../crates/apps/cli/tests/deployment_manifests.rs#L45)) | DEP-076 | DEP-076 (deployment) |
 | `cli_048_results_from_a_landing_directory_writes_every_file_and_prints_the_manifest_digest` ([intake_results.rs:106](../../crates/apps/cli/tests/intake_results.rs#L106)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_the_unprotected_data_statement_is_printed` ([intake_results.rs:131](../../crates/apps/cli/tests/intake_results.rs#L131)) | CLI-048 | CLI-048 (cli) |
 | `cli_048_the_csv_guard_prefixes_text_and_never_numbers` ([intake_results.rs:147](../../crates/apps/cli/tests/intake_results.rs#L147)) | CLI-048 | CLI-048 (cli) |
@@ -527,11 +529,25 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `dis_012_an_older_reported_schema_never_widens_what_a_tenancy_may_receive` ([registration_profile.rs:555](../../crates/apps/security-tests/tests/registration_profile.rs#L555)) | DIS-012 | DIS-012 (distribution) |
 | `pub_100_104_the_http_client_passes_the_contract_against_a_running_server` ([end_to_end.rs:31](../../crates/apps/translog/tests/end_to_end.rs#L31)) | PUB-100 | PUB-100 (publishing) |
 | `pub_100_a_client_of_a_stopped_server_reports_unavailable` ([end_to_end.rs:68](../../crates/apps/translog/tests/end_to_end.rs#L68)) | PUB-100 | PUB-100 (publishing) |
+| `dep_051_the_translog_server_writes_one_development_adapters_event` ([start_up_event.rs:8](../../crates/apps/translog/tests/start_up_event.rs#L8)) | DEP-051 | DEP-051 (deployment) |
 | `web_192_pin_fields_allow_password_managers` ([accessibility.rs:6](../../crates/apps/web/tests/accessibility.rs#L6)) | WEB-192 | WEB-192 (web-app) |
 | `web_192_scrollable_tables_are_keyboard_reachable` ([accessibility.rs:16](../../crates/apps/web/tests/accessibility.rs#L16)) | WEB-192 | WEB-192 (web-app) |
 | `ins_025_the_page_stops_a_fifth_option_and_out_of_range_values_in_a_real_browser` ([browser_constraints.rs:43](../../crates/apps/web/tests/browser_constraints.rs#L43)) | INS-025, INS-027, INS-133 | INS-025 (instrument); INS-027 (instrument); INS-133 (instrument) |
+| `web_196_the_stepper_holds_no_credential_and_makes_no_non_get_request_to_a_service` ([demo_stepper.rs:35](../../crates/apps/web/tests/demo_stepper.rs#L35)) | WEB-196 | WEB-196 (web-app) |
+| `web_195_each_step_names_its_production_component` ([demo_stepper.rs:63](../../crates/apps/web/tests/demo_stepper.rs#L63)) | WEB-195 | WEB-195 (web-app) |
+| `web_197_every_confirmation_says_where_it_was_read_and_has_a_check_it_link` ([demo_stepper.rs:93](../../crates/apps/web/tests/demo_stepper.rs#L93)) | WEB-197 | WEB-197 (web-app) |
+| `web_197_step_8_links_to_the_results_reader_and_confirms_nothing` ([demo_stepper.rs:106](../../crates/apps/web/tests/demo_stepper.rs#L106)) | WEB-197 | WEB-197 (web-app) |
+| `web_198_the_banner_is_on_the_demo_and_device_pages` ([demo_stepper.rs:114](../../crates/apps/web/tests/demo_stepper.rs#L114)) | WEB-198 | WEB-198 (web-app) |
+| `web_199_step_3_says_to_retire_the_old_device_before_registering_again` ([demo_stepper.rs:121](../../crates/apps/web/tests/demo_stepper.rs#L121)) | WEB-199 | WEB-199 (web-app) |
+| `web_199_the_last_page_points_to_acceptance_and_release` ([demo_stepper.rs:127](../../crates/apps/web/tests/demo_stepper.rs#L127)) | WEB-199 | WEB-199 (web-app) |
+| `web_180_navigation_has_five_destinations_in_pipeline_order` ([demo_stepper.rs:134](../../crates/apps/web/tests/demo_stepper.rs#L134)) | WEB-180 | WEB-180 (web-app) |
+| `web_181_each_step_has_one_primary_action` ([demo_stepper.rs:156](../../crates/apps/web/tests/demo_stepper.rs#L156)) | WEB-181 | WEB-181 (web-app) |
 | `web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory` ([dev_loop.rs:37](../../crates/apps/web/tests/dev_loop.rs#L37)) | WEB-140 | WEB-140 (web-app) |
-| `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:65](../../crates/apps/web/tests/dev_loop.rs#L65)) | WEB-111 | WEB-111 (web-app) |
+| `web_111_a_survey_that_stops_loading_keeps_its_last_good_version_beside_the_error` ([dev_loop.rs:66](../../crates/apps/web/tests/dev_loop.rs#L66)) | WEB-111 | WEB-111 (web-app) |
+| `web_151_the_publishing_page_reads_the_log_and_the_registration_page_reads_the_factory` ([pages_from_services.rs:92](../../crates/apps/web/tests/pages_from_services.rs#L92)) | WEB-151 | WEB-151 (web-app) |
+| `web_151_a_page_says_plainly_when_its_service_is_unreachable` ([pages_from_services.rs:120](../../crates/apps/web/tests/pages_from_services.rs#L120)) | WEB-151 | WEB-151 (web-app) |
+| `web_152_the_provisioning_document_carries_the_trust_bundle_and_the_allow_lists_from_the_environment` ([pages_from_services.rs:134](../../crates/apps/web/tests/pages_from_services.rs#L134)) | WEB-152 | WEB-152 (web-app) |
+| `web_154_the_intake_route_is_404_and_no_page_links_to_it` ([pages_from_services.rs:151](../../crates/apps/web/tests/pages_from_services.rs#L151)) | WEB-154 | WEB-154 (web-app) |
 | `web_120_instrument_page_matches_preview` ([parity.rs:61](../../crates/apps/web/tests/parity.rs#L61)) | WEB-120 | WEB-120 (web-app) |
 | `web_110_the_roster_page_reads_the_mounted_roster_store_when_set_and_the_examples_otherwise` ([roster_store.rs:57](../../crates/apps/web/tests/roster_store.rs#L57)) | WEB-110 | WEB-110 (web-app) |
 | `web_153_get_device_bundle_is_gone` ([stack_mode.rs:45](../../crates/apps/web/tests/stack_mode.rs#L45)) | WEB-153 | WEB-153 (web-app) |
@@ -539,6 +555,9 @@ the specs (or an ADR); the requirement is in its name or in a `// covers:` comme
 | `web_191_the_stack_mode_needs_no_cli_path` ([stack_mode.rs:90](../../crates/apps/web/tests/stack_mode.rs#L90)) | WEB-191 | WEB-191 (web-app) |
 | `web_191_the_surveys_are_the_published_files_the_log_vouches_for` ([stack_mode.rs:115](../../crates/apps/web/tests/stack_mode.rs#L115)) | WEB-191 | WEB-191 (web-app) |
 | `the_runtime_profile_names_the_schema_the_core_implements` ([lib.rs:39](../../crates/bindings/uniffi/src/lib.rs#L39)) | WIRE-130 | WIRE-130 (wire-formats) |
+| `dep_023_validate_lists_the_development_adapters_per_component` ([development_adapters.rs:77](../../crates/contexts/deployment/tests/development_adapters.rs#L77)) | DEP-023, DEP-076 | DEP-023 (deployment); DEP-076 (deployment) |
+| `dep_023_validate_refuses_them_in_production` ([development_adapters.rs:107](../../crates/contexts/deployment/tests/development_adapters.rs#L107)) | DEP-023 | DEP-023 (deployment) |
+| `dep_051_the_development_adapters_event_has_the_same_shape_in_every_service` ([development_adapters.rs:116](../../crates/contexts/deployment/tests/development_adapters.rs#L116)) | DEP-051 | DEP-051 (deployment) |
 | `dep_012_a_cohorts_key_in_the_tenancy_registry_config_is_no_longer_rendered` ([factory_component.rs:93](../../crates/contexts/deployment/tests/factory_component.rs#L93)) | DEP-012 | DEP-012 (deployment) |
 | `dep_012_the_factory_component_renders_the_new_variables` ([factory_component.rs:103](../../crates/contexts/deployment/tests/factory_component.rs#L103)) | DEP-012 | DEP-012 (deployment) |
 | `dep_002_a_manifest_without_the_new_factory_ports_is_refused` ([factory_component.rs:119](../../crates/contexts/deployment/tests/factory_component.rs#L119)) | DEP-002 | DEP-002 (deployment) |

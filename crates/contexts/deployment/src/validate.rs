@@ -37,7 +37,7 @@ pub fn ports(component: Component) -> &'static [(&'static str, &'static [&'stati
             ("RosterHistory", &["file-dev"]),
             ("InstrumentSource", &["file-dev"]),
         ],
-        Component::Publishing => &[("TransparencyLog", &["trillian", "rekor", "translog", "memory"]), ("Signer", &["pkcs11-hsm", "memory"])],
+        Component::Publishing => &[("TransparencyLog", &["trillian", "rekor", "translog", "memory"]), ("Signer", &["pkcs11-hsm", "file-dev", "memory"])],
         Component::Runtime | Component::Cli => &[],
     }
 }
@@ -155,6 +155,28 @@ pub fn check_manifest(m: &Manifest) -> Vec<ManifestFinding> {
     if !(url.is_empty() || url.starts_with("https://") || loopback_http(url)) {
         out.push(ManifestFinding::SchemaError("spec.runtime.provisioning.factoryUrl: must be https (http only for a loopback host)".into()));
     }
+    out
+}
+
+/// The development adapters a manifest binds, as (component, port, adapter), in component and
+/// port order (DEP-076). `fieldseal deployment validate` prints them, and `tools/dev-web.sh
+/// --check` compares them with the `development-adapters` event of each service (DEP-051).
+pub fn development_adapters_in_use(m: &Manifest) -> Vec<(Component, String, String)> {
+    let mut out: Vec<(Component, String, String)> = m
+        .components
+        .iter()
+        .flat_map(|(component, spec)| {
+            spec.adapters.iter().filter(|(_, b)| DEVELOPMENT_ADAPTERS.contains(&b.adapter.as_str())).map(|(port, b)| (*component, port.clone(), b.adapter.clone()))
+        })
+        .collect();
+    // The export pseudonymisation key is a file the manifest names, not an adapter port, but the
+    // intake app counts it among its development adapters (`ExportKey`).
+    for (component, spec) in &m.components {
+        if *component == Component::Intake && spec.dirs.export_key.is_some() {
+            out.push((*component, "ExportKey".to_owned(), "file-dev".to_owned()));
+        }
+    }
+    out.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
     out
 }
 

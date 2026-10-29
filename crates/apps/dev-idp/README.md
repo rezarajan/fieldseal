@@ -34,7 +34,7 @@ Exit codes: `0` for `--help`; `2` when it refuses to start or the configuration 
 ## Invariants
 
 - It starts only with `--development-tool`, with `FIELDSEAL_ENVIRONMENT=development` (any other value or none exits `2`) and on a loopback address (`localhost`, `127.0.0.1`, `[::1]`). A listener that could be reached from another machine never opens.
-- It prints a banner and a `development-adapters` event line naming itself. The shared start-up event builder does not exist yet, so the line is written by this crate in the same shape.
+- It prints a banner, one `development-adapters` event (built by the shared function of the Deployment context, DEP-051) and a line with its issuer and address.
 - No secret is in the configuration file. The public client has no secret and never accepts one.
 - The access token's audience is the API, never the client; the ID token's audience is the client, never the API. A portal client's access token has `client_id` of that client, which the verifier refuses for the operator API.
 - An unregistered client or redirect URI gets an error page and never a redirect.

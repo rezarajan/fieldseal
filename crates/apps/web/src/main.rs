@@ -15,8 +15,7 @@
 //! | `FIELDSEAL_UPLOAD_URL` | The intake upload endpoint, for `/proxy/upload/*` (optional) |
 //! | `FIELDSEAL_LOG_URL` | The transparency log, for `/proxy/log/*` (optional) |
 //! | `FIELDSEAL_WEB_PUBLIC_URL` | This app's own public URL (optional) |
-//! | `FIELDSEAL_WEB_DEMO_AUTHORITY` | `true` starts an embedded demo authority (practice factory with a dev sign-in, intake upload endpoint, transparency log) over in-memory ports with development keys, so the app works with no other service; non-production only (optional, default `false`) |
-//! | `FIELDSEAL_WEB_DEMO_FACTORY_BIND`, `FIELDSEAL_WEB_DEMO_UPLOAD_BIND` | Where the embedded factory and upload endpoint listen (defaults `127.0.0.1:8091`, `127.0.0.1:8092`); with the demo authority these also become `FIELDSEAL_FACTORY_URL` and `FIELDSEAL_UPLOAD_URL` |
+//! | `FIELDSEAL_WEB_RESULTS_URL` | The intake app's results reader, linked from every page's footer (optional); the app shows no results itself |
 //! | `FIELDSEAL_WEB_STACK` | `true`: run as a service of the compose stack: provisioning from `/authority/trust-bundle.bundle` and the surveys published in `/published`; the device gets its bundle from the factory |
 //! | `FIELDSEAL_WEB_AUTHORITY_DIR` | In stack mode, the authority's directory (default `/authority`); `just web` points it at `deploy/local/.state/dev-web/authority` |
 //! | `FIELDSEAL_WEB_PUBLISHED_DIR` | In stack mode, the directory of the `*.published` files (default `/published`, mounted read only); a survey is listed when the log (`FIELDSEAL_LOG_URL`) holds the entry its file carries |
@@ -29,14 +28,14 @@ use std::io::Read as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use fieldseal_web::http::{MAX_BODY, MAX_INGEST_BODY, Request, Response};
+use fieldseal_web::http::{MAX_BODY, Request, Response};
 use fieldseal_web::routes::dispatch;
 use fieldseal_web::state::AppState;
 
 /// The number of worker threads taking requests.
 const WORKERS: usize = 4;
 
-const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_ROSTER_DIR     the factory's roster store, read only (optional; unset: rosters/ of the examples directory)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n  FIELDSEAL_WEB_ALLOWED_BUILDERS, FIELDSEAL_WEB_ALLOWED_SOURCES  stack mode: comma-separated builders and sources the device's publishing policy accepts\n";
+const HELP: &str = "fieldseal-web: the Fieldseal showcase web app (development only)\n\nUsage: fieldseal-web [--help]\n\nConfiguration is read from the environment:\n  FIELDSEAL_ENVIRONMENT        development, staging or test (required; production is refused)\n  FIELDSEAL_WEB_BIND           address to listen on (default 127.0.0.1:8090; port 0 picks a free one)\n  FIELDSEAL_WEB_EXAMPLES_DIR   directory with surveys/ and rosters/ (required)\n  FIELDSEAL_WEB_SURVEY_COHORTS survey=cohort,... : the cohort whose roster each survey uses (optional)\n  FIELDSEAL_WEB_ROSTER_DIR     the factory's roster store, read only (optional; unset: rosters/ of the examples directory)\n  FIELDSEAL_WEB_WASM_DIR       directory with fieldseal_wasm.js and fieldseal_wasm_bg.wasm (optional)\n  FIELDSEAL_FACTORY_URL        the factory's base URL (optional)\n  FIELDSEAL_UPLOAD_URL         the intake upload endpoint (optional)\n  FIELDSEAL_LOG_URL            the transparency log (optional)\n  FIELDSEAL_WEB_PUBLIC_URL     this app's public URL (optional)\n  FIELDSEAL_WEB_RESULTS_URL    the intake app's results reader, linked in the footer (optional)\n  FIELDSEAL_WEB_STACK          true: run as a service of the stack (or of `just web`)\n  FIELDSEAL_WEB_AUTHORITY_DIR  stack mode: the authority's directory (default /authority)\n  FIELDSEAL_WEB_PUBLISHED_DIR  stack mode: the directory of the *.published files (default /published)\n  FIELDSEAL_WEB_REGISTRY_DIR   stack mode: the CLI's artefact registry, listed on the Publishing page (optional)\n  FIELDSEAL_WEB_ALLOWED_BUILDERS, FIELDSEAL_WEB_ALLOWED_SOURCES  stack mode: comma-separated builders and sources the device's publishing policy accepts\n";
 
 /// The app's configuration, from the environment.
 #[derive(Debug, PartialEq, Eq)]
@@ -50,9 +49,7 @@ struct Config {
     upload_url: Option<String>,
     log_url: Option<String>,
     public_url: Option<String>,
-    demo: bool,
-    demo_factory_bind: String,
-    demo_upload_bind: String,
+    results_url: Option<String>,
     provisioning_file: Option<PathBuf>,
     stack: bool,
     authority_dir: Option<PathBuf>,
@@ -108,9 +105,7 @@ impl Config {
             upload_url: url("FIELDSEAL_UPLOAD_URL")?,
             log_url: url("FIELDSEAL_LOG_URL")?,
             public_url: url("FIELDSEAL_WEB_PUBLIC_URL")?,
-            demo: opt("FIELDSEAL_WEB_DEMO_AUTHORITY").is_some_and(|v| v == "true"),
-            demo_factory_bind: opt("FIELDSEAL_WEB_DEMO_FACTORY_BIND").unwrap_or_else(|| "127.0.0.1:8091".to_owned()),
-            demo_upload_bind: opt("FIELDSEAL_WEB_DEMO_UPLOAD_BIND").unwrap_or_else(|| "127.0.0.1:8092".to_owned()),
+            results_url: url("FIELDSEAL_WEB_RESULTS_URL")?,
             provisioning_file: opt("FIELDSEAL_WEB_PROVISIONING_FILE").map(PathBuf::from),
             stack: opt("FIELDSEAL_WEB_STACK").is_some_and(|v| v == "true"),
             authority_dir: opt("FIELDSEAL_WEB_AUTHORITY_DIR").map(PathBuf::from),
@@ -143,30 +138,16 @@ fn main() {
 fn run(config: Config) -> Result<(), String> {
     let server = Arc::new(tiny_http::Server::http(&config.bind).map_err(|e| format!("{}: {e}", config.bind))?);
     let addr = server.server_addr().to_ip().map(|a| a.to_string()).unwrap_or_else(|| config.bind.clone());
-    let (mut factory_url, mut upload_url) = (config.factory_url, config.upload_url);
-    let demo = if config.demo {
-        let mut dc = fieldseal_adapters_web_demo::DemoConfig::new(&config.examples_dir);
-        dc.now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_millis() as u64;
-        dc.factory_bind = config.demo_factory_bind;
-        dc.upload_bind = config.demo_upload_bind;
-        let d = fieldseal_adapters_web_demo::Demo::start(dc)?;
-        factory_url = Some(d.factory_url().to_owned());
-        upload_url = Some(d.upload_url().to_owned());
-        eprintln!("{{\"event\":\"demo-authority\",\"factory\":\"{}\",\"upload\":\"{}\",\"keys\":\"development, unattested\"}}", d.factory_url(), d.upload_url());
-        Some(fieldseal_web::state::DemoHandle(d))
-    } else {
-        None
-    };
     let state = Arc::new(AppState {
         examples_dir: config.examples_dir,
         survey_cohorts: config.survey_cohorts,
         roster_dir: config.roster_dir,
         wasm_dir: config.wasm_dir,
-        factory_url,
-        upload_url,
+        factory_url: config.factory_url,
+        upload_url: config.upload_url,
         log_url: config.log_url,
         public_url: config.public_url,
-        demo,
+        results_url: config.results_url,
         provisioning_file: config.provisioning_file,
         stack: config.stack,
         authority_dir: config.authority_dir,
@@ -195,8 +176,7 @@ fn run(config: Config) -> Result<(), String> {
 
 fn serve(state: &AppState, mut request: tiny_http::Request) {
     let mut body = Vec::new();
-    let limit = if request.method().as_str() == "POST" && request.url() == "/intake/ingest" { MAX_INGEST_BODY } else { MAX_BODY };
-    let too_big = request.as_reader().take(limit as u64 + 1).read_to_end(&mut body).is_err() || body.len() > limit;
+    let too_big = request.as_reader().take(MAX_BODY as u64 + 1).read_to_end(&mut body).is_err() || body.len() > MAX_BODY;
     let headers = request.headers().iter().map(|h| (h.field.as_str().as_str().to_ascii_lowercase(), h.value.as_str().to_owned())).collect();
     let response = if too_big { Response::text(413, "The request body is too large.").secured() } else { dispatch(state, &Request::new(request.method().as_str(), request.url(), headers, body)) };
     let mut out = tiny_http::Response::from_data(response.body).with_status_code(response.status);

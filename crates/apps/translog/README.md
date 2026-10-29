@@ -33,7 +33,7 @@ The Fieldseal transparency-log server (issue #82, [ADR 0030](../../../docs/expla
 - Creates/reads/appends files under `FIELDSEAL_TRANSLOG_DIR` (log store with a single-writer lock).
 - May create the key file once (exclusive create, mode `0600` on Unix, parent directories created, `fsync`ed).
 - Reads OS randomness for key generation.
-- Prints a structured `event=started` line (origin, public key, format, bind, size) to stderr, and `event=error` lines on failure.
+- Prints one `development-adapters` event (JSON, built by the Deployment context's shared function; the file-held signing key is the log's `Signer`, DEP-051) before a structured `event=started` line (origin, public key, format, bind, size) to stderr, and `event=error` lines on failure.
 
 ## Verification
 - Run: `cargo test -p fieldseal-translog` (repo-wide: `just test`)

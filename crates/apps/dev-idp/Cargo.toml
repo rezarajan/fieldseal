@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 fieldseal-kernel.workspace = true
+fieldseal-deployment.workspace = true
 fieldseal-adapters-authoring.workspace = true
 p256.workspace = true
 # The discovery, certs and token documents.

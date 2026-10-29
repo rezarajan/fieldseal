@@ -29,6 +29,42 @@ let summary = { sealed: new Set(), records: 0, undelivered: 0 };
 
 const PHASES = ["session", "about", "review", "export"];
 
+// What the guided demo (/demo) shows of this device: the device's own view, kept in this browser
+// and read by demo.js on the same origin. It holds counts and public identifiers only, never a
+// key, a PIN or a subject. Nothing here is sent to the server.
+const VIEW_KEY = "fs-device-view";
+let view = readView();
+
+function readView() {
+  try { return JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { return {}; }
+}
+
+function saveView(patch) {
+  if (patch.tenancy !== undefined && view.tenancy !== patch.tenancy) view = {};
+  view = { ...view, ...patch };
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* private window */ }
+}
+
+function rosterCounts() {
+  if (!held) return [];
+  return held.rosters.map((r) => {
+    const consent = {};
+    for (const x of r.subjects) consent[x.consent] = (consent[x.consent] || 0) + 1;
+    return { cohort: r.cohort, version: r.version, subjects: r.subjects.length, consent };
+  });
+}
+
+async function sha256Hex(bytes) {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function recordBundle(sequence, file, publications) {
+  const bundles = (view.bundles || []).filter((b) => b.sequence !== sequence);
+  bundles.push({ sequence, file, publications, rosters: rosterCounts(), layouts: held ? held.layouts : 0 });
+  saveView({ bundles });
+}
+
 worker.onmessage = (e) => {
   const { id, ok, result, error } = e.data;
   const p = waiting.get(id);
@@ -48,7 +84,10 @@ function call(method, ...args) {
   });
 }
 
+let lastExportDigest = null;
+
 function offerDownload(name, bytes) {
+  lastExportDigest = sha256Hex(bytes);
   const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
   const a = document.createElement("a");
   a.href = url;
@@ -194,6 +233,7 @@ async function refresh() {
   if (!device.bundle) held = null;
   if (ready() && !held) held = JSON.parse(await call("held"));
   if (ready() && phase === "session" && !capture) await renderRoster();
+  saveView({ tenancy: device.tenancy, state: device.state || null, held: !!device.bundle });
   paint();
   askForBundle();
 }
@@ -416,13 +456,16 @@ async function getBundle() {
     if (r.status === "imported") {
       try { localStorage.setItem("fs-bundle-sequence-" + device.tenancy, String(r.sequence)); } catch { /* private window */ }
       showBundle(r.report);
+      const got = await call("lastBundle");
       const n = r.report.publications.length;
       const first = r.report.publications[0];
       log(true, `bundle ${r.sequence} fetched from the factory and verified: ${first ? first.signatures + "-of-" + first.threshold + " publisher signatures" : "no publications"}, ${n} publication(s), log inclusion ok`);
       bundleStatus("");
       registered = true;
       choosingSurvey = false;
+      held = null; // a newer bundle brings its own rosters
       await refresh();
+      recordBundle(r.sequence, got && got.file, r.report.publications);
     } else if (r.status === "current") {
       bundleStatus("You already have the latest bundle.");
       log(true, "the factory says the bundle this device holds is the latest");
@@ -488,12 +531,18 @@ async function loadSummary() {
   try {
     const r = JSON.parse(await call("review"));
     const sealed = new Set();
-    let records = 0, undelivered = 0;
+    let records = 0, undelivered = 0, from = null, through = null;
     for (const s of r.subjects) {
       if (s.records.length) sealed.add(s.subject);
-      for (const x of s.records) { records++; if (!/^(delivered|received|cleared)/i.test(x.delivery)) undelivered++; }
+      for (const x of s.records) {
+        records++;
+        if (!/^(delivered|received|cleared)/i.test(x.delivery)) undelivered++;
+        from = from === null ? x.seq : Math.min(from, x.seq);
+        through = through === null ? x.seq : Math.max(through, x.seq);
+      }
     }
     summary = { sealed, records, undelivered };
+    saveView({ journal: { records, undelivered, from, through } });
   } catch (x) { fail("review", x); }
 }
 
@@ -1054,6 +1103,7 @@ $("export").addEventListener("click", async () => {
   try {
     const r = JSON.parse(await call("export", $("parity").checked));
     lastExportName = r.name;
+    saveView({ export: { name: r.name, records: r.records, from: r.from, through: r.through, size: r.size, sha256: lastExportDigest ? await lastExportDigest : null } });
     const p = document.createElement("p");
     p.textContent = `Export ${r.name}: ${r.records} record(s), seq ${r.from}-${r.through}, ${r.size} bytes, parity ${r.parity ? "on" : "off"}; ${r.label}`;
     $("export-out").prepend(p);
@@ -1070,6 +1120,7 @@ $("upload").addEventListener("click", async () => {
     const r = JSON.parse(await call("upload", uploadUrl));
     const text = `${r.label}. Receipt verified against the trust bundle: covers seq ${r.coveredThrough}; ${r.journalDeleted} cleared frame(s) deleted${r.offerClearThrough ? "; a clear is on offer through " + r.offerClearThrough : ""}.`;
     $("upload-out").textContent = text;
+    saveView({ upload: { coveredThrough: r.coveredThrough, journalDeleted: r.journalDeleted, label: r.label } });
     log(true, "upload: receiver proved its key against the trust bundle; " + text, `upload done; receipt verified, covers seq ${r.coveredThrough}`);
     exportScreen = "done";
     paint();

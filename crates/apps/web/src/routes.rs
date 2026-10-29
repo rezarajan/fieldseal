@@ -3,27 +3,31 @@
 
 use crate::http::{Request, Response, proxy};
 use crate::state::AppState;
-use crate::{assets, device, instruments, intake, publishing, registration, ui};
+use crate::{assets, demo_steps, device, instruments, publishing, registration, ui};
 
 /// Routes `req`; every response carries the security headers.
 pub fn dispatch(state: &AppState, req: &Request) -> Response {
-    route(state, req).unwrap_or_else(|| ui::error_page(404, "There is nothing at this address.")).secured()
+    let response = route(state, req).unwrap_or_else(|| ui::error_page(404, "There is nothing at this address."));
+    match &state.results_url {
+        Some(url) => ui::with_results_link(response, url).secured(),
+        None => response.secured(),
+    }
 }
 
 fn route(state: &AppState, req: &Request) -> Option<Response> {
     match (req.method.as_str(), req.path.as_str()) {
-        ("GET", "/") => return Some(Response::redirect("/instruments")),
+        ("GET", "/") => return Some(Response::redirect("/demo")),
         // No icon: an empty answer keeps browser consoles free of a 404.
         ("GET", "/favicon.ico") => return Some(Response::new(204, "image/x-icon", Vec::new())),
         ("GET", "/healthz") => return Some(Response::json(200, "{\"status\":\"ok\"}")),
         _ => {}
     }
     assets::handle(state, req)
+        .or_else(|| demo_steps::handle(state, req))
         .or_else(|| instruments::handle(state, req))
         .or_else(|| publishing::handle(state, req))
         .or_else(|| registration::handle(state, req))
         .or_else(|| device::handle(state, req))
-        .or_else(|| intake::handle(state, req))
         .or_else(|| proxied(state, req))
 }
 

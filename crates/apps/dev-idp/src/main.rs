@@ -69,9 +69,9 @@ fn main() -> ExitCode {
         Err(e) => return refuse(&e),
     };
     eprintln!("fieldseal-dev-idp: DEVELOPMENT ONLY. Anyone who can reach this address can sign in as any login, with no password.");
-    // The shared start-up event for development adapters does not exist yet, so this line
-    // says the same thing in the same shape: what is running, and that production refuses it.
-    eprintln!("fieldseal-dev-idp event=development-adapters adapters=dev-idp environment=development issuer={} bind={}", idp.issuer(), idp.local_addr());
+    // The shared start-up event (DEP-051): what is running, and that production refuses it. The issuer and the address follow on the next line.
+    eprintln!("{}", fieldseal_deployment::events::development_adapters_event("fieldseal-dev-idp", &[("IdentityProvider", "dev-idp")]));
+    eprintln!("fieldseal-dev-idp: issuer {}, listening on {}", idp.issuer(), idp.local_addr());
     idp.wait();
     ExitCode::SUCCESS
 }

@@ -5,6 +5,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use fieldseal_adapters_translog::FileLogStore;
+use fieldseal_deployment::events::development_adapters_event;
 use fieldseal_translog::config::{Config, check_names, load_key};
 use fieldseal_translog::http::Server;
 
@@ -40,6 +41,8 @@ fn main() -> ExitCode {
         Ok(s) => s,
         Err(e) => return fail(EXIT_UNAVAILABLE, "bind", e),
     };
+    // The signing key is a file the operator provides (or this process makes once): a development adapter for the log's signer (DEP-051).
+    eprintln!("{}", development_adapters_event("fieldseal-translog", &[("Signer", "file-dev")]));
     let pin = store.pin();
     eprintln!(
         "fieldseal-translog event=started origin={} public_key={} format={} bind={} size={}",

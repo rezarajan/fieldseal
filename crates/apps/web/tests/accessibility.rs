@@ -14,7 +14,7 @@ fn web_192_pin_fields_allow_password_managers() {
 /// 2.1.1: every sideways-scrolling table can be reached and scrolled with the keyboard.
 #[test]
 fn web_192_scrollable_tables_are_keyboard_reachable() {
-    for src in [include_str!("../src/intake.rs"), include_str!("../src/panels.rs"), include_str!("../src/publishing.rs"), include_str!("../src/registration.rs")] {
+    for src in [include_str!("../src/demo_steps.rs"), include_str!("../src/panels.rs"), include_str!("../src/publishing.rs"), include_str!("../src/registration.rs")] {
         for (i, _) in src.match_indices("class=\\\"scroll\\\"") {
             let tag = &src[i..i + 120];
             assert!(tag.contains("tabindex=\\\"0\\\"") && tag.contains("role=\\\"region\\\"") && tag.contains("aria-label="), "{tag}");

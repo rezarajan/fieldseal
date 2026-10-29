@@ -8,13 +8,14 @@
 
 pub mod assets;
 pub mod catalogue;
+pub mod demo_steps;
 pub mod device;
 pub mod http;
 pub mod instruments;
-pub mod intake;
 pub mod panels;
 pub mod publishing;
 pub mod registration;
+pub mod reports;
 pub mod routes;
 pub mod stack;
 pub mod state;

@@ -72,15 +72,14 @@ sequenceDiagram
     end
 
     rect rgba(13,122,95,0.08)
-    Note over Col,Int: 5. Loading a survey
-    Col->>Dev: Choose a survey (food, water, any published)
-    Dev->>Fac: Request its bundle (PoP)
+    Note over Col,Int: 5. Loading the bundle
+    Dev->>Fac: Request the bundle (PoP)
     Fac->>Fac: Release by policy (attested key, or the development allowance), keep only the roster fields the survey reads
     Fac->>Int: Record the issued rosters and their consent states
     Fac-->>Dev: Bundle sealed to the device's agreement key and signed
     Dev->>Dev: Verify in order: signature, publisher threshold, log inclusion and time token, roster generation, then decrypt
-    opt Load another survey
-    Col->>Dev: Choose again, the same flow
+    opt A newer bundle
+    Col->>Dev: Check for a newer bundle, the same flow
     end
     end
 

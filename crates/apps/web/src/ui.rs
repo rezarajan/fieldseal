@@ -3,11 +3,29 @@
 use crate::http::Response;
 
 /// The navigation: label and path.
-pub const NAV: [(&str, &str); 5] =
-    [("Instruments", "/instruments"), ("Publishing", "/publishing"), ("Registration", "/registration"), ("Device", "/device"), ("Intake", "/intake")];
+pub const NAV: [(&str, &str); 5] = [("Guided demo", "/demo"), ("Instruments", "/instruments"), ("Publishing", "/publishing"), ("Registration", "/registration"), ("Device", "/device")];
 
 /// The line every page carries at the bottom.
 pub const FOOTER: &str = "Development showcase: unattested software device, not for production";
+
+/// The banner of the guided demo and the Device page (WEB-198).
+pub const BANNER: &str = "This collector stand-in stands in for the native Android and iOS apps, which do not exist yet; only the bindings do.";
+
+/// The banner as markup.
+pub fn banner() -> String {
+    format!("<p class=\"banner\" role=\"note\">{BANNER}</p>")
+}
+
+/// Adds a link to the intake app's results reader to the footer of an HTML page. The app shows
+/// no results itself; the reader is a separate origin with its own sign-in.
+pub fn with_results_link(mut response: Response, results_url: &str) -> Response {
+    let footer = format!("<footer class=\"foot\">{FOOTER}</footer>");
+    if let Some(html) = std::str::from_utf8(&response.body).ok().filter(|h| h.contains(&footer)) {
+        let link = format!("<footer class=\"foot\">{FOOTER}. <a href=\"{0}/\" target=\"_blank\" rel=\"noopener\">Results reader</a></footer>", escape(results_url.trim_end_matches('/')));
+        response.body = html.replace(&footer, &link).into_bytes();
+    }
+    response
+}
 
 /// Escapes text for HTML content and double-quoted attributes.
 pub fn escape(s: &str) -> String {
@@ -32,7 +50,7 @@ const STYLES: [&str; 3] = ["/assets/tokens.css", "/assets/nunito-sans.css", "/as
 pub const TABS_JS: &str = "/assets/tabs.js";
 
 /// Wraps `body` (already HTML) in the page shell. `active` is the nav path to mark current;
-/// `scripts` are module script URLs. The shell is a 72px bar with the wordmark and the five
+/// `scripts` are module script URLs. The shell is a 72px bar with the wordmark and the
 /// pipeline destinations as step pills (HICK: at most five top-level links), the page body and
 /// the honest footer. Pages that use [`tabs`] get the tiny tab script.
 pub fn shell(title: &str, active: &str, body: &str, scripts: &[&str]) -> String {

@@ -25,11 +25,12 @@ pub const ASSETS: &[(&str, &str, Source)] = &[
     ("/assets/tabs.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/tabs.js"))),
     ("/assets/app.css", "text/css; charset=utf-8", Source::Embedded(include_str!("../assets/app.css"))),
     ("/assets/instrument.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/instrument.js"))),
+    ("/assets/demo.css", "text/css; charset=utf-8", Source::Embedded(include_str!("../assets/demo.css"))),
+    ("/assets/demo.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/demo.js"))),
     ("/assets/answers.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/answers.js"))),
     ("/assets/device.css", "text/css; charset=utf-8", Source::Embedded(include_str!("../assets/device.css"))),
     ("/assets/device.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/device.js"))),
     ("/assets/device-worker.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/device-worker.js"))),
-    ("/assets/intake.js", "text/javascript; charset=utf-8", Source::Embedded(include_str!("../assets/intake.js"))),
     ("/assets/wasm/fieldseal_wasm.js", "text/javascript; charset=utf-8", Source::Wasm("fieldseal_wasm.js")),
     ("/assets/wasm/fieldseal_wasm_bg.wasm", "application/wasm", Source::Wasm("fieldseal_wasm_bg.wasm")),
 ];

@@ -72,8 +72,8 @@ if [ "${FIELDSEAL_SKIP_IMAGE_BUILD:-0}" = 1 ]; then say "== reusing the loaded i
 say "== starting the stack with ${COMPOSE[*]}"
 stage compose-up compose up -d
 if [ "$REALM_RECORD_NEEDED" = 1 ]; then
-  mkdir -p "$(dirname "$REALM_RECORD")" && printf '%s\n' "$REALM_DIGEST" > "$REALM_RECORD" \
-    || die "could not write $REALM_RECORD"
+  mkdir -p "$(dirname "$REALM_RECORD")"
+  printf '%s\n' "$REALM_DIGEST" > "$REALM_RECORD" || die "could not write $REALM_RECORD"
 fi
 
 wait_for() { # url what seconds
@@ -105,7 +105,7 @@ The stack is up (engine: $ENGINE).
 
   Portal:            http://localhost:8080
   Keycloak console:  http://localhost:8180/admin   (admin / KC_BOOTSTRAP_ADMIN_PASSWORD in deploy/local/.env.secrets)
-  Web app + device:  http://127.0.0.1:8090   (choose a survey, register, collect, upload)
+  Web app + device:  http://127.0.0.1:8090   (register, get the bundle, collect, upload)
   Intake uploads:    http://localhost:8480   (devices upload here)
   Results reader:    http://localhost:8481   (sign in as product-owner; download the results files)
   Transparency log:  http://localhost:9001

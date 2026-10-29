@@ -4,8 +4,6 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use fieldseal_adapters_web_demo::Demo;
-
 use crate::catalogue::Entry;
 
 /// What the routes need to know, set once at start-up from the environment.
@@ -35,9 +33,9 @@ pub struct AppState {
     pub log_url: Option<String>,
     /// This app's own public URL.
     pub public_url: Option<String>,
-    /// The embedded demo authority (`FIELDSEAL_WEB_DEMO_AUTHORITY=true`): a practice factory,
-    /// intake and transparency log over in-memory ports, so the app works standalone.
-    pub demo: Option<DemoHandle>,
+    /// The intake app's results reader (`FIELDSEAL_WEB_RESULTS_URL`), for the link in every
+    /// page's footer. The app shows no results itself.
+    pub results_url: Option<String>,
     /// A provisioning document (see the Device page) for use against another authority.
     pub provisioning_file: Option<PathBuf>,
     /// Stack mode (`FIELDSEAL_WEB_STACK=true`): a service of the compose stack, using its
@@ -57,16 +55,6 @@ pub struct AppState {
     pub allowed_builders: Vec<String>,
     /// The sources the device's publishing policy accepts (`FIELDSEAL_WEB_ALLOWED_SOURCES`).
     pub allowed_sources: Vec<String>,
-}
-
-/// The demo authority, as a cheap copyable handle.
-#[derive(Clone, Copy)]
-pub struct DemoHandle(pub &'static Demo);
-
-impl std::fmt::Debug for DemoHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("DemoHandle")
-    }
 }
 
 impl AppState {

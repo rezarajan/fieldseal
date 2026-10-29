@@ -23,9 +23,6 @@ pub fn handle(state: &AppState, req: &Request) -> Option<Response> {
 }
 
 fn provisioning(state: &AppState) -> Response {
-    if let Some(d) = state.demo {
-        return Response::json(200, d.0.provisioning_json());
-    }
     if state.stack {
         return match crate::stack::provisioning(state) {
             Ok(json) => Response::json(200, json),
@@ -35,14 +32,13 @@ fn provisioning(state: &AppState) -> Response {
     match state.provisioning_file.as_ref().map(std::fs::read_to_string) {
         Some(Ok(text)) => Response::json(200, text),
         Some(Err(e)) => Response::json(500, format!("{{\"error\":{}}}", fieldseal_adapters_web::json::quote(&format!("FIELDSEAL_WEB_PROVISIONING_FILE: {e}")))),
-        None => Response::json(404, "{\"error\":\"no authority is configured: start with FIELDSEAL_WEB_DEMO_AUTHORITY=true, or set FIELDSEAL_WEB_PROVISIONING_FILE\"}"),
+        None => Response::json(404, "{\"error\":\"no authority is configured: run as a service of the stack (FIELDSEAL_WEB_STACK=true), or set FIELDSEAL_WEB_PROVISIONING_FILE\"}"),
     }
 }
 
 fn page(state: &AppState) -> Response {
-    let mode = match (state.demo.is_some(), state.provisioning_file.is_some()) {
-        _ if state.stack => "stack",
-        (true, _) => "demo",
+    let mode = match (state.stack, state.provisioning_file.is_some()) {
+        (true, _) => "stack",
         (false, true) => "file",
         _ => "none",
     };
@@ -52,7 +48,7 @@ fn page(state: &AppState) -> Response {
         .replace("{{mode}}", mode)
         .replace("{{factory_label}}", &crate::ui::escape(state.factory_url.as_deref().unwrap_or("(no factory configured)")))
         .replace("{{factory}}", &crate::ui::escape(state.factory_url.as_deref().unwrap_or("")));
-    let body = format!("<link rel=\"stylesheet\" href=\"/assets/device.css\">\n{body}");
+    let body = format!("<link rel=\"stylesheet\" href=\"/assets/device.css\">\n{}\n{body}", ui::banner());
     ui::page("Device", "/device", &body, &["/assets/device.js"])
 }
 

@@ -97,6 +97,8 @@ globalThis.fieldsealPost = (url, pop, body) => {
 // proof-of-possession token is bound to it); the page reaches it through the same-origin proxy,
 // which passes the token on and sends the bundle's headers back. `held` is a query, not signed.
 let factoryUpstream = null;
+// The headers of the last bundle the factory sent, for the guided demo (the sequence and the file name).
+let lastBundle = null;
 globalThis.fieldsealGet = (url, pop) => {
   if (factoryUpstream && url.startsWith(factoryUpstream)) url = "/proxy/factory" + url.slice(factoryUpstream.length);
   const x = new XMLHttpRequest();
@@ -108,6 +110,10 @@ globalThis.fieldsealGet = (url, pop) => {
     const at = line.indexOf(":");
     return [line.slice(0, at).trim(), line.slice(at + 1).trim()];
   });
+  if (x.status === 200 && /\/v1\/bundle(\?|$)/.test(url)) {
+    const named = (n) => (headers.find(([k]) => k.toLowerCase() === n) || [])[1] || "";
+    lastBundle = { sequence: Number(named("fieldseal-bundle-sequence")), file: (/filename="?([^";]+)"?/.exec(named("content-disposition")) || [])[1] || "" };
+  }
   return { status: x.status, headers, body: new Uint8Array(x.response || new ArrayBuffer(0)) };
 };
 
@@ -133,6 +139,7 @@ async function call(method, args) {
     device = null;
     return null;
   }
+  if (method === "lastBundle") return lastBundle;
   if (!device) throw new Error("the device is not started");
   let r = device[method](...args);
   if (r && typeof r === "object" && "words" in r && "tenancy" in r) r = { file: r.file, words: r.words, tenancy: r.tenancy };

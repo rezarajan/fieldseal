@@ -9,7 +9,7 @@ The Deployment bounded context: the `kind: Deployment` manifest model and the pu
 - `events`: `development_adapters_event(service, adapters)`, the one `development-adapters` start-up event that the services print (DEP-051).
 - `domain`: `Component` (`Factory`, `Intake`, `Publishing`, `Runtime`, `Cli`; `name`, `parse`), `SecretRef`, `SecretValue` (`new`, `expose`; redacted `Debug`), `StoredBuild`, `DocumentationBundle`, `EnvironmentName`.
 - `manifest`: `Manifest`, `decode_manifest` (unknown fields rejected, DEP-001), `Manifest::resolve(environment)`, `ComponentSpec`, `AdapterBinding`, `EnvironmentSpec`, `PlatformSpec`, `ProvisioningSpec`, `ArtefactRef`, `ConfigValue`, `ManagementMode`, `API_VERSION` (`fieldseal.dev/v1alpha1`).
-- `validate`: `validate_manifest`, `check_manifest`, `check_environment`, `check_policy_layers`, `is_deployment_layer`, `ports`, `key_names_secret`, `looks_like_secret`, `DEVELOPMENT_ADAPTERS`.
+- `validate`: `validate_manifest`, `check_manifest`, `check_environment`, `check_policy_layers`, `is_deployment_layer`, `development_adapters_in_use` (the (component, port, adapter) triples a manifest binds to development adapters, DEP-076), `ports`, `key_names_secret`, `looks_like_secret`, `DEVELOPMENT_ADAPTERS`.
 - `render`: `render_environment` (-> `Rendered`), `provisioning_configuration`, `env_file`, `snake_upper`.
 - `release`: `create_release` (-> `Release`), `ReleaseError` (`UnpublishedManifest`, `UnsignedBuild`, `MissingBuild`, `DuplicateBuild`), `release_value`, `build_signing_message`.
 - `custody`: `Tier` (`Development`, `Staging`, `Production`), `tier_of`, `CustodyBinding`, `KEY_CUSTODY_ADAPTERS`, `bindings`, `check_custody`, `env_name`, `startup_check`.

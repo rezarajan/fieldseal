@@ -7,10 +7,6 @@ use std::time::Duration;
 /// The largest request body accepted.
 pub const MAX_BODY: usize = 1024 * 1024;
 
-/// The largest body accepted by `POST /intake/ingest`, where a whole export file arrives.
-/// The server loop should use this limit for that route and [`MAX_BODY`] elsewhere.
-pub const MAX_INGEST_BODY: usize = 32 * 1024 * 1024;
-
 /// The Content-Security-Policy of the app's own pages. The instrument page in the frame
 /// carries its own `<meta>` policy and gets no header.
 pub const PAGE_CSP: &str = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; form-action 'self'; base-uri 'none'";

@@ -114,9 +114,9 @@ smoke *flags:
 images *names:
     tools/stack-images.sh {{names}}
 
-# shellcheck on the stack's scripts and the dev loop's.
+# shellcheck on the stack's scripts, the dev loop's and the browser tests'.
 lint:
-    shellcheck -x -P SCRIPTDIR -s bash tools/stack-*.sh tools/dev-web.sh tools/dev-publish.sh
+    shellcheck -x -P SCRIPTDIR -s bash tools/stack-*.sh tools/dev-web.sh tools/dev-publish.sh tools/browser-tests/*.sh
 
 # The three flake checks CI runs: clippy, tests, architecture.
 check:

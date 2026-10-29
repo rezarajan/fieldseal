@@ -34,6 +34,8 @@ Until now the only way to look at an instrument was `fieldseal instrument previe
 - A browser tab is not a field device: no secure display, no lock-down, and the user can clear site data. The profile's limits are in the spec and shown in the UI.
 - A browser download cannot be read back through its destination; Delivery's read-back verifies the bytes handed to the browser.
 
+- The collector stand-in hosts no authority. It once embedded an in-memory demo authority (a factory, an intake and a log with development keys); it now reads the real factory, log and upload endpoint, and the Intake page moved to the intake app's results reader. It holds no key, seed or session (WEB-155).
+
 ## Alternatives rejected
 
 - **A JavaScript device.** Rejected: it would test a re-implementation.

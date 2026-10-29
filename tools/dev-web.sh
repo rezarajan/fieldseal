@@ -3,18 +3,26 @@
 # intake app and collector stand-in (fieldseal-web in stack mode) natively from a rendered deployment manifest,
 # behind a development OIDC provider (fieldseal-dev-idp, in the place Keycloak takes in the stack),
 # publishes the bundled examples and the publishing policy through the log, issues the example
-# rosters and assigns their cohorts to the `presenter` login (fieldseal roster issue and assign,
+# rosters and assigns their cohorts, one survey to each of the logins `presenter` and `collector1` (fieldseal roster issue and assign,
 # signed in at the development IdP with no browser), has the factory build bundles for the
 # devices that register (served at GET /v1/bundle), and re-reads the survey files on every
 # request, so an edit shows at once. Ctrl-C stops everything.
 #
 #   tools/dev-web.sh            (normally: just web)
-#   tools/dev-web.sh --check    start everything, wait for each service, run the edit-and-reload
-#                               check, stop everything; exit 0 when every check passes
+#   tools/dev-web.sh --check    start everything, wait for each service, run the checks (the
+#                               development adapters each service reports against the manifest, the
+#                               pages, the edit-and-reload check), stop everything; exit 0 when
+#                               every check passes
+#   tools/dev-web.sh --check --browser
+#                               also run, in a headless browser, the cookie-scoping check
+#                               (tools/browser-tests/cookies.sh) and the eight steps of the guided
+#                               demo (tools/browser-tests/demo-e2e.sh); both need chromium and
+#                               python3 with `websockets`, both in the dev shell
 #
 # State is in deploy/local/.state/dev-web/ (git-ignored): remove it to start over. `just web` and
 # `just up` use the same ports, so they cannot run together. Environment: FIELDSEAL_BIN (a CLI to
 # use instead of building one).
+# shellcheck disable=SC2030,SC2031 # PATH and HOME are reset on purpose inside the subshells that start a process
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,11 +31,15 @@ STATE="$ROOT/deploy/local/.state/dev-web"
 MANIFEST="examples/deployments/dev-web.yaml"
 LOGS="$STATE/logs"
 CHECK=0
-case "${1:-}" in
-  "") ;;
-  --check) CHECK=1 ;;
-  *) echo "usage: tools/dev-web.sh [--check]" >&2; exit 2 ;;
-esac
+BROWSER=0
+for arg in "$@"; do
+  case "$arg" in
+    --check) CHECK=1 ;;
+    --browser) BROWSER=1 ;;
+    *) echo "usage: tools/dev-web.sh [--check [--browser]]" >&2; exit 2 ;;
+  esac
+done
+[ "$BROWSER" = 0 ] || [ "$CHECK" = 1 ] || { echo "usage: tools/dev-web.sh [--check [--browser]]  (--browser belongs to --check)" >&2; exit 2; }
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'web: %s\n' "$*" >&2; exit 1; }
@@ -92,7 +104,7 @@ mapfile -t FACTORY_SECRET < <(printf '%s\n' "${SECRETS[@]}" | grep '^FIELDSEAL_S
 mapfile -t INTAKE_SECRET < <(printf '%s\n' "${SECRETS[@]}" | grep '^FIELDSEAL_SECRET_INTAKE_OIDC_CLIENT_SECRET=')
 
 # 3. The manifest. The rendered environment is the only configuration the services read (DEP-012).
-"$FIELDSEAL_BIN" deployment validate "$MANIFEST" >/dev/null || die "the manifest does not validate: fieldseal deployment validate $MANIFEST"
+VALIDATED="$("$FIELDSEAL_BIN" deployment validate "$MANIFEST" --json)" || die "the manifest does not validate: fieldseal deployment validate $MANIFEST"
 find "$STATE/env" -maxdepth 1 -name '*.env' -delete
 "$FIELDSEAL_BIN" deployment render "$MANIFEST" --environment development --out "$STATE/env" >/dev/null || die "could not render $MANIFEST"
 say "rendered the environment of $(basename "$MANIFEST") to deploy/local/.state/dev-web/env"
@@ -103,6 +115,19 @@ FIELDSEAL_AUTHORITY_DIR="$STATE/authority" "$ROOT/tools/stack-init.sh" >"$LOGS/a
 say "building the services"
 cargo build -q -p fieldseal-translog -p fieldseal-factory -p fieldseal-intake-app -p fieldseal-web -p fieldseal-dev-idp
 TARGET="$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/debug"
+
+# The browser device is the format core compiled to WebAssembly (the Device page and the guided
+# demo need it). Nix builds it; FIELDSEAL_WEB_WASM_DIR names a bundle you already have.
+WASM_DIR="${FIELDSEAL_WEB_WASM_DIR:-}"
+if [ -z "$WASM_DIR" ]; then
+  WASM_DIR="$(nix build --no-link --print-out-paths "path:$ROOT#fieldseal-wasm" 2>"$LOGS/wasm.log")" || WASM_DIR=""
+fi
+if [ -n "$WASM_DIR" ] && [ -f "$WASM_DIR/fieldseal_wasm_bg.wasm" ]; then
+  say "the browser device (WebAssembly): $WASM_DIR"
+else
+  WASM_DIR=""
+  say "warning: no WebAssembly bundle, so the Device page cannot run (set FIELDSEAL_WEB_WASM_DIR, or install Nix: deploy/local/.state/dev-web/logs/wasm.log)"
+fi
 
 # start <name> <binary> <env file> [NAME=value...] [-- argument...]: the process gets the rendered
 # environment and nothing else of ours (the log refuses unknown FIELDSEAL_TRANSLOG_ variables). The
@@ -170,10 +195,16 @@ cli() {
 cli roster issue --factory-url http://localhost:8080 --browser none --login presenter \
   examples/rosters/village-a.yaml examples/rosters/cohort-a.yaml >"$LOGS/roster.log" 2>&1 \
   || { tail -n 20 "$LOGS/roster.log" >&2; die "could not issue the example rosters (deploy/local/.state/dev-web/logs/roster.log)"; }
+# A runtime holds exactly one instrument per bundle (the browser device refuses more), so each
+# account gets one survey: the presenter the water survey, collector1 the school-meals survey.
+COLLECTOR1=00000000-0000-4000-8000-000000000002
 cli roster assign --factory-url http://localhost:8080 --browser none --login presenter --account "$PRESENTER" \
-  --assign household-water-access=village-a --assign school-meals-baseline=cohort-a >>"$LOGS/roster.log" 2>&1 \
+  --assign household-water-access=village-a >>"$LOGS/roster.log" 2>&1 \
   || { tail -n 20 "$LOGS/roster.log" >&2; die "could not assign the cohorts (deploy/local/.state/dev-web/logs/roster.log)"; }
-say "issued the example rosters and assigned their cohorts to the presenter account (deploy/local/.state/dev-web/logs/roster.log)"
+cli roster assign --factory-url http://localhost:8080 --browser none --login presenter --account "$COLLECTOR1" \
+  --assign school-meals-baseline=cohort-a >>"$LOGS/roster.log" 2>&1 \
+  || { tail -n 20 "$LOGS/roster.log" >&2; die "could not assign the cohorts (deploy/local/.state/dev-web/logs/roster.log)"; }
+say "issued the example rosters and assigned household-water-access to the presenter account and school-meals-baseline to collector1 (deploy/local/.state/dev-web/logs/roster.log)"
 
 # 7. The intake app: the upload endpoint on :8480 and the results reader on :8481. It replays what
 # it stored before it listens, so a restart keeps what has landed. The results reader signs in
@@ -189,11 +220,12 @@ start web "$TARGET/fieldseal-web" "" \
   FIELDSEAL_WEB_STACK=true FIELDSEAL_WEB_BIND=127.0.0.1:8090 \
   FIELDSEAL_WEB_ALLOWED_BUILDERS="$(env_value "$STATE/env/intake.env" FIELDSEAL_INTAKE_ALLOWED_BUILDERS)" \
   FIELDSEAL_WEB_ALLOWED_SOURCES="$(env_value "$STATE/env/intake.env" FIELDSEAL_INTAKE_ALLOWED_SOURCES)" \
-  FIELDSEAL_WEB_EXAMPLES_DIR="$ROOT/examples" \
+  FIELDSEAL_WEB_EXAMPLES_DIR="$ROOT/examples" FIELDSEAL_WEB_WASM_DIR="$WASM_DIR" \
   FIELDSEAL_WEB_AUTHORITY_DIR="$STATE/authority" FIELDSEAL_WEB_PUBLISHED_DIR="$STATE/published" FIELDSEAL_WEB_REGISTRY_DIR="$STATE/cli/registry" \
   FIELDSEAL_WEB_SURVEY_COHORTS="school-meals-baseline=cohort-a,household-water-access=village-a" \
   FIELDSEAL_WEB_ROSTER_DIR="$STATE/rosters" \
-  FIELDSEAL_FACTORY_URL=http://localhost:8080 FIELDSEAL_UPLOAD_URL=http://localhost:8480 FIELDSEAL_LOG_URL=http://localhost:9001 FIELDSEAL_WEB_PUBLIC_URL=http://127.0.0.1:8090
+  FIELDSEAL_FACTORY_URL=http://localhost:8080 FIELDSEAL_UPLOAD_URL=http://localhost:8480 FIELDSEAL_LOG_URL=http://localhost:9001 FIELDSEAL_WEB_PUBLIC_URL=http://127.0.0.1:8090 \
+  FIELDSEAL_WEB_RESULTS_URL=http://localhost:8481
 wait_for web http://127.0.0.1:8090/healthz 60
 
 # sign_in_as <login> <cookie jar> <base url> <path>: signs in to a service through the development
@@ -247,6 +279,7 @@ check_bundle() {
   curl -fsS -b "$jar" -o /dev/null --max-time 10 -d "csrf=$csrf" "http://localhost:8080/pending/$tenancy/confirm" || die "check: the portal did not confirm the device"
   cli registration wait "$tenancy" --device-dir "$dev" --factory-url http://localhost:8080 --trust-bundle "$STATE/authority/trust-bundle.bundle" --timeout 30 --json >/dev/null \
     || die "check: the device did not register"
+  curl -fsS --max-time 10 "http://127.0.0.1:8090/registration?tenancy=$tenancy" | grep -q '<strong>registered</strong>' || die "check: the Registration page does not show the factory's state registered for the device"
   out=""
   for i in $(seq 1 30); do
     if out="$(cli bundle fetch --device-dir "$dev" --factory-url http://localhost:8080 --trust-bundle "$STATE/authority/trust-bundle.bundle" --out "$dev/bundle/" --json 2>"$LOGS/check-fetch.err")"; then break; fi
@@ -258,7 +291,7 @@ check_bundle() {
   grep -q '"event":"bundle-built"' "$LOGS/factory.log" || die "check: the factory log has no bundle-built event"
   retire_devices "$jar"
   rm -f "$jar"
-  say "check: a registered device fetched its bundle (sequence 1) and the factory logged bundle-built"
+  say "check: a registered device fetched its bundle (sequence 1) and the factory logged bundle-built, and the Registration page shows the factory's state"
 }
 
 # The stand-in's part of the browser device's fetch: the provisioning names the factory itself
@@ -274,6 +307,43 @@ check_device_fetch() {
   case "$code" in 400 | 401) ;; *) die "check: the proxy did not hand back the factory's refusal of a bad token (got $code)" ;; esac
   [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:8090/device/bundle?tenancy=00")" = 404 ] || die "check: the removed bundle route still answers"
   say "check: the stand-in provisions the device with the factory's URL, passes its token to the factory and has no bundle route of its own"
+}
+
+# The development adapters check (DEP-076, Technical Plan 10.1): each service wrote one
+# `development-adapters` event at start, and the ports and adapters in it are the ones the
+# manifest binds to development adapters, as `fieldseal deployment validate` lists them.
+check_adapters() {
+  local component service log expected found events
+  for entry in factory:fieldseal-factory:factory intake:fieldseal-intake:intake publishing:fieldseal-translog:translog; do
+    IFS=: read -r component service log <<<"$entry"
+    expected="$(jq -r --arg c "$component" '.developmentAdapters[$c] // {} | to_entries | map("\(.key)=\(.value)") | sort | join(",")' <<<"$VALIDATED")"
+    events="$(grep -h '"event":"development-adapters"' "$LOGS/$log.log" | jq -c --arg s "$service" 'select(.service == $s)')"
+    [ "$(wc -l <<<"$events")" = 1 ] && [ -n "$events" ] || die "check: $service did not write exactly one development-adapters event (deploy/local/.state/dev-web/logs/$log.log)"
+    found="$(jq -r '.adapters | map("\(.port)=\(.adapter)") | sort | join(",")' <<<"$events")"
+    [ "$found" = "$expected" ] || die "check: $service reports the development adapters [$found] but the manifest binds [$expected]"
+  done
+  say "check: each service reports the development adapters the manifest binds"
+}
+
+# The pages the collector stand-in serves from the real services: Publishing verifies the log and
+# the published artefacts against the trust bundle (WEB-141), Registration reads the factory
+# (WEB-150), the Device page is in stack mode, and there is no Intake page (WEB-154).
+check_pages() {
+  local base=http://127.0.0.1:8090 page code
+  for path in /demo /demo/1 /demo/2 /demo/8 /instruments /instruments/school-meals-baseline /publishing /registration /device; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$base$path")"
+    [ "$code" = 200 ] || die "check: $path answered $code"
+  done
+  page="$(curl -fsS --max-time 30 "$base/publishing")"
+  grep -q '<span class="ok">verified</span>' <<<"$page" || die "check: the Publishing page verifies no artefact against the trust bundle"
+  ! grep -q '<span class="bad">not verified' <<<"$page" || die "check: the Publishing page shows an artefact that does not verify"
+  grep -q 'pinned log key</dt><dd><span class="ok">yes</span>' <<<"$page" || die "check: the log's checkpoint does not verify against the pinned log key"
+  grep -q 'household-water-access' <<<"$page" || die "check: the Publishing page does not list the published survey"
+  grep -q 'data-mode="stack"' < <(curl -fsS --max-time 10 "$base/device") || die "check: the Device page is not in stack mode"
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$base/intake")" = 404 ] || die "check: /intake does not answer 404"
+  ! curl -fsS --max-time 10 "$base/registration" | grep -q 'href="/intake' || die "check: a page links to /intake"
+  curl -fsS --max-time 10 "$base/registration" | grep -q 'href="http://localhost:8481/"' || die "check: the pages do not link to the results reader"
+  say "check: the Publishing page verifies the log and the artefacts, there is no Intake page, and the Instruments, Registration and Device pages answer"
 }
 
 # The edit-and-reload check: a changed label shows with no restart, and a broken file keeps the
@@ -311,7 +381,8 @@ if [ "$CHECK" = 1 ]; then
   sign_in_as presenter "$jar" http://localhost:8481 /results >/dev/null || die "check: the sign-in through the development IdP did not reach the results page"
   curl -fsS -b "$jar" --max-time 10 http://localhost:8481/results | grep -q 'outside Fieldseal' || die "check: the results page did not show after the sign-in"
   mark="$(curl -fsS -b "$jar" --max-time 10 http://localhost:8481/results | sed -n 's|.*/results/exports/\([0-9]*\)/manifest.json.*|\1|p' | head -n 1)"
-  [ -n "$mark" ] && curl -fsS -b "$jar" --max-time 10 "http://localhost:8481/results/exports/$mark/manifest.json" | grep -q '"landing_mark"' || die "check: the manifest did not download"
+  [ -n "$mark" ] || die "check: the results page lists no export"
+  curl -fsS -b "$jar" --max-time 10 "http://localhost:8481/results/exports/$mark/manifest.json" | grep -q '"landing_mark"' || die "check: the manifest did not download"
   rm -f "$jar"
   say "check: signing in as presenter through the development IdP reads the results and downloads the manifest"
   jar="$STATE/check-cookies"; rm -f "$jar"
@@ -323,9 +394,17 @@ if [ "$CHECK" = 1 ]; then
   say "check: the Publishing page lists the published examples"
   curl -fsS --max-time 10 http://127.0.0.1:8090/instruments/school-meals-baseline/roster | grep -q '"cohort":"cohort-a"' || die "check: the roster page does not show the issued roster of cohort-a"
   say "check: the roster page reads the roster the factory stored"
+  check_adapters
+  check_pages
   check_bundle
   check_device_fetch
   check_edit
+  if [ "$BROWSER" = 1 ]; then
+    "$ROOT/tools/browser-tests/cookies.sh" --login presenter http://127.0.0.1:8090 http://localhost:8080 http://localhost:8481 || die "check: the cookie-scoping check failed"
+    say "check: the browser sends no factory or results reader cookie to the collector stand-in"
+    "$ROOT/tools/browser-tests/demo-e2e.sh" --state "$STATE" || die "check: the guided demo's eight steps did not pass in the browser"
+    say "check: the eight steps of the guided demo ran end to end, each confirmation found at its own source"
+  fi
   say "dev-web --check passed"
   exit 0
 fi
@@ -336,10 +415,10 @@ just web is running (Ctrl-C stops everything). State: deploy/local/.state/dev-we
   Collector stand-in   http://127.0.0.1:8090   (edit a survey under examples/surveys/ and reload)
   Factory              http://localhost:8080
   Intake uploads       http://localhost:8480   (devices upload here)
-  Results reader       http://localhost:8481   (signs you in as the development login `presenter`)
+  Results reader       http://localhost:8481   (signs you in as the development login presenter)
   Transparency log     http://localhost:9001/checkpoint
   Publish your survey  just publish <survey>   (then see the Publishing page)
-  Rosters              issued and assigned to the presenter account (subject 00000000-0000-4000-8000-000000000001):
+  Rosters              issued; household-water-access assigned to presenter (subject 00000000-0000-4000-8000-000000000001), school-meals-baseline to collector1 (...0002):
                        fieldseal roster issue <file>... --factory-url http://localhost:8080 --browser none --login presenter
                        fieldseal roster assign --factory-url http://localhost:8080 --browser none --login presenter --account <subject> --assign <survey>=<cohort>
                        (set FIELDSEAL_OIDC_ISSUER=http://localhost:8180/realms/fieldseal and FIELDSEAL_OIDC_CLIENT_ID=fieldseal-cli first)
@@ -347,6 +426,9 @@ just web is running (Ctrl-C stops everything). State: deploy/local/.state/dev-we
 Sign-in at the factory and the results reader goes through the development IdP: pick a login on its page.
 Not for production: fieldseal-dev-idp refuses to run there. Logs: deploy/local/.state/dev-web/logs/
 MSG
+echo "Development adapters in use (production refuses every one; the manifest binds them, each service reports them):"
+jq -r '.developmentAdapters | to_entries[] | .key as $c | .value | to_entries[] | "  \($c) \(.key): \(.value)"' <<<"$VALIDATED"
+echo "The identity provider is the development IdP (no password, any login), in the place Keycloak takes in the stack."
 
 # Stop when any service stops.
 wait -n "${PIDS[@]}" || true

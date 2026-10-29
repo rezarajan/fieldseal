@@ -14,7 +14,7 @@ for c in compact expanded; do "$FS" instrument preview "$root/examples/surveys/s
 "$FS" instrument preview "$root/examples/surveys/household-water-access/instrument.yaml" --lang es -o "$out/water-es.html" >/dev/null
 pages=("file://$out/food-compact.html" "file://$out/food-expanded.html" "file://$out/water-es.html")
 if [ -n "${1:-}" ]; then
-  for p in /instruments /instruments/school-meals-baseline /publishing /registration /device /intake; do pages+=("$1$p"); done
+  for p in /demo /demo/{1..8} /instruments /instruments/school-meals-baseline /publishing /registration /device; do pages+=("$1$p"); done
 fi
 # shellcheck disable=SC2016  # a Nix expression, not shell
 py="$(nix build --no-link --print-out-paths --impure --expr '(builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}.python3.withPackages (p: [p.websockets])')"

@@ -173,11 +173,4 @@ dd { margin: 0; word-break: break-word; }
   .step { padding: 16px; }
   .devbar { padding: 8px 16px; }
 }
-
-/* The survey chooser: every published survey, none preselected */
-.survey-pick { display: grid; gap: 0.5rem; width: min(100%, 32rem); margin: 0 auto 1rem; padding: 0; border: 0; }
-.survey-choice { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.125rem 0.75rem; min-height: 3.25rem; padding: 0.75rem 1rem; border: 1.5px solid var(--unset, #d5dad8); border-radius: 1rem; cursor: pointer; text-align: start; }
-.survey-choice:has(input:checked) { border-color: var(--primary, #0d7a5f); background: var(--selected-fill, #ecfdf5); }
-.survey-choice input { grid-row: 1 / span 2; width: 1.25rem; height: 1.25rem; }
-.survey-name { font-weight: 800; }
-.survey-id { font-size: 0.8125rem; color: var(--ink-2, #56615e); }
+main:has(.device) > .banner { margin: 12px 24px 0; }

@@ -234,3 +234,5 @@ FIELDSEAL_WEB_DEMO_AUTHORITY=true nix run path:.#fieldseal-web
 ```
 
 Then open <http://127.0.0.1:8090>. See [use the web app](../how-to/use-the-web-app.md).
+
+To see the whole pipeline in eight steps, with each confirmation read from the component that did the work, run `just web` and open <http://127.0.0.1:8090>: the guided demo starts there. See [use the web app](../how-to/use-the-web-app.md#give-the-guided-demo).

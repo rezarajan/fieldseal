@@ -19,11 +19,11 @@ fieldseal-kernel.workspace = true
 fieldseal-trust.workspace = true
 fieldseal-publishing.workspace = true
 fieldseal-adapters-translog.workspace = true
+fieldseal-deployment.workspace = true
 thiserror.workspace = true
 getrandom = "0.2"
 
 [dev-dependencies]
-fieldseal-deployment.workspace = true
 fieldseal-adapters-authoring.workspace = true
 
 [lints]

@@ -40,7 +40,8 @@ fn web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory() {
     let policy = &world.policy.publication;
     std::fs::write(registry.join("one.publication"), policy.encode()).unwrap();
     std::fs::write(registry.join("broken.publication"), b"not a publication").unwrap();
-    // An unreachable log: the artefacts are listed above whatever the log answers.
+    // An unreachable log and no trust bundle: the artefacts are still listed, and the page says
+    // what it could not verify.
     let state = AppState {
         examples_dir: examples(),
         stack: true,
@@ -49,12 +50,12 @@ fn web_140_the_publishing_page_lists_the_artefacts_of_the_registry_directory() {
         ..AppState::default()
     };
     let page = dispatch(&state, &Request::get("/publishing")).body_text();
-    let at = page.find("id=\"registry\"").expect("the registry section");
-    assert!(at < page.find("Transparency log:").expect("the log section"), "the artefacts come above the log");
+    let at = page.find("id=\"artefacts\"").expect("the artefacts section");
     for cell in [policy.artefact.name(), policy.artefact.version(), policy.artefact.kind().as_str(), &policy.address().to_text()] {
         assert!(page[at..].contains(cell), "{cell} is listed");
     }
     assert!(page.contains("broken.publication is unreadable"), "a file that does not decode is named");
+    assert!(page.contains("nothing is verified") && page.contains("could not be read at"), "what is not verified is said");
 
     let empty = AppState { registry_dir: None, ..state };
     assert!(dispatch(&empty, &Request::get("/publishing")).body_text().contains("No artefact has been published yet"));

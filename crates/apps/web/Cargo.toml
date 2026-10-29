@@ -22,19 +22,19 @@ fieldseal-adapters-file.workspace = true
 fieldseal-distribution.workspace = true
 fieldseal-adapters-html.workspace = true
 fieldseal-adapters-web.workspace = true
-fieldseal-adapters-web-demo = { path = "../../adapters/web-demo" }
-fieldseal-adapters-memory.workspace = true
 fieldseal-publishing.workspace = true
 fieldseal-adapters-translog.workspace = true
 fieldseal-trust.workspace = true
+fieldseal-policy.workspace = true
 serde_json = "1"
-fieldseal-intake.workspace = true
 tiny_http = "0.12"
 # The blocking client the other HTTP adapters use; https upstreams go through rustls.
 ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 
 [dev-dependencies]
 fieldseal-adapters-web = { workspace = true }
+# The tests build a publishing world in memory.
+fieldseal-adapters-memory.workspace = true
 
 [lints]
 workspace = true

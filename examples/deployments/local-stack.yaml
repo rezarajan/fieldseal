@@ -127,7 +127,8 @@ spec:
             origin: "fieldseal.local/log"
             dir: /data/log
             keyFile: /authority/translog.key
-        Signer: { adapter: memory, config: {} }
+        # The log signs its checkpoints with the key in `keyFile` (a development adapter).
+        Signer: { adapter: file-dev, config: {} }
   runtime:
     provisioning:
       factoryUrl: "http://localhost:8080"

@@ -6,14 +6,17 @@
 #
 #   --no-up     check a stack that is already running (do not start it)
 #   --keep      leave the stack running afterwards (default: stop it, keeping its volumes)
-#   --browser   also run the whole demo in the demo container (tools/stack-run.sh demo): headless
-#               Chromium with a virtual authenticator registers a passkey, a device registers,
-#               captures, uploads and verifies the receipts
+#   --browser   also check cookie scoping with the browser harness (tools/browser-tests/cookies.sh:
+#               the collector stand-in on 127.0.0.1:8090 gets no cookie of the factory or the intake
+#               portal) and run the whole demo in the demo container (tools/stack-run.sh demo):
+#               headless Chromium with a virtual authenticator registers a passkey, a device
+#               registers, captures, uploads and verifies the receipts
 #
 # Checks: the log, the intake app (both listeners) and the factory answer their probes; Keycloak serves
 # OIDC discovery for the realm with the endpoints and the issuer the factory expects; the
 # realm requires the passkey flow; the factory's sign-in redirects to Keycloak with PKCE and
-# asks for acr=phr; Keycloak shows its username form.
+# asks for acr=phr; Keycloak shows its username form; each service's development-adapters event
+# equals the development adapters the manifest binds.
 set -euo pipefail
 
 if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${GITLAB_CI:-}" ] || [ -n "${BUILDKITE:-}" ]; then
@@ -81,7 +84,25 @@ else
   bad "could not authenticate to the Keycloak admin API"
 fi
 
+echo "== development adapters (DEP-076)"
+# Each service wrote a development-adapters event at start; its latest one lists the ports it
+# binds to a development adapter, which must be the ones the manifest binds, as
+# `fieldseal deployment validate` lists them.
+VALIDATED="$("$("$ROOT/tools/stack-cli.sh")" deployment validate "$ROOT/examples/deployments/local-stack.yaml" --json || true)"
+for entry in factory:fieldseal-factory:factory intake:fieldseal-intake:intake publishing:fieldseal-translog:translog; do
+  IFS=: read -r component service container <<<"$entry"
+  expected="$(jq -r --arg c "$component" '.developmentAdapters[$c] // {} | to_entries | map("\(.key)=\(.value)") | sort | join(",")' <<<"$VALIDATED")"
+  found="$("$ROOT/tools/stack-compose.sh" logs --no-log-prefix "$container" 2>&1 | grep -h '"event":"development-adapters"' | tail -n 1 \
+    | jq -r --arg s "$service" 'select(.service == $s) | .adapters | map("\(.port)=\(.adapter)") | sort | join(",")' 2>/dev/null || true)"
+  if [ -n "$found" ] && [ "$found" = "$expected" ]; then ok "$service reports the development adapters the manifest binds"; else bad "$service reports [$found] but the manifest binds [$expected]"; fi
+done
+
 if [ "$BROWSER" = 1 ]; then
+  echo "== cookie scoping (control 4 of the design, section 7.2)"
+  # The collector stand-in is on 127.0.0.1 and the factory and the intake portal on localhost, so
+  # the browser sends their cookies to localhost only. The sign-in is not completed (the
+  # stack's Keycloak asks for a passkey): the cookies the two sign-ins set on the way are enough.
+  if "$ROOT/tools/browser-tests/cookies.sh" http://127.0.0.1:8090 http://localhost:8080 http://localhost:8481; then ok "no factory or results reader cookie reaches the collector stand-in"; else bad "cookie scoping"; fi
   echo "== demo container (virtual authenticator, device registration, upload, receipts)"
   if "$ROOT/tools/stack-run.sh" demo; then ok "the end-to-end demo"; else bad "the end-to-end demo"; fi
 fi

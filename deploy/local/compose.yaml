@@ -212,6 +212,8 @@ services:
       # On 127.0.0.1, not localhost: the browser then keeps the web app apart from the factory and
       # the intake portal (on localhost) and sends their cookies to localhost only.
       FIELDSEAL_WEB_PUBLIC_URL: http://127.0.0.1:8090
+      # The results reader, linked from the footer of every page (the app shows no results).
+      FIELDSEAL_WEB_RESULTS_URL: http://localhost:8481
     volumes:
       - authority:/authority:ro
       - published:/published:ro

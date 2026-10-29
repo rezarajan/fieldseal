@@ -1,7 +1,8 @@
 // The browser device, end to end, as a collector would use it: create the PIN on the pad,
-// register against the demo factory, take the bundle, start a capture, fill in a few answers,
-// review, seal by holding, hand over (upload and receipt), clear. Evaluated in the page by
-// device-flow.py, which runs `window.flow` step by step and takes the screenshots.
+// register with a token from the factory portal, take the bundle, start a capture, fill in a few
+// answers, review, seal by holding, hand over (export, upload and receipt), clear. Evaluated in
+// the Device page by demo-e2e.py, which runs the steps of `window.flow` by name, one at a time,
+// and does the factory portal's part of registration itself (the token, the four words).
 (() => {
   const $ = (id) => document.getElementById(id);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -61,15 +62,17 @@
       check("a new tenancy goes to registration", true);
     } },
     { name: "register", run: async () => {
-      const text = await (await fetch("/registration/token", { method: "POST" })).text();
-      const token = /<pre class="token">([^<]*)/.exec(text)[1];
-      $("token").value = token;
+      // The token comes from the factory portal (window.TOKEN); the words are for the person at
+      // the portal to compare and confirm, which the caller does.
+      $("token").value = window.TOKEN;
       $("form-register").requestSubmit();
       await until(() => $("reg-status") && /pending/i.test($("reg-status").textContent), "pending status");
-      check("the four words are shown big", document.querySelector("#register-result .words").textContent.trim().split(/\s+/).length >= 4, document.querySelector("#register-result .words").textContent);
-      const tenancy = /Tenancy ([0-9a-f]{64})/.exec($("tenancy-info").textContent)[1];
-      const c = await fetch("/registration/confirm", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "tenancy=" + tenancy });
-      check("the portal confirms the words", c.status < 400, c.status);
+      const words = document.querySelector("#register-result .words").textContent.trim();
+      check("the four words are shown big", words.split(/\s+/).length >= 4, words);
+      window.__words = words;
+      window.__tenancy = /Tenancy ([0-9a-f]{64})/.exec($("tenancy-info").textContent)[1];
+    } },
+    { name: "registered", run: async () => {
       await screen("bundle");
     } },
     { name: "bundle", shot: "02-session-roster.png", run: async () => {
@@ -193,9 +196,23 @@
       $("form-clear").requestSubmit();
       await until(() => $("clear-out").textContent.startsWith("Cleared"), "the clear", 300);
       check("cleared", true, $("clear-out").textContent);
-      const intake = await (await fetch("/intake")).text();
-      check("the intake page shows the landed rows", /<table/.test(intake) || /rows?/i.test(intake));
       check("the security log is still there", document.querySelectorAll("#log li").length >= 10, document.querySelectorAll("#log li").length);
     } },
+    // After the operator issued a new roster version and the factory built the next bundle: ask for it.
+    { name: "newer", run: async () => {
+      if ($("device").dataset.screen === "sealed") $("sealed-next").click();
+      await screen("roster");
+      $("another-survey").click();
+      await screen("bundle");
+      $("fetch-bundle").click();
+      await until(() => ["roster", "consent"].includes($("device").dataset.screen), "the roster of the newer bundle", 300);
+      check("the latest result names the newer bundle", /bundle/i.test($("latest").textContent), $("latest").textContent);
+    } },
+    // Back to the list after a seal, ready for the next person.
+    { name: "next-person", run: async () => {
+      $("sealed-next").click();
+      await screen("roster");
+    } },
   ];
+  window.flowStep = (name) => window.flow.find((s) => s.name === name).run();
 })();

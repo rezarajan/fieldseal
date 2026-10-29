@@ -195,3 +195,6 @@ pre.token { padding: 12px 16px; border: 1px solid var(--border); border-radius: 
   .disclosure > :not(summary) { margin-left: 16px; margin-right: 16px; }
   iframe.instrument { height: 70vh; min-height: 480px; }
 }
+
+/* The banner of the guided demo and the Device page: the collector stand-in is not the native app. */
+.banner { margin: 0 0 20px; padding: .7rem 1rem; border: 1px solid #f5d9a8; border-radius: var(--radius-lg); background: var(--warning-tint); color: var(--ink); font-size: .95rem; }

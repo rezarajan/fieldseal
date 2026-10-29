@@ -14,7 +14,7 @@ use fieldseal_deployment::domain::{Component, EnvironmentName, StoredBuild};
 use fieldseal_deployment::manifest::{ArtefactRef, Manifest, decode_manifest};
 use fieldseal_deployment::release::{build_signing_message, create_release};
 use fieldseal_deployment::render::env_file;
-use fieldseal_deployment::validate::check_policy_layers;
+use fieldseal_deployment::validate::{check_policy_layers, development_adapters_in_use};
 use fieldseal_instrument::application::validate_instrument;
 use fieldseal_intake::data_contract::generate_data_contract;
 use fieldseal_kernel::crypto::{P256PublicKey, Signature};
@@ -53,6 +53,17 @@ fn event(name: &str, fields: &[(&str, &str)]) {
         m.insert((*k).to_owned(), Value::Text((*v).to_owned()));
     }
     eprintln!("{}", json::compact(&Value::Map(m)));
+}
+
+/// Lists the development adapters the manifest binds, per component (DEP-076): a line for each
+/// and `developmentAdapters` in the JSON, component to port to adapter.
+fn development_adapters(o: &mut Outcome, m: &Manifest) {
+    let mut by_component: BTreeMap<String, BTreeMap<String, Value>> = BTreeMap::new();
+    for (component, port, adapter) in development_adapters_in_use(m) {
+        o.lines.push(format!("development adapter: {} {port} {adapter}", component.name()));
+        by_component.entry(component.name().to_owned()).or_default().insert(port, Value::Text(adapter));
+    }
+    o.set("developmentAdapters", Value::Map(by_component.into_iter().map(|(c, ports)| (c, Value::Map(ports))).collect()));
 }
 
 /// Runs `fieldseal deployment …` and `fieldseal docs …`; `args` start at the noun.
@@ -127,6 +138,9 @@ fn execute(command: &str, a: &Args, o: &mut Outcome) -> Result<(), Failure> {
                         }
                     }
                 }
+            }
+            if let Some(m) = manifest.as_ref() {
+                development_adapters(o, m);
             }
             o.lines.push(format!("{file}: {} finding(s)", o.findings.len()));
             Ok(())
