@@ -53,3 +53,7 @@ Start at [`docs/index.md`](docs/index.md):
 - Run: `just test` (test inventory check, nextest and doc tests within the 20 s budget, clippy and the architecture check)
 - CI parity: `just check` (the flake's clippy, tests and architecture checks; builds `checks.x86_64-linux.*` only)
 - Per crate: `cargo test -p <package>`
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Third-party fonts and test tooling keep their own licences; see [NOTICE](NOTICE).

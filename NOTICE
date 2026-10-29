@@ -1,0 +1,17 @@
+Fieldseal
+Copyright 2026 Reza Rajan
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes the following third-party material, which keeps its own licence:
+
+- Nunito Sans font files
+  crates/adapters/html/fonts/ and crates/apps/web/assets/fonts/
+  Copyright 2016 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+  Licensed under the SIL Open Font License, Version 1.1 (see the OFL.txt in each folder).
+
+- axe-core 4.10.2
+  tools/browser-tests/vendor/axe-4.10.2.min.js
+  Copyright (c) 2015 - 2024 Deque Systems, Inc.
+  Licensed under the Mozilla Public License, Version 2.0 (https://mozilla.org/MPL/2.0/).
+  Source: https://github.com/dequelabs/axe-core
