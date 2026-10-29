@@ -184,13 +184,9 @@ wait_for factory http://127.0.0.1:8080/healthz 60
 PRESENTER=00000000-0000-4000-8000-000000000001
 # cli <fieldseal args...>: the CLI in an environment of PATH, HOME and the sign-in settings only.
 cli() {
-  (
-    keep_path="$PATH"; keep_home="$HOME"
-    for v in $(compgen -e); do unset "$v"; done
-    export PATH="$keep_path" HOME="$keep_home" \
-      FIELDSEAL_OIDC_ISSUER=http://localhost:8180/realms/fieldseal FIELDSEAL_OIDC_CLIENT_ID=fieldseal-cli
-    exec "$FIELDSEAL_BIN" "$@"
-  )
+  env -i PATH="$PATH" HOME="$HOME" \
+    FIELDSEAL_OIDC_ISSUER=http://localhost:8180/realms/fieldseal FIELDSEAL_OIDC_CLIENT_ID=fieldseal-cli \
+    "$FIELDSEAL_BIN" "$@"
 }
 cli roster issue --factory-url http://localhost:8080 --browser none --login presenter \
   examples/rosters/village-a.yaml examples/rosters/cohort-a.yaml >"$LOGS/roster.log" 2>&1 \

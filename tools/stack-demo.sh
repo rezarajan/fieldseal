@@ -6,8 +6,8 @@
 #   seed     publish the sample instruments, their layouts and the policy through the stack's log
 #   issue    issue the example rosters at the factory (one operator sign-in); `unchanged` when
 #            the factory already holds them
-#   assign   assign the cohorts to the account of the stack's product-owner (one operator
-#            sign-in); `unchanged` when they are already assigned
+#   assign   assign the survey's cohort to the account of the stack's product-owner (one operator
+#            sign-in); `unchanged` when it is already assigned
 #   resume   after `just down` and `just up`: seed, issue and assign again (nothing changes), then
 #            the device registered earlier is still registered and uploads the same export again
 #            (changing nothing)
@@ -31,6 +31,13 @@ INTAKE="${FIELDSEAL_INTAKE_URL:-http://localhost:8480}"
 SURVEY="${FIELDSEAL_DEMO_SURVEY:-school-meals-baseline}"
 SCENARIO="stack-capture-$SURVEY.yaml"
 [ "$SURVEY" = household-water-access ] && SCENARIO=stack-capture.yaml
+# The cohort of that survey's example roster. A bundle carries one instrument, so the device's
+# account is assigned this one survey only.
+case "$SURVEY" in
+  household-water-access) COHORT=village-a ;;
+  school-meals-baseline) COHORT=cohort-a ;;
+  *) echo "stack-demo.sh: no example cohort for survey $SURVEY" >&2; exit 2 ;;
+esac
 mkdir -p "$HOME" "$W" "$FIELDSEAL_STATE_DIR" /clistate/published
 
 SUMMARY=()
@@ -178,10 +185,10 @@ issue() {
 }
 
 assign() {
-  stage "Assign the cohorts to the collector's account (operator sign-in)"
+  stage "Assign the survey's cohort to the collector's account (operator sign-in)"
   run roster assign --factory-url "$FIELDSEAL_FACTORY_URL" --browser "$BROWSER" --account "$ACCOUNT" \
-    --assign household-water-access=village-a --assign school-meals-baseline=cohort-a
-  note "household-water-access -> village-a and school-meals-baseline -> cohort-a assigned to account $ACCOUNT"
+    --assign "$SURVEY=$COHORT"
+  note "$SURVEY -> $COHORT assigned to account $ACCOUNT"
 }
 
 # 2. A device registers: the browser flow gets the token and calls tools/stack-enroll.sh.
