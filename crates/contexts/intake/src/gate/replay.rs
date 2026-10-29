@@ -12,7 +12,7 @@ use fieldseal_instrument::domain::{Instrument, RecordInput, RecordView, Verdict}
 use fieldseal_kernel::Value;
 use fieldseal_kernel::digest::lower_hex;
 use fieldseal_kernel::id::{Fingerprint, RecordId, SubjectId};
-use fieldseal_kernel::payload::ItemsPayload;
+use fieldseal_kernel::payload::{ItemsPayload, Mode};
 use fieldseal_policy::domain::{DecisionPoint, Obligation};
 
 use super::{Instruments, IntakeService, Part, Step, backend};
@@ -21,6 +21,12 @@ use crate::landing::RunningState;
 use crate::wire::Payload;
 
 type Sample = (String, SubjectId, BTreeMap<String, Value>);
+
+/// Whether a record holds only the items that changed (COL-032): alone it cannot show what
+/// the subject's other answers hide, so INS-124 is checked on the merged state instead.
+fn is_delta(p: &ItemsPayload) -> bool {
+    matches!(p.mode, Mode::Resurvey | Mode::Correction)
+}
 
 /// What stage 10 found.
 #[derive(Clone, Debug, Default)]
@@ -59,7 +65,7 @@ impl IntakeService<'_> {
         for id in eval.with_verdict(Verdict::Hard) {
             reasons.push(format!("hard rule `{id}` fires but the record was sealed"));
         }
-        if !eval.cleared.is_empty() {
+        if !eval.cleared.is_empty() && !is_delta(p) {
             reasons.push(format!("{} hidden item(s) present (INS-124)", eval.cleared.len()));
         }
         let flags: BTreeSet<&str> = p.flags.iter().flatten().map(String::as_str).collect();
@@ -137,6 +143,18 @@ impl IntakeService<'_> {
             let roster = BTreeMap::new();
             match evaluate_rules(inst, RecordInput { values: &state.values, roster: &roster }) {
                 Ok(eval) => {
+                    if !eval.cleared.is_empty() {
+                        for (part, n) in members {
+                            if let Payload::Items(i) = &part.payloads[*n]
+                                && is_delta(i)
+                            {
+                                let id = part.entries[*n].record.header.record_id;
+                                let reason = format!("{} hidden item(s) present on the merged state (INS-124)", eval.cleared.len());
+                                sub.record(Finding::new(FindingKind::Quarantine, "INT-012", format!("record {} held: {reason}", lower_hex(id.as_bytes()))));
+                                result.held.entry(id).or_default().push(reason);
+                            }
+                        }
+                    }
                     for id in eval.with_verdict(Verdict::Hard) {
                         result.quality_failures += 1;
                         failing.insert((*fp, subject.clone()));
